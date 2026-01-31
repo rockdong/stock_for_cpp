@@ -15,6 +15,20 @@ add_subdirectory(thirdparty/dotenv-cpp)
 # 如果 thirdparty/ta-lib 有 CMakeLists.txt，可以取消下面的注释
 add_subdirectory(thirdparty/ta-lib)
 
+# 添加配置库
+add_library(config_lib STATIC
+    config/Config.cpp
+)
+
+target_include_directories(config_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dotenv-cpp/include
+)
+
+target_link_libraries(config_lib PUBLIC
+    dotenv
+)
+
 # 添加日志库
 add_library(log_lib STATIC
     log/LogConfig.cpp
@@ -39,6 +53,7 @@ add_executable(stock_for_cpp main.cpp)
 
 # 链接第三方库
 target_link_libraries(stock_for_cpp PRIVATE
+    config_lib
     log_lib
     spdlog::spdlog
     sqlpp11::sqlpp11
@@ -49,6 +64,7 @@ target_link_libraries(stock_for_cpp PRIVATE
 
 # 包含第三方库头文件目录
 target_include_directories(stock_for_cpp PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/spdlog/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/sqlpp11/include
