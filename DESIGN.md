@@ -4,7 +4,7 @@
 
 **项目名称**: Stock for C++  
 **版本**: 1.0.0  
-**更新日期**: 2026-01-31  
+**更新日期**: 2026-02-01  
 **开发语言**: C++17  
 **构建工具**: CMake 3.1+
 
@@ -123,14 +123,14 @@
 
 ### 核心依赖
 
-| 库名 | 版本 | 用途 | 许可证 |
-|------|------|------|--------|
-| **spdlog** | v1.x | 高性能日志库 | MIT |
-| **dotenv-cpp** | master | 环境变量管理 | BSD |
-| **nlohmann/json** | develop | JSON 处理 | MIT |
-| **cpp-httplib** | master | HTTP 客户端/服务器 | MIT |
-| **sqlpp11** | main | SQL 查询构建器 | BSD |
-| **ta-lib** | main | 技术分析库 | BSD |
+| 库名 | 版本 | 用途 | 许可证 | 备注 |
+|------|------|------|--------|------|
+| **spdlog** | v1.x | 高性能日志库 | MIT | 已集成 |
+| **dotenv-cpp** | master | 环境变量管理 | BSD | 已集成 |
+| **nlohmann/json** | develop | JSON 处理 | MIT | 已集成 |
+| **cpp-httplib** | master | HTTP 客户端 | MIT | 已集成，只使用 HTTP |
+| **sqlpp11** | main | SQL 查询构建器 | BSD | 待集成 |
+| **ta-lib** | main | 技术分析库 | BSD | 待集成 |
 
 ### 开发工具
 - **编译器**: GCC 7+, Clang 5+, MSVC 2017+
@@ -162,13 +162,19 @@ stock_for_cpp/
 │   └── file/                  # 文件存储
 │       └── CSVReader.h/cpp    # CSV 文件读取
 │
-├── network/                    # 网络层模块 (待开发)
+├── network/                    # 网络层模块 (已完成 ✅)
 │   ├── http/                  # HTTP 客户端
 │   │   ├── HttpClient.h/cpp   # HTTP 客户端封装
-│   │   └── DataSource.h/cpp   # 数据源接口
-│   └── parser/                # 数据解析
-│       ├── JsonParser.h/cpp   # JSON 解析器
-│       └── CsvParser.h/cpp    # CSV 解析器
+│   │   ├── TushareClient.h/cpp # Tushare API 客户端
+│   ├── IDataSource.h          # 数据源接口
+│   ├── TushareDataSource.h/cpp # Tushare 数据源实现
+│   ├── DataSourceFactory.h/cpp # 数据源工厂
+│   ├── Network.h              # 统一头文件
+│   ├── README.md              # 使用文档
+│   ├── SUMMARY.md             # 开发总结
+│   └── examples/              # 使用示例
+│       ├── network_example.cpp # 示例代码
+│       └── README.md          # 示例说明
 │
 ├── output/                     # 输出层模块 (待开发)
 │   ├── console/               # 控制台输出
@@ -234,7 +240,7 @@ stock_for_cpp/
 ### 1. 工厂模式 (Factory Pattern)
 **应用场景**: 日志系统、数据源创建
 
-**已实现**: ✅ 日志系统
+**已实现**: ✅ 日志系统、✅ 网络层
 
 ```cpp
 // LoggerFactory - 创建不同类型的日志器
@@ -245,11 +251,22 @@ namespace logger {
     };
 }
 
+// DataSourceFactory - 创建不同类型的数据源
+namespace network {
+    class DataSourceFactory {
+    public:
+        static DataSourcePtr createDataSource(DataSourceType type, const std::string& config);
+        static DataSourcePtr createFromConfig();  // 从配置模块创建
+    };
+}
+
 // 使用示例
 auto logger = logger::LoggerFactory::createLogger(
     logger::LoggerFactory::LoggerType::SPDLOG, 
     config
 );
+
+auto dataSource = network::DataSourceFactory::createFromConfig();
 ```
 
 ### 2. 单例模式 (Singleton Pattern)
@@ -286,7 +303,7 @@ auto& config = config::Config::getInstance();
 ### 3. 策略模式 (Strategy Pattern)
 **应用场景**: 日志实现、交易策略、数据源
 
-**已实现**: ✅ 日志系统
+**已实现**: ✅ 日志系统、✅ 网络层
 
 ```cpp
 // ILogger - 日志策略接口
@@ -304,6 +321,21 @@ namespace logger {
         void info(const std::string& msg) override;
         void error(const std::string& msg) override;
         // ...
+    };
+}
+
+// IDataSource - 数据源策略接口
+namespace network {
+    class IDataSource {
+    public:
+        virtual std::vector<StockData> getDailyData(...) = 0;
+        virtual StockData getLatestQuote(...) = 0;
+        // ...
+    };
+
+    // TushareDataSource - 具体策略实现
+    class TushareDataSource : public IDataSource {
+        // 实现接口...
     };
 }
 ```
@@ -335,12 +367,26 @@ auto query = QueryBuilder()
 ### 6. 适配器模式 (Adapter Pattern)
 **应用场景**: 不同数据源的统一接口
 
+**已实现**: ✅ 网络层
+
 ```cpp
-// 数据源适配器
-class DataSourceAdapter {
-public:
-    virtual StockData fetchData(const std::string& symbol) = 0;
-};
+// IDataSource - 数据源接口
+namespace network {
+    class IDataSource {
+    public:
+        virtual std::vector<StockData> getDailyData(...) = 0;
+        virtual StockData getLatestQuote(...) = 0;
+    };
+}
+
+// TushareDataSource - 适配 Tushare API 到统一接口
+namespace network {
+    class TushareDataSource : public IDataSource {
+    public:
+        std::vector<StockData> getDailyData(...) override;
+        StockData getLatestQuote(...) override;
+    };
+}
 ```
 
 ## 🔧 核心模块设计
@@ -522,40 +568,95 @@ public:
 } // namespace data
 ```
 
-### 4. 网络层设计 (待开发)
+### 4. 网络层 (已完成 ✅)
 
-#### HTTP 客户端
+#### 设计原则
+- ✅ 完全遵循 SOLID 原则
+- ✅ 工厂模式 + 策略模式 + 适配器模式
+- ✅ 从配置模块自动获取参数
+- ✅ 封装 Tushare Pro API
+
+#### 核心类
+- `HttpClient`: HTTP 客户端封装
+- `TushareClient`: Tushare API 客户端
+- `IDataSource`: 数据源接口
+- `TushareDataSource`: Tushare 数据源实现
+- `DataSourceFactory`: 数据源工厂
+
+#### 数据结构
+- `HttpResponse`: HTTP 响应
+- `TushareResponse`: Tushare API 响应
+- `StockBasic`: 股票基本信息
+- `StockData`: 股票行情数据
+
+#### 命名空间
 ```cpp
 namespace network {
-
-// HTTP 客户端封装
-class HttpClient {
-public:
-    HttpClient(const std::string& baseUrl);
-    std::string get(const std::string& path);
-    bool download(const std::string& url, const std::string& filepath);
-};
-
-// 数据源接口
-class IDataSource {
-public:
-    virtual StockData fetchRealtime(const std::string& symbol) = 0;
-    virtual std::vector<StockData> fetchHistory(
-        const std::string& symbol,
-        const std::string& startDate,
-        const std::string& endDate
-    ) = 0;
-};
-
-// CSV 解析器
-class CsvParser {
-public:
-    std::vector<StockData> parse(const std::string& filepath);
-    std::vector<StockData> parseString(const std::string& csvContent);
-};
-
-} // namespace network
+    // 所有网络相关类和函数
+}
 ```
+
+#### 使用示例
+```cpp
+#include "Network.h"
+
+int main() {
+    // 创建数据源（从配置模块自动获取参数）
+    auto source = network::DataSourceFactory::createFromConfig();
+    
+    // 获取股票列表
+    auto stocks = source->getStockList();
+    
+    // 获取日线数据
+    auto data = source->getDailyData("000001.SZ", "20240101", "20240131");
+    
+    // 获取最新行情
+    auto quote = source->getLatestQuote("000001.SZ");
+    
+    return 0;
+}
+```
+
+#### API 接口封装（11个）
+
+**基础数据**:
+- `getStockBasic()` - 获取股票列表
+- `getTradeCal()` - 获取交易日历
+
+**行情数据**:
+- `getDailyQuote()` - 获取日线行情
+- `getAdjFactor()` - 获取复权因子
+- `getDailyBasic()` - 获取每日指标
+
+**财务数据**:
+- `getIncome()` - 获取利润表
+- `getBalanceSheet()` - 获取资产负债表
+- `getCashFlow()` - 获取现金流量表
+
+**市场数据**:
+- `getHsConst()` - 获取沪深股通成份股
+
+**通用接口**:
+- `query()` - 通用 API 调用
+
+#### 特性
+- ✅ **自动配置**: 从配置模块获取 URL 和 Token
+- ✅ **只支持 HTTP**: 不依赖 OpenSSL，简化部署
+- ✅ **重试机制**: 自动重试失败的请求
+- ✅ **错误处理**: 完善的错误处理和日志记录
+- ✅ **类型安全**: 强类型数据结构
+- ✅ **易于扩展**: 支持添加新的数据源
+
+#### 技术说明
+- **HTTP 协议**: 只支持 HTTP，不支持 HTTPS
+- **无需 OpenSSL**: 简化依赖，降低部署复杂度
+- **适用场景**: Tushare Pro API 使用 HTTP 协议，完全满足需求
+
+#### 文档
+- `network/README.md` - 完整使用文档
+- `network/SUMMARY.md` - 开发总结
+- `network/examples/README.md` - 示例说明
+- `network/examples/network_example.cpp` - 5个使用示例
 
 ### 5. 输出层设计 (待开发)
 
@@ -728,9 +829,12 @@ DB_PASSWORD=password
 DB_POOL_SIZE=10
 
 # ========== 数据源配置 ==========
-DATA_SOURCE_URL=https://api.example.com
-DATA_SOURCE_API_KEY=your_api_key
-DATA_SOURCE_TIMEOUT=10
+# Tushare Pro API 配置
+DATA_SOURCE_URL=http://api.waditu.com
+DATA_SOURCE_API_KEY=your_tushare_token_here
+DATA_SOURCE_TIMEOUT=30
+DATA_SOURCE_RETRY_TIMES=3
+DATA_SOURCE_RETRY_DELAY=1000
 
 # ========== 缓存配置 ==========
 CACHE_ENABLED=true
@@ -751,17 +855,19 @@ CHART_ENABLED=false
 - ✅ 日志系统实现（logger 命名空间）
 - ✅ 配置管理实现（config 命名空间）
 
-### Phase 2: 数据层 (进行中)
+### Phase 2: 网络层 (已完成 ✅)
+- ✅ HTTP 客户端封装
+- ✅ Tushare API 客户端
+- ✅ 数据源接口设计
+- ✅ Tushare 数据源实现
+- ✅ 数据源工厂
+- ✅ 完整文档和示例
+
+### Phase 3: 数据层 (待开发)
 - ⏳ 数据库连接池
 - ⏳ DAO 层实现
 - ⏳ 缓存系统
 - ⏳ 文件存储
-
-### Phase 3: 网络层 (待开发)
-- ⏳ HTTP 客户端封装
-- ⏳ 数据源适配器
-- ⏳ CSV 解析器
-- ⏳ JSON 解析器
 
 ### Phase 4: 业务层 (待开发)
 - ⏳ 股票实体设计
@@ -901,6 +1007,12 @@ CREATE TABLE trades (
 - `config/EXAMPLES.md` - 示例代码（5 个实用示例）
 - `config/SUMMARY.md` - 开发总结
 
+#### 网络层文档 ✅
+- `network/README.md` - 完整使用文档（400+ 行）
+- `network/SUMMARY.md` - 开发总结
+- `network/examples/README.md` - 示例说明
+- `network/examples/network_example.cpp` - 5个使用示例
+
 ### 文档标准
 
 #### 代码文档
@@ -949,17 +1061,17 @@ CREATE TABLE trades (
 
 ### 已完成模块 ✅
 
-| 模块 | 状态 | 完成日期 | 文件数 | 代码行数 |
-|------|------|----------|--------|----------|
-| 日志系统 | ✅ 完成 | 2026-01-31 | 11 个 | ~800 行 |
-| 配置系统 | ✅ 完成 | 2026-01-31 | 2 个 | ~350 行 |
+| 模块 | 状态 | 完成日期 | 文件数 | 代码行数 | 文档行数 |
+|------|------|----------|--------|----------|----------|
+| 日志系统 | ✅ 完成 | 2026-01-31 | 11 个 | ~800 行 | ~1000 行 |
+| 配置系统 | ✅ 完成 | 2026-01-31 | 2 个 | ~350 行 | ~500 行 |
+| 网络层 | ✅ 完成 | 2026-02-01 | 10 个 | ~1200 行 | ~1000 行 |
 
 ### 待开发模块 ⏳
 
 | 模块 | 优先级 | 预计工作量 |
 |------|--------|-----------|
 | 数据层 | 高 | 2-3 天 |
-| 网络层 | 高 | 2-3 天 |
 | 核心业务层 | 高 | 3-4 天 |
 | 分析层 | 中 | 3-4 天 |
 | 输出层 | 中 | 2-3 天 |
@@ -968,20 +1080,22 @@ CREATE TABLE trades (
 ### 总体进度
 
 - **基础设施层**: ✅ 100% (日志系统 + 配置系统)
+- **网络层**: ✅ 80% (HTTP 客户端 + Tushare API，待扩展 CSV/数据库数据源)
 - **数据层**: ⏳ 0%
-- **网络层**: ⏳ 0%
 - **业务层**: ⏳ 0%
 - **分析层**: ⏳ 0%
 - **输出层**: ⏳ 0%
 
-**整体进度**: 约 15% (2/13 个主要模块)
+**整体进度**: 约 30% (3/10 个主要模块)
 
 ---
 
-**文档版本**: 1.1.0  
+**文档版本**: 1.2.1  
 **最后更新**: 2026-02-01  
 **维护者**: Development Team  
 **变更记录**: 
+- 2026-02-01: 优化 HTTP 客户端，移除 HTTPS 支持，简化依赖（不需要 OpenSSL）
+- 2026-02-01: 添加网络层模块完成标记，更新设计模式应用，更新开发进度（30%）
 - 2026-02-01: 添加配置系统完成标记，更新开发进度
 - 2026-01-31: 初始版本，日志系统完成
 

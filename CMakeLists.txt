@@ -48,6 +48,30 @@ target_link_libraries(log_lib PUBLIC
     dotenv
 )
 
+# 添加网络库
+add_library(network_lib STATIC
+    network/http/HttpClient.cpp
+    network/http/TushareClient.cpp
+    network/TushareDataSource.cpp
+    network/DataSourceFactory.cpp
+)
+
+target_include_directories(network_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/network/http
+    ${CMAKE_CURRENT_SOURCE_DIR}/log
+    ${CMAKE_CURRENT_SOURCE_DIR}/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-httplib
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include
+)
+
+target_link_libraries(network_lib PUBLIC
+    httplib::httplib
+    nlohmann_json::nlohmann_json
+    log_lib
+    config_lib
+)
+
 # 创建可执行文件
 add_executable(stock_for_cpp main.cpp)
 
@@ -55,6 +79,7 @@ add_executable(stock_for_cpp main.cpp)
 target_link_libraries(stock_for_cpp PRIVATE
     config_lib
     log_lib
+    network_lib
     spdlog::spdlog
     sqlpp11::sqlpp11
     nlohmann_json::nlohmann_json
@@ -66,6 +91,7 @@ target_link_libraries(stock_for_cpp PRIVATE
 target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/log
+    ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/spdlog/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/sqlpp11/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include
