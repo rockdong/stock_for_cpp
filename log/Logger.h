@@ -14,24 +14,34 @@
 #include "ILogger.h"
 #include "LoggerFactory.h"
 #include "LoggerManager.h"
-#include "dotenv.h"
 
 namespace logger {
 
 /**
  * @brief 初始化日志系统
- * @param env_file .env 文件路径
+ * @param config 日志配置对象
  * 
  * 使用示例：
  * @code
- * logger::init(".env");
+ * logger::LogConfig config;
+ * logger::init(config);
  * @endcode
  */
-inline void init(const char* env_file = ".env") {
-    // 加载环境变量
-    dotenv::init(env_file);
-    
-    // 创建配置并初始化日志管理器
+inline void init(const LogConfig& config) {
+    // 使用提供的配置初始化日志管理器
+    LoggerManager::getInstance().initialize(config);
+}
+
+/**
+ * @brief 初始化日志系统（从环境变量）
+ * 
+ * 使用示例：
+ * @code
+ * logger::init();
+ * @endcode
+ */
+inline void init() {
+    // 创建配置（从环境变量读取）并初始化日志管理器
     LogConfig config;
     LoggerManager::getInstance().initialize(config);
 }

@@ -32,7 +32,7 @@ LOG_ASYNC_QUEUE_SIZE=8192
 
 int main() {
     // 初始化日志系统
-    log::init(".env");
+    logger::init(".env");
     
     // 记录日志
     LOG_INFO("应用程序启动");
@@ -71,10 +71,10 @@ LOG_CRITICAL("严重错误");
 
 ```cpp
 // 为不同模块创建日志器
-auto db_logger = log::getLogger("database");
+auto db_logger = logger::getLogger("database");
 db_logger->info("数据库连接成功");
 
-auto net_logger = log::getLogger("network");
+auto net_logger = logger::getLogger("network");
 net_logger->info("网络请求完成");
 
 // 或使用宏
@@ -85,16 +85,16 @@ LOG_ERROR_N("network", "连接失败");
 ### 3. 动态调整日志级别
 
 ```cpp
-auto logger = log::getLogger();
-logger->setLevel(log::LogLevel::DEBUG);  // 设置为 DEBUG
-logger->setLevel(log::LogLevel::ERROR);  // 设置为 ERROR
+auto logger = logger::getLogger();
+logger->setLevel(logger::LogLevel::DEBUG);  // 设置为 DEBUG
+logger->setLevel(logger::LogLevel::ERROR);  // 设置为 ERROR
 ```
 
 ### 4. 手动刷新日志
 
 ```cpp
 // 刷新所有日志（确保写入磁盘）
-log::LoggerManager::getInstance().flushAll();
+logger::LoggerManager::getInstance().flushAll();
 ```
 
 ## ⚙️ 配置说明

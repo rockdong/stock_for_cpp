@@ -81,7 +81,7 @@ log/
 
 int main() {
     // 初始化日志系统
-    log::init(".env");
+    logger::init(".env");
     
     // 使用宏记录日志
     LOG_INFO("应用程序启动");
@@ -97,7 +97,7 @@ int main() {
 
 ```cpp
 // 获取或创建命名日志器
-auto db_logger = log::getLogger("database");
+auto db_logger = logger::getLogger("database");
 db_logger->info("数据库连接成功");
 db_logger->error("数据库查询失败");
 
@@ -109,11 +109,11 @@ LOG_INFO_N("network", "网络请求完成");
 
 ```cpp
 // 创建自定义配置
-log::LogConfig custom_config;
+logger::LogConfig custom_config;
 // 配置会自动从环境变量读取
 
 // 创建自定义日志器
-auto custom_logger = log::LoggerManager::getInstance()
+auto custom_logger = logger::LoggerManager::getInstance()
     .createLogger("custom", custom_config);
 custom_logger->info("使用自定义配置");
 ```
@@ -122,10 +122,10 @@ custom_logger->info("使用自定义配置");
 
 ```cpp
 // 刷新所有日志
-log::LoggerManager::getInstance().flushAll();
+logger::LoggerManager::getInstance().flushAll();
 
 // 关闭日志系统
-log::LoggerManager::getInstance().shutdown();
+logger::LoggerManager::getInstance().shutdown();
 ```
 
 ## 日志级别
@@ -181,7 +181,7 @@ enum class LoggerType {
 
 ## 注意事项
 
-1. 确保在使用日志前调用 `log::init()`
+1. 确保在使用日志前调用 `logger::init()`
 2. 程序退出前建议调用 `flushAll()` 确保日志写入
 3. 日志文件目录会自动创建
 4. 异步模式下，程序异常退出可能丢失部分日志

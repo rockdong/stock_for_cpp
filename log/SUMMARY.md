@@ -81,7 +81,7 @@ log/
 
 int main() {
     // 初始化（从 .env 加载配置）
-    log::init(".env");
+    logger::init(".env");
     
     // 使用宏记录日志
     LOG_INFO("应用程序启动");
@@ -97,10 +97,10 @@ int main() {
 
 ```cpp
 // 为不同模块创建日志器
-auto db_logger = log::getLogger("database");
+auto db_logger = logger::getLogger("database");
 db_logger->info("数据库连接成功");
 
-auto net_logger = log::getLogger("network");
+auto net_logger = logger::getLogger("network");
 net_logger->info("网络请求完成");
 
 // 使用宏
@@ -310,9 +310,9 @@ TEST(LoggerManagerTest, Singleton) {
 ```cpp
 // 测试完整流程
 TEST(LogSystemTest, EndToEnd) {
-    log::init(".env");
+    logger::init(".env");
     LOG_INFO("测试消息");
-    log::LoggerManager::getInstance().flushAll();
+    logger::LoggerManager::getInstance().flushAll();
     // 验证日志文件内容
 }
 ```

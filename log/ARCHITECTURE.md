@@ -233,7 +233,7 @@ class GlogLogger : public ILogger {
 │       SpdlogLogger              │
 │      (spdlog 实现)              │
 ├─────────────────────────────────┤
-│ - logger_: spdlog::logger       │
+│ - logger_: spdlogger::logger       │
 ├─────────────────────────────────┤
 │ + SpdlogLogger(config, name)    │
 │ + trace(message): void          │
@@ -411,8 +411,8 @@ public:
 spdlog 本身是线程安全的，使用 `_mt` 后缀的 sink：
 
 ```cpp
-auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(...);
+auto console_sink = std::make_shared<spdlogger::sinks::stdout_color_sink_mt>();
+auto file_sink = std::make_shared<spdlogger::sinks::rotating_file_sink_mt>(...);
 ```
 
 ## 10. 性能优化
@@ -423,8 +423,8 @@ auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(...);
 
 ```cpp
 if (config.isAsyncEnabled()) {
-    spdlog::init_thread_pool(config.getAsyncQueueSize(), 1);
-    logger_ = std::make_shared<spdlog::async_logger>(...);
+    spdlogger::init_thread_pool(config.getAsyncQueueSize(), 1);
+    logger_ = std::make_shared<spdlogger::async_logger>(...);
 }
 ```
 
@@ -433,7 +433,7 @@ if (config.isAsyncEnabled()) {
 使用宏避免不必要的字符串构造：
 
 ```cpp
-#define LOG_INFO(msg) log::getLogger()->info(msg)
+#define LOG_INFO(msg) logger::getLogger()->info(msg)
 ```
 
 ### 10.3 日志级别过滤

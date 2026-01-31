@@ -49,7 +49,7 @@ make
 
 int main() {
     // 初始化日志系统
-    log::init(".env");
+    logger::init(".env");
     
     // 使用宏记录日志
     LOG_TRACE("这是追踪信息");
@@ -67,16 +67,19 @@ int main() {
 
 ```cpp
 #include "Logger.h"
+#include "Config.h"
 
 int main() {
-    log::init(".env");
+    // 初始化
+    config::Config::getInstance().initialize(".env");
+    logger::init();
     
     // 获取命名日志器
-    auto db_logger = log::getLogger("database");
+    auto db_logger = logger::getLogger("database");
     db_logger->info("数据库连接成功");
     db_logger->debug("执行 SQL: SELECT * FROM users");
     
-    auto net_logger = log::getLogger("network");
+    auto net_logger = logger::getLogger("network");
     net_logger->info("HTTP 请求: GET /api/data");
     net_logger->warn("请求超时，正在重试...");
     
@@ -92,15 +95,17 @@ int main() {
 
 ```cpp
 #include "Logger.h"
+#include "Config.h"
 
 int main() {
-    log::init(".env");
+    // 初始化配置模块
+    config::Config::getInstance().initialize(".env");
     
     // 创建自定义配置的日志器
-    log::LogConfig custom_config;
+    logger::LogConfig custom_config;
     // 配置会自动从环境变量读取
     
-    auto custom_logger = log::LoggerManager::getInstance()
+    auto custom_logger = logger::LoggerManager::getInstance()
         .createLogger("custom", custom_config);
     
     custom_logger->info("使用自定义配置");
@@ -115,16 +120,16 @@ int main() {
 #include "Logger.h"
 
 int main() {
-    log::init(".env");
+    logger::init(".env");
     
-    auto logger = log::getLogger();
+    auto logger = logger::getLogger();
     
     // 设置为 DEBUG 级别
-    logger->setLevel(log::LogLevel::DEBUG);
+    logger->setLevel(logger::LogLevel::DEBUG);
     logger->debug("现在可以看到调试信息");
     
     // 设置为 ERROR 级别
-    logger->setLevel(log::LogLevel::ERROR);
+    logger->setLevel(logger::LogLevel::ERROR);
     logger->info("这条信息不会显示");
     logger->error("只有错误及以上级别会显示");
     
@@ -138,17 +143,17 @@ int main() {
 #include "Logger.h"
 
 int main() {
-    log::init(".env");
+    logger::init(".env");
     
     LOG_INFO("开始处理任务");
     
     // 手动刷新所有日志
-    log::LoggerManager::getInstance().flushAll();
+    logger::LoggerManager::getInstance().flushAll();
     
     LOG_INFO("任务完成");
     
     // 程序退出前关闭日志系统
-    log::LoggerManager::getInstance().shutdown();
+    logger::LoggerManager::getInstance().shutdown();
     
     return 0;
 }
@@ -283,7 +288,7 @@ LOG_ASYNC_QUEUE_SIZE=8192
 #include "ILogger.h"
 #include <glog/logging.h>
 
-namespace log {
+namespace logger {
 
 class GlogLogger : public ILogger {
 public:
@@ -299,7 +304,7 @@ public:
     void flush() override;
 };
 
-} // namespace log
+} // namespace logger
 ```
 
 2. 在 `LoggerFactory` 中注册：
