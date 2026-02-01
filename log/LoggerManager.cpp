@@ -1,5 +1,6 @@
 #include "LoggerManager.h"
 #include <spdlog/spdlog.h>
+#include "Logger.h"
 
 namespace logger {
 

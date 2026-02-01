@@ -77,12 +77,6 @@ int main() {
     }
     LOG_INFO("数据库连接成功");
 
-    // 创建数据库表
-    if (!conn.createTables()) {
-        LOG_ERROR("创建数据库表失败");
-        return 1;
-    }
-
     // 创建 StockDAO 实例
     data::StockDAO stockDao;
 
@@ -129,8 +123,15 @@ int main() {
     
     LOG_INFO("应用程序正常退出");
     
+    // 断开数据库连接
+    conn.disconnect();
+    
+    LOG_INFO("应用程序退出");
+    
     // 显式关闭日志系统，避免析构顺序问题
     logger::LoggerManager::getInstance().shutdown();
+
+    std::cout << "应用程序退出" << std::endl;
     
     return 0;
 }

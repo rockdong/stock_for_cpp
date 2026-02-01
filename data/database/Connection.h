@@ -92,6 +92,13 @@ private:
     Connection() = default;
     ~Connection();
 
+    /**
+     * @brief 内部执行 SQL 语句（不加锁，假设调用者已持有锁）
+     * @param sql SQL 语句
+     * @return 是否成功
+     */
+    bool executeInternal(const std::string& sql);
+
     std::unique_ptr<sqlpp::sqlite3::connection> db_;
     std::string dbPath_;
     bool connected_ = false;

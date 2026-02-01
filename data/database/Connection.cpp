@@ -84,6 +84,12 @@ sqlpp::sqlite3::connection* Connection::getDb() {
 
 bool Connection::execute(const std::string& sql) {
     std::lock_guard<std::mutex> lock(mutex_);
+    return executeInternal(sql);
+}
+
+bool Connection::executeInternal(const std::string& sql) {
+    // 此方法假设调用者已经持有 mutex_ 锁
+    LOG_INFO("执行 SQL: " + sql);
     
     if (!connected_ || !db_) {
         LOG_ERROR("数据库未连接");
@@ -92,6 +98,7 @@ bool Connection::execute(const std::string& sql) {
     
     try {
         db_->execute(sql);
+        LOG_INFO("SQL 执行成功");
         return true;
     } catch (const std::exception& e) {
         LOG_ERROR("SQL 执行失败: " + std::string(e.what()));
@@ -112,6 +119,9 @@ bool Connection::rollback() {
 }
 
 bool Connection::createTables() {
+    // 此方法假设调用者已经持有 mutex_ 锁（从 connect() 调用）
+    LOG_INFO("创建数据库表");
+    
     // 创建股票表
     std::string createStocksTable = R"(
         CREATE TABLE IF NOT EXISTS stocks (
@@ -128,7 +138,8 @@ bool Connection::createTables() {
         )
     )";
     
-    if (!execute(createStocksTable)) {
+    LOG_INFO("创建 stocks 表");
+    if (!executeInternal(createStocksTable)) {
         LOG_ERROR("创建 stocks 表失败");
         return false;
     }
@@ -152,7 +163,8 @@ bool Connection::createTables() {
         )
     )";
     
-    if (!execute(createPricesTable)) {
+    LOG_INFO("创建 prices 表");
+    if (!executeInternal(createPricesTable)) {
         LOG_ERROR("创建 prices 表失败");
         return false;
     }
@@ -171,15 +183,16 @@ bool Connection::createTables() {
         )
     )";
     
-    if (!execute(createTradesTable)) {
+    LOG_INFO("创建 trades 表");
+    if (!executeInternal(createTradesTable)) {
         LOG_ERROR("创建 trades 表失败");
         return false;
     }
     
     // 创建索引
-    execute("CREATE INDEX IF NOT EXISTS idx_stocks_ts_code ON stocks(ts_code)");
-    execute("CREATE INDEX IF NOT EXISTS idx_prices_stock_date ON prices(stock_id, trade_date)");
-    execute("CREATE INDEX IF NOT EXISTS idx_trades_stock_time ON trades(stock_id, trade_time)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_stocks_ts_code ON stocks(ts_code)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_prices_stock_date ON prices(stock_id, trade_date)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_trades_stock_time ON trades(stock_id, trade_time)");
     
     LOG_INFO("数据库表创建成功");
     return true;
