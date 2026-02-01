@@ -114,6 +114,29 @@ target_link_libraries(data_lib PUBLIC
     config_lib
 )
 
+# 添加分析层库
+add_library(analysis_lib STATIC
+    analysis/IndicatorBase.cpp
+    analysis/indicators/MA.cpp
+    analysis/indicators/EMA.cpp
+    analysis/indicators/MACD.cpp
+    analysis/indicators/RSI.cpp
+    analysis/indicators/KDJ.cpp
+    analysis/indicators/BOLL.cpp
+    analysis/indicators/ATR.cpp
+    analysis/IndicatorFactory.cpp
+)
+
+target_include_directories(analysis_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis/indicators
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ta-lib/include
+)
+
+target_link_libraries(analysis_lib PUBLIC
+    ta-lib-static
+)
+
 # 创建可执行文件
 add_executable(stock_for_cpp main.cpp)
 
@@ -123,12 +146,14 @@ target_link_libraries(stock_for_cpp PRIVATE
     log_lib
     network_lib
     data_lib
+    analysis_lib
     spdlog::spdlog
     sqlpp11::sqlpp11
     sqlite3
     nlohmann_json::nlohmann_json
     httplib::httplib
     dotenv
+    ta-lib-static
 )
 
 # 包含第三方库头文件目录
@@ -137,6 +162,7 @@ target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/data
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/spdlog/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/sqlpp11/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include

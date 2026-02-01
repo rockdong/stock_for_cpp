@@ -100,12 +100,12 @@ int main() {
     if (stock_list.empty()) {
         LOG_INFO("数据库为空，从 Tushare API 获取股票列表...");
         auto dataSource = network::DataSourceFactory::createFromConfig();
-        auto api_stock_list = dataSource->getStockList();
-        LOG_INFO("从 API 获取到 " + std::to_string(api_stock_list.size()) + " 只股票");
+        stock_list = dataSource->getStockList();
+        LOG_INFO("从 API 获取到 " + std::to_string(stock_list.size()) + " 只股票");
         
         // 转换并保存到数据库
         std::vector<data::Stock> stocks_to_save;
-        for (const auto& api_stock : api_stock_list) {
+        for (const auto& api_stock : stock_list) {
             data::Stock stock;
             stock.ts_code = api_stock.ts_code;
             stock.symbol = api_stock.symbol;
@@ -120,8 +120,15 @@ int main() {
         int saved_count = stockDao.batchInsert(stocks_to_save);
         LOG_INFO("成功保存 " + std::to_string(saved_count) + " 只股票到数据库");
     }
-    
-    LOG_INFO("应用程序正常退出");
+
+    for (const auto& stock : stock_list) {
+        LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name);
+        // 循环 日 周 月
+        for (const auto& freq : {"d", "w", "m"}) {
+            auto data = dataSource->getQuoteData(stock.ts_code, "", "", freq);
+            LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(data.size()));
+        }
+    }
     
     // 测试新增的周线和月线接口
     LOG_INFO("========================================");

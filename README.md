@@ -6,12 +6,12 @@
 
 ## 📦 集成的开源库
 
-- **spdlog** - 高性能日志库
-- **dotenv-cpp** - 环境变量管理
-- **nlohmann/json** - JSON 处理
-- **cpp-httplib** - HTTP 客户端（⚠️ 仅 HTTP，不支持 HTTPS）
-- **sqlpp11** - SQL 查询构建器
-- **ta-lib** - 技术分析库
+- **spdlog** - 高性能日志库 ✅
+- **dotenv-cpp** - 环境变量管理 ✅
+- **nlohmann/json** - JSON 处理 ✅
+- **cpp-httplib** - HTTP 客户端（⚠️ 仅 HTTP，不支持 HTTPS）✅
+- **sqlpp11** - SQL 查询构建器 ✅
+- **ta-lib** - 技术分析库 ✅
 
 ### ⚠️ 重要说明
 
@@ -72,6 +72,19 @@ HTTP 客户端和 Tushare Pro API 封装。
 - ✅ **CSV 支持**：读写 CSV 文件
 - ✅ **线程安全**：使用互斥锁保护共享资源
 
+### 5. 分析层 (analysis::)
+
+技术指标计算，基于 TA-Lib 库实现。
+
+#### 特性
+
+- ✅ **7种技术指标**：MA、EMA、MACD、RSI、KDJ、BOLL、ATR
+- ✅ **多种使用方式**：静态方法、对象方式、工厂模式
+- ✅ **类型安全**：C++ 强类型系统，智能指针管理
+- ✅ **设计模式**：策略模式、工厂模式、模板方法模式
+- ✅ **易于扩展**：统一接口，便于添加新指标
+- ✅ **错误处理**：完善的数据验证和异常处理
+
 ### 快速开始
 
 #### 1. 创建配置文件
@@ -89,6 +102,7 @@ cp env.example .env
 #include "Config.h"
 #include "Network.h"
 #include "Data.h"
+#include "Analysis.h"
 
 int main() {
     // 初始化配置
@@ -117,6 +131,24 @@ int main() {
     }
     
     LOG_INFO("股票数据已保存到数据库");
+    
+    // 使用分析层计算技术指标
+    std::vector<double> prices = {10.0, 11.0, 12.0, 11.5, 13.0, 14.0, 13.5, 15.0};
+    
+    // 计算移动平均线
+    auto ma = analysis::MA::compute(prices, 5);
+    LOG_INFO("MA(5) 计算完成");
+    
+    // 计算 RSI
+    auto rsi = analysis::RSI::compute(prices, 14);
+    LOG_INFO("RSI(14) 计算完成");
+    
+    // 使用工厂模式创建指标
+    auto indicator = analysis::IndicatorFactory::create("MACD", {
+        {"fastPeriod", 12}, {"slowPeriod", 26}, {"signalPeriod", 9}
+    });
+    auto result = indicator->calculate(prices);
+    LOG_INFO("MACD 指标计算完成");
     
     return 0;
 }
@@ -154,6 +186,10 @@ make
 #### 数据层文档
 - **[Data.h](data/Data.h)** - 统一头文件和使用说明
 
+#### 分析层文档
+- **[README.md](analysis/README.md)** - 完整使用文档（400+ 行）
+- **[SUMMARY.md](analysis/SUMMARY.md)** - 开发总结
+
 #### 项目文档
 - **[DESIGN.md](DESIGN.md)** - 系统设计文档
 - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - 快速参考
@@ -174,16 +210,33 @@ stock_for_cpp/
 ├── config/                # 配置系统 (已完成 ✅)
 │   ├── Config.h/cpp       # 配置管理类
 │   └── *.md               # 文档
-├── network/               # 网络层 (已完成 ✅)
-│   ├── http/              # HTTP 客户端
-│   │   ├── HttpClient.h/cpp    # HTTP 客户端封装
-│   │   └── TushareClient.h/cpp # Tushare API 客户端
-│   ├── IDataSource.h      # 数据源接口
-│   ├── TushareDataSource.h/cpp # Tushare 数据源实现
-│   ├── DataSourceFactory.h/cpp # 数据源工厂
-│   ├── Network.h          # 统一头文件
-│   ├── *.md               # 文档
-│   └── examples/          # 使用示例
+├── data/                  # 数据层 (已完成 ✅)
+│   ├── database/          # 数据库访问
+│   │   ├── Connection.h/cpp    # 数据库连接
+│   │   ├── StockDAO.h/cpp      # 股票数据访问对象
+│   │   └── PriceDAO.h/cpp      # 价格数据访问对象
+│   ├── cache/             # 缓存管理
+│   │   ├── ICache.h       # 缓存接口
+│   │   └── MemoryCache.h/cpp   # 内存缓存
+│   ├── file/              # 文件存储
+│   │   ├── CSVReader.h/cpp     # CSV 读取
+│   │   └── CSVWriter.h/cpp     # CSV 写入
+│   └── Data.h             # 统一头文件
+├── analysis/              # 分析层 (已完成 ✅)
+│   ├── IIndicator.h       # 指标接口
+│   ├── IndicatorBase.h/cpp # 指标基类
+│   ├── indicators/        # 技术指标
+│   │   ├── MA.h/cpp       # 移动平均线
+│   │   ├── EMA.h/cpp      # 指数移动平均线
+│   │   ├── MACD.h/cpp     # MACD 指标
+│   │   ├── RSI.h/cpp      # RSI 指标
+│   │   ├── KDJ.h/cpp      # KDJ 指标
+│   │   ├── BOLL.h/cpp     # 布林带
+│   │   └── ATR.h/cpp      # 平均真实波幅
+│   ├── IndicatorFactory.h/cpp # 指标工厂
+│   ├── Analysis.h         # 统一头文件
+│   ├── README.md          # 使用文档
+│   └── SUMMARY.md         # 开发总结
 ├── thirdparty/            # 第三方库
 │   ├── spdlog/
 │   ├── dotenv-cpp/
@@ -265,7 +318,7 @@ DB_PASSWORD=password
 #include "Logger.h"
 
 int main() {
-    log::init(".env");
+    logger::init(".env");
     
     LOG_TRACE("追踪信息");
     LOG_DEBUG("调试信息");
@@ -278,24 +331,78 @@ int main() {
 }
 ```
 
+### 技术指标计算
+
+```cpp
+#include "Analysis.h"
+
+int main() {
+    std::vector<double> prices = {10.0, 11.0, 12.0, 11.5, 13.0, 14.0, 13.5, 15.0};
+    
+    // 方法1：静态方法（最简单）
+    auto ma = analysis::MA::compute(prices, 5);
+    auto rsi = analysis::RSI::compute(prices, 14);
+    
+    // 方法2：对象方式
+    analysis::MA maIndicator(20);
+    auto result = maIndicator.calculate(prices);
+    
+    // 方法3：工厂模式
+    auto indicator = analysis::IndicatorFactory::create("MACD", {
+        {"fastPeriod", 12}, {"slowPeriod", 26}, {"signalPeriod", 9}
+    });
+    auto macdResult = indicator->calculate(prices);
+    
+    return 0;
+}
+```
+
 ### 命名日志器
 
 ```cpp
 #include "Logger.h"
 
 int main() {
-    log::init(".env");
+    logger::init(".env");
     
     // 为不同模块创建日志器
-    auto db_logger = log::getLogger("database");
+    auto db_logger = logger::getLogger("database");
     db_logger->info("数据库连接成功");
     
-    auto net_logger = log::getLogger("network");
+    auto net_logger = logger::getLogger("network");
     net_logger->info("网络请求完成");
     
     // 使用宏
     LOG_INFO_N("database", "查询完成");
     LOG_ERROR_N("network", "连接失败");
+    
+    return 0;
+}
+```
+
+### 数据库操作
+
+```cpp
+#include "Data.h"
+
+int main() {
+    // 连接数据库
+    auto& conn = data::database::Connection::getInstance();
+    conn.connect("stock.db");
+    
+    // 创建 DAO
+    data::database::StockDAO stockDao(conn);
+    stockDao.createTable();
+    
+    // 插入数据
+    StockInfo stock{"000001.SZ", "平安银行", "深交所", "银行"};
+    stockDao.insert(stock);
+    
+    // 查询数据
+    auto result = stockDao.findBySymbol("000001.SZ");
+    if (result) {
+        std::cout << "找到股票: " << result->name << std::endl;
+    }
     
     return 0;
 }
@@ -363,8 +470,9 @@ cat logs/app.log
 - [x] 完善股票数据获取模块（已完成）
 - [x] 实现数据库存储功能（已完成）
 - [x] 添加数据缓存（已完成）
-- [ ] 实现技术分析指标
+- [x] 实现技术分析指标（已完成）
 - [ ] 实现策略引擎
+- [ ] 实现回测系统
 - [ ] 添加单元测试
 
 ## 📊 开发进度
@@ -372,11 +480,11 @@ cat logs/app.log
 - **基础设施层**: ✅ 100% (日志系统 + 配置系统)
 - **网络层**: ✅ 100% (HTTP 客户端 + Tushare API)
 - **数据层**: ✅ 100% (数据库 + 缓存 + 文件操作)
+- **分析层**: ✅ 100% (7种技术指标 + 工厂模式)
 - **业务层**: ⏳ 0%
-- **分析层**: ⏳ 0%
 - **输出层**: ⏳ 0%
 
-**整体进度**: 约 50%
+**整体进度**: 约 67% (4/6 个主要模块)
 
 ## 📞 联系方式
 
@@ -384,7 +492,7 @@ cat logs/app.log
 
 ---
 
-**版本**: 1.1.0  
+**版本**: 1.2.0  
 **更新日期**: 2026-02-01  
-**整体进度**: 50% (4/8 个主要模块)
+**整体进度**: 67% (4/6 个主要模块)
 
