@@ -4,6 +4,17 @@ project(stock_for_cpp)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ========== 禁用 cpp-httplib 的 SSL 支持 ==========
+# 必须在 add_subdirectory(thirdparty/cpp-httplib) 之前设置
+set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "Disable OpenSSL support" FORCE)
+set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "Do not require OpenSSL" FORCE)
+set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "Disable ZLIB support" FORCE)
+set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "Disable Brotli support" FORCE)
+set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "Disable ZSTD support" FORCE)
+
+# 强制禁用 OpenSSL（防止自动检测）
+set(HTTPLIB_IS_USING_OPENSSL OFF CACHE BOOL "Force disable OpenSSL" FORCE)
+
 # 添加第三方库子目录
 add_subdirectory(thirdparty/spdlog)
 add_subdirectory(thirdparty/sqlpp11)
@@ -55,6 +66,10 @@ add_library(network_lib STATIC
     network/TushareDataSource.cpp
     network/DataSourceFactory.cpp
 )
+
+# 注意：不要定义 CPPHTTPLIB_OPENSSL_SUPPORT
+# httplib.h 使用 #ifdef 检查，定义为 0 也会被认为启用了
+# 我们通过 HTTPLIB_USE_OPENSSL_IF_AVAILABLE=OFF 来禁用 SSL
 
 target_include_directories(network_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/network

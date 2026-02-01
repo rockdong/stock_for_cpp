@@ -1,6 +1,7 @@
 #include "TushareDataSource.h"
 #include "Config.h"
 #include "Logger.h"
+#include <unordered_map>
 
 namespace network {
 
@@ -19,15 +20,46 @@ TushareDataSource::TushareDataSource(const std::string& api_token) {
 }
 
 std::vector<StockBasic> TushareDataSource::getStockList() {
-    LOG_DEBUG("获取股票列表");
+    return getStockList("L", "");
+}
+
+std::vector<StockBasic> TushareDataSource::getStockList(
+    const std::string& list_status,
+    const std::string& exchange) {
     
-    auto response = client_->getStockBasic("L", "");
+    LOG_DEBUG("获取股票列表 [状态=" + list_status + ", 交易所=" + 
+              (exchange.empty() ? "全部" : exchange) + "]");
+    
+    auto response = client_->getStockBasic(list_status, exchange);
     
     if (response.isSuccess()) {
         return parseStockBasic(response);
     } else {
         LOG_ERROR("获取股票列表失败: " + response.msg);
         return {};
+    }
+}
+
+StockBasic TushareDataSource::getStockInfo(const std::string& ts_code) {
+    LOG_DEBUG("获取股票信息: " + ts_code);
+    
+    // 使用通用查询接口，指定 ts_code 参数
+    std::map<std::string, std::string> params;
+    params["ts_code"] = ts_code;
+    
+    auto response = client_->query("stock_basic", params);
+    
+    if (response.isSuccess()) {
+        auto stocks = parseStockBasic(response);
+        if (!stocks.empty()) {
+            return stocks[0];
+        } else {
+            LOG_WARN("未找到股票: " + ts_code);
+            return StockBasic{};
+        }
+    } else {
+        LOG_ERROR("获取股票信息失败: " + response.msg);
+        return StockBasic{};
     }
 }
 
@@ -87,38 +119,47 @@ std::vector<StockBasic> TushareDataSource::parseStockBasic(const TushareResponse
         auto fields = response.data["fields"].get<std::vector<std::string>>();
         auto items = response.data["items"];
         
-        // 查找字段索引
-        int ts_code_idx = -1, symbol_idx = -1, name_idx = -1;
-        int area_idx = -1, industry_idx = -1, market_idx = -1, list_date_idx = -1;
-        
+        // 构建字段索引映射
+        std::unordered_map<std::string, size_t> field_index;
         for (size_t i = 0; i < fields.size(); ++i) {
-            if (fields[i] == "ts_code") ts_code_idx = i;
-            else if (fields[i] == "symbol") symbol_idx = i;
-            else if (fields[i] == "name") name_idx = i;
-            else if (fields[i] == "area") area_idx = i;
-            else if (fields[i] == "industry") industry_idx = i;
-            else if (fields[i] == "market") market_idx = i;
-            else if (fields[i] == "list_date") list_date_idx = i;
+            field_index[fields[i]] = i;
         }
+        
+        // 辅助函数：安全获取字符串字段
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
         
         // 解析数据
         for (const auto& item : items) {
             StockBasic stock;
             
-            if (ts_code_idx >= 0 && !item[ts_code_idx].is_null())
-                stock.ts_code = item[ts_code_idx].get<std::string>();
-            if (symbol_idx >= 0 && !item[symbol_idx].is_null())
-                stock.symbol = item[symbol_idx].get<std::string>();
-            if (name_idx >= 0 && !item[name_idx].is_null())
-                stock.name = item[name_idx].get<std::string>();
-            if (area_idx >= 0 && !item[area_idx].is_null())
-                stock.area = item[area_idx].get<std::string>();
-            if (industry_idx >= 0 && !item[industry_idx].is_null())
-                stock.industry = item[industry_idx].get<std::string>();
-            if (market_idx >= 0 && !item[market_idx].is_null())
-                stock.market = item[market_idx].get<std::string>();
-            if (list_date_idx >= 0 && !item[list_date_idx].is_null())
-                stock.list_date = item[list_date_idx].get<std::string>();
+            // 基础字段
+            stock.ts_code = get_string(item, "ts_code");
+            stock.symbol = get_string(item, "symbol");
+            stock.name = get_string(item, "name");
+            
+            // 详细信息
+            stock.area = get_string(item, "area");
+            stock.industry = get_string(item, "industry");
+            stock.fullname = get_string(item, "fullname");
+            stock.enname = get_string(item, "enname");
+            stock.cnspell = get_string(item, "cnspell");
+            
+            // 市场信息
+            stock.market = get_string(item, "market");
+            stock.exchange = get_string(item, "exchange");
+            stock.curr_type = get_string(item, "curr_type");
+            
+            // 上市信息
+            stock.list_status = get_string(item, "list_status");
+            stock.list_date = get_string(item, "list_date");
+            stock.delist_date = get_string(item, "delist_date");
+            stock.is_hs = get_string(item, "is_hs");
             
             result.push_back(stock);
         }
@@ -144,52 +185,54 @@ std::vector<StockData> TushareDataSource::parseStockData(const TushareResponse& 
         auto fields = response.data["fields"].get<std::vector<std::string>>();
         auto items = response.data["items"];
         
-        // 查找字段索引
-        int ts_code_idx = -1, trade_date_idx = -1;
-        int open_idx = -1, high_idx = -1, low_idx = -1, close_idx = -1;
-        int pre_close_idx = -1, change_idx = -1, pct_chg_idx = -1;
-        int vol_idx = -1, amount_idx = -1;
-        
+        // 构建字段索引映射
+        std::unordered_map<std::string, size_t> field_index;
         for (size_t i = 0; i < fields.size(); ++i) {
-            if (fields[i] == "ts_code") ts_code_idx = i;
-            else if (fields[i] == "trade_date") trade_date_idx = i;
-            else if (fields[i] == "open") open_idx = i;
-            else if (fields[i] == "high") high_idx = i;
-            else if (fields[i] == "low") low_idx = i;
-            else if (fields[i] == "close") close_idx = i;
-            else if (fields[i] == "pre_close") pre_close_idx = i;
-            else if (fields[i] == "change") change_idx = i;
-            else if (fields[i] == "pct_chg") pct_chg_idx = i;
-            else if (fields[i] == "vol") vol_idx = i;
-            else if (fields[i] == "amount") amount_idx = i;
+            field_index[fields[i]] = i;
         }
+        
+        // 辅助函数：安全获取字符串字段
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
+        
+        // 辅助函数：安全获取 double 字段
+        auto get_double = [&](const json& item, const std::string& field_name) -> double {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<double>();
+            }
+            return 0.0;
+        };
+        
+        // 辅助函数：安全获取 long 字段
+        auto get_long = [&](const json& item, const std::string& field_name) -> long {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<long>();
+            }
+            return 0;
+        };
         
         // 解析数据
         for (const auto& item : items) {
             StockData data;
             
-            if (ts_code_idx >= 0 && !item[ts_code_idx].is_null())
-                data.ts_code = item[ts_code_idx].get<std::string>();
-            if (trade_date_idx >= 0 && !item[trade_date_idx].is_null())
-                data.trade_date = item[trade_date_idx].get<std::string>();
-            if (open_idx >= 0 && !item[open_idx].is_null())
-                data.open = item[open_idx].get<double>();
-            if (high_idx >= 0 && !item[high_idx].is_null())
-                data.high = item[high_idx].get<double>();
-            if (low_idx >= 0 && !item[low_idx].is_null())
-                data.low = item[low_idx].get<double>();
-            if (close_idx >= 0 && !item[close_idx].is_null())
-                data.close = item[close_idx].get<double>();
-            if (pre_close_idx >= 0 && !item[pre_close_idx].is_null())
-                data.pre_close = item[pre_close_idx].get<double>();
-            if (change_idx >= 0 && !item[change_idx].is_null())
-                data.change = item[change_idx].get<double>();
-            if (pct_chg_idx >= 0 && !item[pct_chg_idx].is_null())
-                data.pct_chg = item[pct_chg_idx].get<double>();
-            if (vol_idx >= 0 && !item[vol_idx].is_null())
-                data.volume = item[vol_idx].get<long>();
-            if (amount_idx >= 0 && !item[amount_idx].is_null())
-                data.amount = item[amount_idx].get<double>();
+            data.ts_code = get_string(item, "ts_code");
+            data.trade_date = get_string(item, "trade_date");
+            data.open = get_double(item, "open");
+            data.high = get_double(item, "high");
+            data.low = get_double(item, "low");
+            data.close = get_double(item, "close");
+            data.pre_close = get_double(item, "pre_close");
+            data.change = get_double(item, "change");
+            data.pct_chg = get_double(item, "pct_chg");
+            data.volume = get_long(item, "vol");
+            data.amount = get_double(item, "amount");
             
             result.push_back(data);
         }

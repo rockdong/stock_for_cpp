@@ -1,6 +1,8 @@
 #include <iostream>
 #include "Logger.h"
 #include "Config.h"
+#include "DataSourceFactory.h"
+#include "TushareDataSource.h"
 
 int main() {
     // 初始化配置系统
@@ -59,8 +61,18 @@ int main() {
     
     // 刷新所有日志
     logger::LoggerManager::getInstance().flushAll();
+
+    // 获取股票列表
+    auto dataSource = network::DataSourceFactory::createFromConfig();
+    auto stock_list = dataSource->getStockList();
+    for (const auto& stock : stock_list) {
+        LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name);
+    }
     
     LOG_INFO("应用程序正常退出");
+    
+    // 显式关闭日志系统，避免析构顺序问题
+    logger::LoggerManager::getInstance().shutdown();
     
     return 0;
 }

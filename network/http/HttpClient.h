@@ -4,6 +4,11 @@
 #include <string>
 #include <map>
 #include <memory>
+
+// 禁用 SSL 支持（本项目只使用 HTTP）
+// 注意：httplib.h 使用 #ifdef 检查，所以不要定义这个宏
+// CMakeLists.txt 中已经通过 HTTPLIB_USE_OPENSSL_IF_AVAILABLE=OFF 禁用了
+
 #include <httplib.h>
 
 namespace network {

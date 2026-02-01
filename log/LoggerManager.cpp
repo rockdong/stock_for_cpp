@@ -92,12 +92,26 @@ void LoggerManager::flushAll() {
 }
 
 void LoggerManager::shutdown() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    // 使用 try_lock 避免在析构时出现死锁或 mutex 已销毁的问题
+    std::unique_lock<std::mutex> lock(mutex_, std::try_to_lock);
+    
+    if (!lock.owns_lock()) {
+        // 如果无法获取锁，说明可能在析构阶段，直接返回
+        return;
+    }
+    
+    if (!initialized_) {
+        return;
+    }
     
     // 刷新所有日志
     for (auto& pair : loggers_) {
         if (pair.second) {
-            pair.second->flush();
+            try {
+                pair.second->flush();
+            } catch (...) {
+                // 忽略刷新时的异常
+            }
         }
     }
     
@@ -105,13 +119,37 @@ void LoggerManager::shutdown() {
     loggers_.clear();
     
     // 关闭 spdlog
-    spdlog::shutdown();
+    try {
+        spdlog::shutdown();
+    } catch (...) {
+        // 忽略关闭时的异常
+    }
     
     initialized_ = false;
 }
 
 LoggerManager::~LoggerManager() {
-    shutdown();
+    // 在析构时不使用锁，直接清理
+    try {
+        // 刷新所有日志
+        for (auto& pair : loggers_) {
+            if (pair.second) {
+                try {
+                    pair.second->flush();
+                } catch (...) {
+                    // 忽略异常
+                }
+            }
+        }
+        
+        // 清空日志器
+        loggers_.clear();
+        
+        // 关闭 spdlog
+        spdlog::shutdown();
+    } catch (...) {
+        // 析构函数中不抛出异常
+    }
 }
 
 } // namespace logger

@@ -31,10 +31,28 @@ public:
     ~TushareDataSource() override = default;
 
     /**
-     * @brief 获取股票列表
+     * @brief 获取股票列表（默认获取所有上市股票）
      * @return 股票基本信息列表
      */
     std::vector<StockBasic> getStockList() override;
+    
+    /**
+     * @brief 获取股票列表（带参数）
+     * @param list_status 上市状态（L上市 D退市 P暂停上市，默认L）
+     * @param exchange 交易所（SSE上交所 SZSE深交所，默认为空表示全部）
+     * @return 股票基本信息列表
+     */
+    std::vector<StockBasic> getStockList(
+        const std::string& list_status,
+        const std::string& exchange
+    ) override;
+    
+    /**
+     * @brief 根据股票代码获取股票信息
+     * @param ts_code 股票代码（如 000001.SZ）
+     * @return 股票基本信息
+     */
+    StockBasic getStockInfo(const std::string& ts_code) override;
 
     /**
      * @brief 获取股票日线数据

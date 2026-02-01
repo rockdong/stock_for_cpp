@@ -28,6 +28,61 @@
 - ✅ **高性能**: 优化的数据处理和存储
 - ✅ **易维护**: 清晰的代码结构和文档
 
+## ⚠️ 重要技术决策
+
+### 1. HTTP-Only 架构（不使用 SSL/HTTPS）
+
+**决策**: 项目只使用 HTTP 协议，不支持 HTTPS，不依赖 OpenSSL
+
+**原因**:
+- ✅ **数据源需求**: Tushare Pro API 使用 HTTP 协议（`http://api.waditu.com`）
+- ✅ **简化依赖**: 不需要安装和链接 OpenSSL 库
+- ✅ **避免架构冲突**: 避免 ARM64/x86_64 架构不匹配问题
+- ✅ **降低复杂度**: 减少编译配置和部署难度
+- ✅ **满足需求**: 完全满足股票数据获取的业务需求
+
+**实现方式**:
+```cmake
+# CMakeLists.txt 中禁用 SSL 支持
+add_definitions(-DCPPHTTPLIB_OPENSSL_SUPPORT=0)
+
+target_compile_definitions(network_lib PRIVATE
+    CPPHTTPLIB_OPENSSL_SUPPORT=0
+)
+```
+
+**影响范围**:
+- `network/http/HttpClient`: 只创建 `httplib::Client`，不创建 `httplib::SSLClient`
+- `CMakeLists.txt`: 添加编译选项禁用 SSL
+- 所有网络请求都使用 HTTP 协议
+
+**注意事项**:
+- ⚠️ 如果将来需要访问 HTTPS API，需要重新启用 SSL 支持并链接 OpenSSL
+- ⚠️ 当前架构不支持 HTTPS 请求，尝试访问 HTTPS URL 会失败
+
+### 2. 配置驱动架构
+
+**决策**: 所有配置通过 `.env` 文件管理，使用配置模块统一访问
+
+**优势**:
+- ✅ 集中管理：所有配置在一个文件中
+- ✅ 环境隔离：开发/测试/生产环境配置分离
+- ✅ 安全性：敏感信息（如 API Token）不进入代码库
+- ✅ 灵活性：无需重新编译即可修改配置
+
+### 3. 模块化命名空间
+
+**决策**: 每个模块使用独立的命名空间
+
+**命名空间列表**:
+- `logger::` - 日志系统
+- `config::` - 配置管理
+- `network::` - 网络层
+- `data::` - 数据层（待开发）
+- `core::` - 核心业务（待开发）
+- `analysis::` - 分析层（待开发）
+- `output::` - 输出层（待开发）
+
 ## 🏗️ 系统架构
 
 ### 整体架构图
@@ -128,9 +183,18 @@
 | **spdlog** | v1.x | 高性能日志库 | MIT | 已集成 |
 | **dotenv-cpp** | master | 环境变量管理 | BSD | 已集成 |
 | **nlohmann/json** | develop | JSON 处理 | MIT | 已集成 |
-| **cpp-httplib** | master | HTTP 客户端 | MIT | 已集成，只使用 HTTP |
+| **cpp-httplib** | master | HTTP 客户端 | MIT | ⚠️ 已集成，**仅 HTTP，禁用 SSL** |
 | **sqlpp11** | main | SQL 查询构建器 | BSD | 待集成 |
 | **ta-lib** | main | 技术分析库 | BSD | 待集成 |
+
+### 重要说明
+
+#### cpp-httplib 配置
+- ⚠️ **仅支持 HTTP 协议**
+- ⚠️ **已禁用 SSL/HTTPS 支持**
+- ⚠️ **不依赖 OpenSSL**
+- ✅ 通过 `CPPHTTPLIB_OPENSSL_SUPPORT=0` 编译选项禁用
+- ✅ 完全满足 Tushare API（HTTP）的需求
 
 ### 开发工具
 - **编译器**: GCC 7+, Clang 5+, MSVC 2017+
@@ -1090,10 +1154,11 @@ CREATE TABLE trades (
 
 ---
 
-**文档版本**: 1.2.1  
+**文档版本**: 1.3.0  
 **最后更新**: 2026-02-01  
 **维护者**: Development Team  
 **变更记录**: 
+- 2026-02-01: 添加"重要技术决策"章节，明确 HTTP-Only 架构和技术选型说明
 - 2026-02-01: 优化 HTTP 客户端，移除 HTTPS 支持，简化依赖（不需要 OpenSSL）
 - 2026-02-01: 添加网络层模块完成标记，更新设计模式应用，更新开发进度（30%）
 - 2026-02-01: 添加配置系统完成标记，更新开发进度
