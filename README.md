@@ -85,6 +85,19 @@ HTTP 客户端和 Tushare Pro API 封装。
 - ✅ **易于扩展**：统一接口，便于添加新指标
 - ✅ **错误处理**：完善的数据验证和异常处理
 
+### 6. 工具类模块 (utils::)
+
+提供时间、字符串、数学计算等基础工具函数。
+
+#### 特性
+
+- ✅ **TimeUtil**：时间工具类（28个方法）- 日期格式化、解析、计算、判断
+- ✅ **StringUtil**：字符串工具类（37个方法）- 修剪、分割、转换、判断
+- ✅ **MathUtil**：数学工具类（34个方法）- 统计、金融计算、数组操作
+- ✅ **静态方法**：无需实例化，直接调用
+- ✅ **跨平台**：支持 Windows/Linux/macOS
+- ✅ **错误处理**：返回默认值或 NaN，不抛出异常
+
 ### 快速开始
 
 #### 1. 创建配置文件
@@ -103,6 +116,7 @@ cp env.example .env
 #include "Network.h"
 #include "Data.h"
 #include "Analysis.h"
+#include "Utils.h"
 
 int main() {
     // 初始化配置
@@ -150,6 +164,13 @@ int main() {
     auto result = indicator->calculate(prices);
     LOG_INFO("MACD 指标计算完成");
     
+    // 使用工具类
+    std::string today = utils::TimeUtil::today();
+    LOG_INFO("今天日期: " + today);
+    
+    double avg = utils::MathUtil::mean(prices);
+    LOG_INFO("价格平均值: " + utils::StringUtil::toString(avg, 2));
+    
     return 0;
 }
 ```
@@ -189,6 +210,10 @@ make
 #### 分析层文档
 - **[README.md](analysis/README.md)** - 完整使用文档（400+ 行）
 - **[SUMMARY.md](analysis/SUMMARY.md)** - 开发总结
+
+#### 工具类文档
+- **[README.md](utils/README.md)** - 完整使用文档（650+ 行）
+- **[SUMMARY.md](utils/SUMMARY.md)** - 开发总结（300+ 行）
 
 #### 项目文档
 - **[DESIGN.md](DESIGN.md)** - 系统设计文档
@@ -235,6 +260,13 @@ stock_for_cpp/
 │   │   └── ATR.h/cpp      # 平均真实波幅
 │   ├── IndicatorFactory.h/cpp # 指标工厂
 │   ├── Analysis.h         # 统一头文件
+│   ├── README.md          # 使用文档
+│   └── SUMMARY.md         # 开发总结
+├── utils/                 # 工具类模块 (已完成 ✅)
+│   ├── TimeUtil.h/cpp     # 时间工具（28个方法）
+│   ├── StringUtil.h/cpp   # 字符串工具（37个方法）
+│   ├── MathUtil.h/cpp     # 数学工具（34个方法）
+│   ├── Utils.h            # 统一头文件
 │   ├── README.md          # 使用文档
 │   └── SUMMARY.md         # 开发总结
 ├── thirdparty/            # 第三方库
@@ -408,6 +440,31 @@ int main() {
 }
 ```
 
+### 工具类使用
+
+```cpp
+#include "Utils.h"
+
+int main() {
+    // 时间工具
+    std::string today = utils::TimeUtil::today();
+    int days = utils::TimeUtil::daysBetween("2024-01-01", "2024-12-31");
+    
+    // 字符串工具
+    std::string trimmed = utils::StringUtil::trim("  hello  ");
+    auto parts = utils::StringUtil::split("a,b,c", ",");
+    int value = utils::StringUtil::toInt("123");
+    
+    // 数学工具
+    std::vector<double> prices = {100.0, 102.0, 101.0, 105.0, 103.0};
+    double avg = utils::MathUtil::mean(prices);
+    double std = utils::MathUtil::stddev(prices);
+    double maxDD = utils::MathUtil::maxDrawdown(prices);
+    
+    return 0;
+}
+```
+
 ## 🚀 性能优化
 
 ### 开发环境
@@ -471,20 +528,21 @@ cat logs/app.log
 - [x] 实现数据库存储功能（已完成）
 - [x] 添加数据缓存（已完成）
 - [x] 实现技术分析指标（已完成）
+- [x] 实现工具类模块（已完成）
 - [ ] 实现策略引擎
 - [ ] 实现回测系统
 - [ ] 添加单元测试
 
 ## 📊 开发进度
 
-- **基础设施层**: ✅ 100% (日志系统 + 配置系统)
+- **基础设施层**: ✅ 100% (日志系统 + 配置系统 + 工具类)
 - **网络层**: ✅ 100% (HTTP 客户端 + Tushare API)
 - **数据层**: ✅ 100% (数据库 + 缓存 + 文件操作)
 - **分析层**: ✅ 100% (7种技术指标 + 工厂模式)
 - **业务层**: ⏳ 0%
 - **输出层**: ⏳ 0%
 
-**整体进度**: 约 67% (4/6 个主要模块)
+**整体进度**: 约 67% (5/7 个主要模块)
 
 ## 📞 联系方式
 
@@ -492,7 +550,7 @@ cat logs/app.log
 
 ---
 
-**版本**: 1.2.0  
+**版本**: 1.3.0  
 **更新日期**: 2026-02-01  
-**整体进度**: 67% (4/6 个主要模块)
+**整体进度**: 67% (5/7 个主要模块)
 

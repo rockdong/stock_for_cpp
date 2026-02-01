@@ -89,6 +89,7 @@ target_link_libraries(network_lib PUBLIC
 
 # 添加数据层库
 add_library(data_lib STATIC
+    data/Data.cpp
     data/database/Connection.cpp
     data/database/StockDAO.cpp
     data/database/PriceDAO.cpp
@@ -104,6 +105,7 @@ target_include_directories(data_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/data/file
     ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/sqlpp11/include
 )
 
@@ -137,6 +139,17 @@ target_link_libraries(analysis_lib PUBLIC
     ta-lib-static
 )
 
+# 添加工具类库
+add_library(utils_lib STATIC
+    utils/TimeUtil.cpp
+    utils/StringUtil.cpp
+    utils/MathUtil.cpp
+)
+
+target_include_directories(utils_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+)
+
 # 创建可执行文件
 add_executable(stock_for_cpp main.cpp)
 
@@ -147,6 +160,7 @@ target_link_libraries(stock_for_cpp PRIVATE
     network_lib
     data_lib
     analysis_lib
+    utils_lib
     spdlog::spdlog
     sqlpp11::sqlpp11
     sqlite3
@@ -163,6 +177,7 @@ target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/data
     ${CMAKE_CURRENT_SOURCE_DIR}/analysis
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/spdlog/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/sqlpp11/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include

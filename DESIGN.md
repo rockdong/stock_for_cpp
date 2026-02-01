@@ -78,9 +78,10 @@ target_compile_definitions(network_lib PRIVATE
 - `logger::` - 日志系统
 - `config::` - 配置管理
 - `network::` - 网络层
-- `data::` - 数据层（待开发）
+- `data::` - 数据层
+- `analysis::` - 分析层
+- `utils::` - 工具类
 - `core::` - 核心业务（待开发）
-- `analysis::` - 分析层（待开发）
 - `output::` - 输出层（待开发）
 
 ## 🏗️ 系统架构
@@ -274,10 +275,13 @@ stock_for_cpp/
 │   ├── Portfolio.h/cpp        # 投资组合
 │   └── StockManager.h/cpp     # 股票管理器
 │
-├── utils/                      # 工具类模块 (待开发)
+├── utils/                      # 工具类模块 (已完成 ✅)
 │   ├── TimeUtil.h/cpp         # 时间工具
 │   ├── StringUtil.h/cpp       # 字符串工具
-│   └── MathUtil.h/cpp         # 数学工具
+│   ├── MathUtil.h/cpp         # 数学工具
+│   ├── Utils.h                # 统一头文件
+│   ├── README.md              # 使用文档
+│   └── SUMMARY.md             # 开发总结
 │
 ├── config/                     # 配置模块 (已完成 ✅)
 │   ├── Config.h               # 配置管理类（头文件）
@@ -1051,7 +1055,88 @@ int main() {
 - `analysis/README.md` - 完整使用文档（400+ 行）
 - `analysis/SUMMARY.md` - 开发总结
 
-### 6. 输出层设计 (待开发)
+### 6. 工具类模块 (已完成 ✅)
+
+#### 设计原则
+- ✅ 完全遵循 SOLID 原则
+- ✅ 工具类模式（静态方法）
+- ✅ 功能分类清晰
+- ✅ 易于使用和扩展
+
+#### 核心类
+- `TimeUtil`: 时间工具类（28个方法）
+- `StringUtil`: 字符串工具类（37个方法）
+- `MathUtil`: 数学工具类（34个方法）
+
+#### 命名空间
+```cpp
+namespace utils {
+    // 所有工具类相关函数
+}
+```
+
+#### 功能概览
+
+**TimeUtil - 时间工具类**：
+- 格式化功能（now, today, timestampToString, format）
+- 解析功能（stringToTimestamp, parseDate, parseDateTime）
+- 计算功能（daysBetween, addDays, addMonths, addYears）
+- 判断功能（isLeapYear, isValidDate, isWeekday, isWeekend）
+- 信息获取（getDayOfWeek, getDayOfYear, getDaysInMonth等）
+- 日期范围（getDateRange, getWeekStart/End, getMonthStart/End等）
+
+**StringUtil - 字符串工具类**：
+- 修剪功能（trim, ltrim, rtrim）
+- 分割与连接（split, join）
+- 大小写转换（toUpper, toLower, capitalize）
+- 查找与替换（startsWith, endsWith, contains, replaceAll）
+- 判断功能（isBlank, isNumeric, isInteger, isFloat等）
+- 类型转换（toInt, toDouble, toString等）
+- 格式化功能（padLeft, padRight, repeat, reverse, truncate）
+
+**MathUtil - 数学工具类**：
+- 基础统计（mean, median, variance, stddev, percentile等）
+- 相关性分析（covariance, correlation）
+- 金融计算（returnRate, sharpeRatio, maxDrawdown, volatility, cagr）
+- 数值处理（round, ceil, floor, clamp, equals）
+- 数组操作（normalize, standardize, cumsum, diff, pctChange）
+- 移动计算（movingAverage, movingStddev, movingMax, movingMin）
+
+#### 使用示例
+```cpp
+#include "Utils.h"
+
+int main() {
+    // 时间工具
+    std::string today = utils::TimeUtil::today();
+    int days = utils::TimeUtil::daysBetween("2024-01-01", "2024-12-31");
+    
+    // 字符串工具
+    std::string trimmed = utils::StringUtil::trim("  hello  ");
+    auto parts = utils::StringUtil::split("a,b,c", ",");
+    
+    // 数学工具
+    std::vector<double> values = {1.0, 2.0, 3.0, 4.0, 5.0};
+    double avg = utils::MathUtil::mean(values);
+    double std = utils::MathUtil::stddev(values);
+    
+    return 0;
+}
+```
+
+#### 特性
+- ✅ **99个实用方法**: 覆盖时间、字符串、数学计算
+- ✅ **静态方法**: 无需实例化，直接调用
+- ✅ **类型安全**: C++ 强类型系统
+- ✅ **错误处理**: 返回默认值或 NaN，不抛出异常
+- ✅ **跨平台**: 支持 Windows/Linux/macOS
+- ✅ **高性能**: 优化的算法实现
+
+#### 文档
+- `utils/README.md` - 完整使用文档（650+ 行）
+- `utils/SUMMARY.md` - 开发总结（300+ 行）
+
+### 7. 输出层设计 (待开发)
 
 #### 控制台输出
 ```cpp
@@ -1084,7 +1169,7 @@ public:
 } // namespace output
 ```
 
-### 7. 核心业务设计 (待开发)
+### 8. 核心业务设计 (待开发)
 
 #### 股票实体
 ```cpp
@@ -1234,19 +1319,25 @@ CHART_ENABLED=false
 - ✅ 指标工厂
 - ✅ 完整文档和示例
 
-### Phase 5: 业务层 (待开发)
+### Phase 5: 工具类模块 (已完成 ✅)
+- ✅ TimeUtil - 时间工具类（28个方法）
+- ✅ StringUtil - 字符串工具类（37个方法）
+- ✅ MathUtil - 数学工具类（34个方法）
+- ✅ 统一头文件和文档
+
+### Phase 6: 业务层 (待开发)
 - ⏳ 股票实体设计
 - ⏳ 股票管理器
 - ⏳ 交易记录
 - ⏳ 投资组合
 
-### Phase 6: 输出层 (待开发)
+### Phase 7: 输出层 (待开发)
 - ⏳ 控制台输出
 - ⏳ CSV 导出
 - ⏳ JSON 导出
 - ⏳ 图表生成
 
-### Phase 7: 测试与优化 (待开发)
+### Phase 8: 测试与优化 (待开发)
 - ⏳ 单元测试
 - ⏳ 集成测试
 - ⏳ 性能优化
@@ -1427,6 +1518,7 @@ CREATE TABLE trades (
 | 网络层 | ✅ 完成 | 2026-02-01 | 10 个 | ~1200 行 | ~1000 行 |
 | 数据层 | ✅ 完成 | 2026-02-01 | 13 个 | ~1500 行 | 待完善 |
 | 分析层 | ✅ 完成 | 2026-02-01 | 19 个 | ~1000 行 | ~500 行 |
+| 工具类模块 | ✅ 完成 | 2026-02-01 | 9 个 | ~1950 行 | ~950 行 |
 
 ### 待开发模块 ⏳
 
@@ -1440,21 +1532,22 @@ CREATE TABLE trades (
 
 ### 总体进度
 
-- **基础设施层**: ✅ 100% (日志系统 + 配置系统)
+- **基础设施层**: ✅ 100% (日志系统 + 配置系统 + 工具类)
 - **网络层**: ✅ 100% (HTTP 客户端 + Tushare API)
 - **数据层**: ✅ 100% (数据库 + 缓存 + 文件操作)
 - **分析层**: ✅ 100% (7种技术指标 + 工厂模式)
 - **业务层**: ⏳ 0%
 - **输出层**: ⏳ 0%
 
-**整体进度**: 约 67% (4/6 个主要模块)
+**整体进度**: 约 67% (5/7 个主要模块)
 
 ---
 
-**文档版本**: 1.5.0  
+**文档版本**: 1.6.0  
 **最后更新**: 2026-02-01  
 **维护者**: Development Team  
 **变更记录**: 
+- 2026-02-01: 添加工具类模块完成标记，更新开发进度（67%），完善工具类设计文档
 - 2026-02-01: 添加分析层模块完成标记，更新开发进度（67%），完善分析层设计文档
 - 2026-02-01: 添加数据层模块完成标记，更新开发进度（50%），完善数据层设计文档
 - 2026-02-01: 添加"重要技术决策"章节，明确 HTTP-Only 架构和技术选型说明

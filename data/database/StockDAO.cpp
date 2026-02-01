@@ -5,6 +5,33 @@
 
 namespace data {
 
+// 辅助函数：从数据库行构建 Stock 对象
+namespace {
+    template<typename Row>
+    Stock buildStockFromRow(const Row& row) {
+        Stock stock;
+        stock.id = row.id;
+        stock.ts_code = row.tsCode;
+        stock.symbol = row.symbol.is_null() ? "" : row.symbol.value();
+        stock.name = row.name.is_null() ? "" : row.name.value();
+        stock.area = row.area.is_null() ? "" : row.area.value();
+        stock.industry = row.industry.is_null() ? "" : row.industry.value();
+        stock.fullname = row.fullname.is_null() ? "" : row.fullname.value();
+        stock.enname = row.enname.is_null() ? "" : row.enname.value();
+        stock.cnspell = row.cnspell.is_null() ? "" : row.cnspell.value();
+        stock.market = row.market.is_null() ? "" : row.market.value();
+        stock.exchange = row.exchange.is_null() ? "" : row.exchange.value();
+        stock.curr_type = row.currType.is_null() ? "" : row.currType.value();
+        stock.list_status = row.listStatus.is_null() ? "" : row.listStatus.value();
+        stock.list_date = row.listDate.is_null() ? "" : row.listDate.value();
+        stock.delist_date = row.delistDate.is_null() ? "" : row.delistDate.value();
+        stock.is_hs = row.isHs.is_null() ? "" : row.isHs.value();
+        stock.created_at = row.createdAt;
+        stock.updated_at = row.updatedAt;
+        return stock;
+    }
+}
+
 bool StockDAO::insert(const Stock& stock) {
     auto& conn = Connection::getInstance();
     if (!conn.isConnected()) {
@@ -22,8 +49,16 @@ bool StockDAO::insert(const Stock& stock) {
             stocks.name = stock.name,
             stocks.area = stock.area,
             stocks.industry = stock.industry,
+            stocks.fullname = stock.fullname,
+            stocks.enname = stock.enname,
+            stocks.cnspell = stock.cnspell,
             stocks.market = stock.market,
-            stocks.listDate = stock.list_date
+            stocks.exchange = stock.exchange,
+            stocks.currType = stock.curr_type,
+            stocks.listStatus = stock.list_status,
+            stocks.listDate = stock.list_date,
+            stocks.delistDate = stock.delist_date,
+            stocks.isHs = stock.is_hs
         ));
         
         LOG_DEBUG("插入股票成功: " + stock.ts_code);
@@ -69,18 +104,7 @@ std::optional<Stock> StockDAO::findByTsCode(const std::string& ts_code) {
         for (const auto& row : (*db)(sqlpp::select(all_of(stocks))
                                      .from(stocks)
                                      .where(stocks.tsCode == ts_code))) {
-            Stock stock;
-            stock.id = row.id;
-            stock.ts_code = row.tsCode;
-            stock.symbol = row.symbol;
-            stock.name = row.name;
-            stock.area = row.area.is_null() ? "" : row.area.value();
-            stock.industry = row.industry.is_null() ? "" : row.industry.value();
-            stock.market = row.market.is_null() ? "" : row.market.value();
-            stock.list_date = row.listDate.is_null() ? "" : row.listDate.value();
-            stock.created_at = row.createdAt;
-            stock.updated_at = row.updatedAt;
-            return stock;
+            return buildStockFromRow(row);
         }
         
         return std::nullopt;
@@ -104,18 +128,7 @@ std::optional<Stock> StockDAO::findById(int id) {
         for (const auto& row : (*db)(sqlpp::select(all_of(stocks))
                                      .from(stocks)
                                      .where(stocks.id == id))) {
-            Stock stock;
-            stock.id = row.id;
-            stock.ts_code = row.tsCode;
-            stock.symbol = row.symbol;
-            stock.name = row.name;
-            stock.area = row.area.is_null() ? "" : row.area.value();
-            stock.industry = row.industry.is_null() ? "" : row.industry.value();
-            stock.market = row.market.is_null() ? "" : row.market.value();
-            stock.list_date = row.listDate.is_null() ? "" : row.listDate.value();
-            stock.created_at = row.createdAt;
-            stock.updated_at = row.updatedAt;
-            return stock;
+            return buildStockFromRow(row);
         }
         
         return std::nullopt;
@@ -142,18 +155,7 @@ std::vector<Stock> StockDAO::findAll() {
                                      .from(stocks)
                                      .unconditionally()
                                      .order_by(stocks.tsCode.asc()))) {
-            Stock stock;
-            stock.id = row.id;
-            stock.ts_code = row.tsCode;
-            stock.symbol = row.symbol;
-            stock.name = row.name;
-            stock.area = row.area.is_null() ? "" : row.area.value();
-            stock.industry = row.industry.is_null() ? "" : row.industry.value();
-            stock.market = row.market.is_null() ? "" : row.market.value();
-            stock.list_date = row.listDate.is_null() ? "" : row.listDate.value();
-            stock.created_at = row.createdAt;
-            stock.updated_at = row.updatedAt;
-            result.push_back(stock);
+            result.push_back(buildStockFromRow(row));
         }
         
         LOG_DEBUG("查询到 " + std::to_string(result.size()) + " 只股票");
@@ -181,18 +183,7 @@ std::vector<Stock> StockDAO::findByMarket(const std::string& market) {
                                      .from(stocks)
                                      .where(stocks.market == market)
                                      .order_by(stocks.tsCode.asc()))) {
-            Stock stock;
-            stock.id = row.id;
-            stock.ts_code = row.tsCode;
-            stock.symbol = row.symbol;
-            stock.name = row.name;
-            stock.area = row.area.is_null() ? "" : row.area.value();
-            stock.industry = row.industry.is_null() ? "" : row.industry.value();
-            stock.market = row.market.is_null() ? "" : row.market.value();
-            stock.list_date = row.listDate.is_null() ? "" : row.listDate.value();
-            stock.created_at = row.createdAt;
-            stock.updated_at = row.updatedAt;
-            result.push_back(stock);
+            result.push_back(buildStockFromRow(row));
         }
         
         return result;
@@ -219,18 +210,7 @@ std::vector<Stock> StockDAO::findByIndustry(const std::string& industry) {
                                      .from(stocks)
                                      .where(stocks.industry == industry)
                                      .order_by(stocks.tsCode.asc()))) {
-            Stock stock;
-            stock.id = row.id;
-            stock.ts_code = row.tsCode;
-            stock.symbol = row.symbol;
-            stock.name = row.name;
-            stock.area = row.area.is_null() ? "" : row.area.value();
-            stock.industry = row.industry.is_null() ? "" : row.industry.value();
-            stock.market = row.market.is_null() ? "" : row.market.value();
-            stock.list_date = row.listDate.is_null() ? "" : row.listDate.value();
-            stock.created_at = row.createdAt;
-            stock.updated_at = row.updatedAt;
-            result.push_back(stock);
+            result.push_back(buildStockFromRow(row));
         }
         
         return result;
@@ -257,8 +237,16 @@ bool StockDAO::update(const Stock& stock) {
                   stocks.name = stock.name,
                   stocks.area = stock.area,
                   stocks.industry = stock.industry,
+                  stocks.fullname = stock.fullname,
+                  stocks.enname = stock.enname,
+                  stocks.cnspell = stock.cnspell,
                   stocks.market = stock.market,
-                  stocks.listDate = stock.list_date
+                  stocks.exchange = stock.exchange,
+                  stocks.currType = stock.curr_type,
+                  stocks.listStatus = stock.list_status,
+                  stocks.listDate = stock.list_date,
+                  stocks.delistDate = stock.delist_date,
+                  stocks.isHs = stock.is_hs
               )
               .where(stocks.tsCode == stock.ts_code));
         

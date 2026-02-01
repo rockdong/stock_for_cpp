@@ -127,12 +127,20 @@ bool Connection::createTables() {
         CREATE TABLE IF NOT EXISTS stocks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ts_code TEXT NOT NULL UNIQUE,
-            symbol TEXT NOT NULL,
-            name TEXT NOT NULL,
+            symbol TEXT,
+            name TEXT,
             area TEXT,
             industry TEXT,
+            fullname TEXT,
+            enname TEXT,
+            cnspell TEXT,
             market TEXT,
+            exchange TEXT,
+            curr_type TEXT,
+            list_status TEXT,
             list_date TEXT,
+            delist_date TEXT,
+            is_hs TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )

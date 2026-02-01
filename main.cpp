@@ -96,11 +96,12 @@ int main() {
         }
     }
 
+    auto dataSource = network::DataSourceFactory::createFromConfig();
+
     // 如果没有就通过接口获取并且保存到数据库中
     if (stock_list.empty()) {
         LOG_INFO("数据库为空，从 Tushare API 获取股票列表...");
-        auto dataSource = network::DataSourceFactory::createFromConfig();
-        stock_list = dataSource->getStockList();
+        auto stock_list = dataSource->getStockList();
         LOG_INFO("从 API 获取到 " + std::to_string(stock_list.size()) + " 只股票");
         
         // 转换并保存到数据库

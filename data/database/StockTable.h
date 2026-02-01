@@ -47,7 +47,7 @@ namespace StockTable_ {
                 const T& operator()() const { return symbol; }
             };
         };
-        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::require_insert>;
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
     };
 
     struct Name {
@@ -61,7 +61,7 @@ namespace StockTable_ {
                 const T& operator()() const { return name; }
             };
         };
-        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::require_insert>;
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
     };
 
     struct Area {
@@ -92,6 +92,48 @@ namespace StockTable_ {
         using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
     };
 
+    struct Fullname {
+        struct _alias_t {
+            static constexpr const char _literal[] = "fullname";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T fullname;
+                T& operator()() { return fullname; }
+                const T& operator()() const { return fullname; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
+    struct Enname {
+        struct _alias_t {
+            static constexpr const char _literal[] = "enname";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T enname;
+                T& operator()() { return enname; }
+                const T& operator()() const { return enname; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
+    struct Cnspell {
+        struct _alias_t {
+            static constexpr const char _literal[] = "cnspell";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T cnspell;
+                T& operator()() { return cnspell; }
+                const T& operator()() const { return cnspell; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
     struct Market {
         struct _alias_t {
             static constexpr const char _literal[] = "market";
@@ -106,6 +148,48 @@ namespace StockTable_ {
         using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
     };
 
+    struct Exchange {
+        struct _alias_t {
+            static constexpr const char _literal[] = "exchange";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T exchange;
+                T& operator()() { return exchange; }
+                const T& operator()() const { return exchange; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
+    struct CurrType {
+        struct _alias_t {
+            static constexpr const char _literal[] = "curr_type";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T currType;
+                T& operator()() { return currType; }
+                const T& operator()() const { return currType; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
+    struct ListStatus {
+        struct _alias_t {
+            static constexpr const char _literal[] = "list_status";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T listStatus;
+                T& operator()() { return listStatus; }
+                const T& operator()() const { return listStatus; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
     struct ListDate {
         struct _alias_t {
             static constexpr const char _literal[] = "list_date";
@@ -115,6 +199,34 @@ namespace StockTable_ {
                 T listDate;
                 T& operator()() { return listDate; }
                 const T& operator()() const { return listDate; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
+    struct DelistDate {
+        struct _alias_t {
+            static constexpr const char _literal[] = "delist_date";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T delistDate;
+                T& operator()() { return delistDate; }
+                const T& operator()() const { return delistDate; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
+    struct IsHs {
+        struct _alias_t {
+            static constexpr const char _literal[] = "is_hs";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T isHs;
+                T& operator()() { return isHs; }
+                const T& operator()() const { return isHs; }
             };
         };
         using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
@@ -156,8 +268,16 @@ struct StockTable : sqlpp::table_t<StockTable,
     StockTable_::Name,
     StockTable_::Area,
     StockTable_::Industry,
+    StockTable_::Fullname,
+    StockTable_::Enname,
+    StockTable_::Cnspell,
     StockTable_::Market,
+    StockTable_::Exchange,
+    StockTable_::CurrType,
+    StockTable_::ListStatus,
     StockTable_::ListDate,
+    StockTable_::DelistDate,
+    StockTable_::IsHs,
     StockTable_::CreatedAt,
     StockTable_::UpdatedAt>
 {
