@@ -216,15 +216,18 @@ stock_for_cpp/
 │   ├── Logger.h               # 统一头文件
 │   └── docs/                  # 日志系统文档
 │
-├── data/                       # 数据层模块 (待开发)
+├── data/                       # 数据层模块 (已完成 ✅)
 │   ├── database/              # 数据库访问
-│   │   ├── Connection.h/cpp   # 数据库连接
+│   │   ├── Connection.h/cpp   # 数据库连接（单例）
 │   │   ├── StockDAO.h/cpp     # 股票数据访问对象
-│   │   └── TransactionDAO.h/cpp # 交易数据访问对象
+│   │   └── PriceDAO.h/cpp     # 价格数据访问对象
 │   ├── cache/                 # 缓存管理
-│   │   └── MemoryCache.h/cpp  # 内存缓存
-│   └── file/                  # 文件存储
-│       └── CSVReader.h/cpp    # CSV 文件读取
+│   │   ├── ICache.h           # 缓存接口
+│   │   └── MemoryCache.h/cpp  # 内存缓存（LRU）
+│   ├── file/                  # 文件存储
+│   │   ├── CSVReader.h/cpp    # CSV 文件读取
+│   │   └── CSVWriter.h/cpp    # CSV 文件写入
+│   └── Data.h                 # 统一头文件
 │
 ├── network/                    # 网络层模块 (已完成 ✅)
 │   ├── http/                  # HTTP 客户端
@@ -604,33 +607,216 @@ getDefaultRsiPeriod()     // RSI 周期
 - `config/EXAMPLES.md` - 示例代码
 - `config/SUMMARY.md` - 开发总结
 
-### 3. 数据层设计 (待开发)
+### 3. 数据层 (已完成 ✅)
+
+#### 设计原则
+- ✅ 完全遵循 SOLID 原则
+- ✅ DAO 模式 + 单例模式
+- ✅ 从配置模块自动获取参数
+- ✅ 支持 SQLite 数据库
+
+#### 核心类
+- `Connection`: 数据库连接管理（单例）
+- `StockDAO`: 股票数据访问对象
+- `PriceDAO`: 价格数据访问对象
+- `ICache`: 缓存接口
+- `MemoryCache`: 内存缓存实现
+- `CSVReader`: CSV 文件读取
+- `CSVWriter`: CSV 文件写入
+
+#### 命名空间
+```cpp
+namespace data {
+    namespace database {
+        // 数据库相关类
+    }
+    namespace cache {
+        // 缓存相关类
+    }
+    namespace file {
+        // 文件操作相关类
+    }
+}
+```
 
 #### 数据库访问
 ```cpp
-namespace data {
+namespace data::database {
 
-// 数据库连接类
+// 数据库连接类（单例）
 class Connection {
 public:
     static Connection& getInstance();
-    bool connect(const std::string& connStr);
+    bool connect(const std::string& dbPath);
     void disconnect();
     bool isConnected() const;
+    sqlite3* getHandle();
+    
+    // 事务支持
+    bool beginTransaction();
+    bool commit();
+    bool rollback();
 };
 
 // 股票数据访问对象
 class StockDAO {
 public:
-    bool insert(const Stock& stock);
-    Stock findBySymbol(const std::string& symbol);
-    std::vector<Stock> findAll();
-    bool update(const Stock& stock);
+    explicit StockDAO(Connection& conn);
+    
+    bool createTable();
+    bool insert(const StockInfo& stock);
+    std::optional<StockInfo> findBySymbol(const std::string& symbol);
+    std::vector<StockInfo> findAll();
+    bool update(const StockInfo& stock);
     bool remove(const std::string& symbol);
+    size_t count();
 };
 
-} // namespace data
+// 价格数据访问对象
+class PriceDAO {
+public:
+    explicit PriceDAO(Connection& conn);
+    
+    bool createTable();
+    bool insert(const PriceData& price);
+    std::vector<PriceData> findBySymbol(const std::string& symbol);
+    std::vector<PriceData> findByDateRange(
+        const std::string& symbol,
+        const std::string& startDate,
+        const std::string& endDate
+    );
+    bool update(const PriceData& price);
+    bool remove(const std::string& symbol, const std::string& date);
+    size_t count();
+};
+
+} // namespace data::database
 ```
+
+#### 缓存系统
+```cpp
+namespace data::cache {
+
+// 缓存接口
+template<typename K, typename V>
+class ICache {
+public:
+    virtual ~ICache() = default;
+    virtual bool put(const K& key, const V& value) = 0;
+    virtual std::optional<V> get(const K& key) = 0;
+    virtual bool remove(const K& key) = 0;
+    virtual void clear() = 0;
+    virtual size_t size() const = 0;
+};
+
+// 内存缓存实现（LRU）
+template<typename K, typename V>
+class MemoryCache : public ICache<K, V> {
+public:
+    explicit MemoryCache(size_t maxSize = 1000, int ttlSeconds = 300);
+    
+    bool put(const K& key, const V& value) override;
+    std::optional<V> get(const K& key) override;
+    bool remove(const K& key) override;
+    void clear() override;
+    size_t size() const override;
+    
+    // 统计信息
+    size_t getHitCount() const;
+    size_t getMissCount() const;
+    double getHitRate() const;
+};
+
+} // namespace data::cache
+```
+
+#### 文件操作
+```cpp
+namespace data::file {
+
+// CSV 读取器
+class CSVReader {
+public:
+    explicit CSVReader(const std::string& filepath);
+    
+    bool open();
+    void close();
+    bool isOpen() const;
+    
+    std::vector<std::string> readHeader();
+    std::vector<std::vector<std::string>> readAll();
+    std::optional<std::vector<std::string>> readLine();
+    
+    void setDelimiter(char delimiter);
+    void setSkipEmptyLines(bool skip);
+};
+
+// CSV 写入器
+class CSVWriter {
+public:
+    explicit CSVWriter(const std::string& filepath);
+    
+    bool open();
+    void close();
+    bool isOpen() const;
+    
+    bool writeHeader(const std::vector<std::string>& header);
+    bool writeLine(const std::vector<std::string>& line);
+    bool writeAll(const std::vector<std::vector<std::string>>& data);
+    
+    void setDelimiter(char delimiter);
+};
+
+} // namespace data::file
+```
+
+#### 使用示例
+```cpp
+#include "Data.h"
+
+int main() {
+    // 数据库操作
+    auto& conn = data::database::Connection::getInstance();
+    conn.connect("stock.db");
+    
+    data::database::StockDAO stockDao(conn);
+    stockDao.createTable();
+    
+    // 插入股票
+    StockInfo stock{"000001.SZ", "平安银行", "深交所", "银行"};
+    stockDao.insert(stock);
+    
+    // 查询股票
+    auto result = stockDao.findBySymbol("000001.SZ");
+    if (result) {
+        std::cout << "找到股票: " << result->name << std::endl;
+    }
+    
+    // 缓存操作
+    data::cache::MemoryCache<std::string, StockInfo> cache(1000, 300);
+    cache.put("000001.SZ", stock);
+    auto cached = cache.get("000001.SZ");
+    
+    // CSV 操作
+    data::file::CSVWriter writer("stocks.csv");
+    writer.open();
+    writer.writeHeader({"symbol", "name", "market", "sector"});
+    writer.writeLine({"000001.SZ", "平安银行", "深交所", "银行"});
+    writer.close();
+    
+    return 0;
+}
+```
+
+#### 特性
+- ✅ **SQLite 支持**: 轻量级嵌入式数据库
+- ✅ **事务支持**: 支持事务的 ACID 特性
+- ✅ **连接池**: 单例模式管理数据库连接
+- ✅ **LRU 缓存**: 基于 LRU 算法的内存缓存
+- ✅ **TTL 支持**: 缓存项自动过期
+- ✅ **CSV 支持**: 读写 CSV 文件
+- ✅ **线程安全**: 使用互斥锁保护共享资源
+- ✅ **错误处理**: 完善的错误处理和日志记录
 
 ### 4. 网络层 (已完成 ✅)
 
@@ -927,11 +1113,11 @@ CHART_ENABLED=false
 - ✅ 数据源工厂
 - ✅ 完整文档和示例
 
-### Phase 3: 数据层 (待开发)
-- ⏳ 数据库连接池
-- ⏳ DAO 层实现
-- ⏳ 缓存系统
-- ⏳ 文件存储
+### Phase 3: 数据层 (已完成 ✅)
+- ✅ 数据库连接池
+- ✅ DAO 层实现（StockDAO、PriceDAO）
+- ✅ 缓存系统（MemoryCache）
+- ✅ 文件存储（CSVReader、CSVWriter）
 
 ### Phase 4: 业务层 (待开发)
 - ⏳ 股票实体设计
@@ -1130,6 +1316,7 @@ CREATE TABLE trades (
 | 日志系统 | ✅ 完成 | 2026-01-31 | 11 个 | ~800 行 | ~1000 行 |
 | 配置系统 | ✅ 完成 | 2026-01-31 | 2 个 | ~350 行 | ~500 行 |
 | 网络层 | ✅ 完成 | 2026-02-01 | 10 个 | ~1200 行 | ~1000 行 |
+| 数据层 | ✅ 完成 | 2026-02-01 | 13 个 | ~1500 行 | 待完善 |
 
 ### 待开发模块 ⏳
 
@@ -1144,20 +1331,21 @@ CREATE TABLE trades (
 ### 总体进度
 
 - **基础设施层**: ✅ 100% (日志系统 + 配置系统)
-- **网络层**: ✅ 80% (HTTP 客户端 + Tushare API，待扩展 CSV/数据库数据源)
-- **数据层**: ⏳ 0%
+- **网络层**: ✅ 100% (HTTP 客户端 + Tushare API)
+- **数据层**: ✅ 100% (数据库 + 缓存 + 文件操作)
 - **业务层**: ⏳ 0%
 - **分析层**: ⏳ 0%
 - **输出层**: ⏳ 0%
 
-**整体进度**: 约 30% (3/10 个主要模块)
+**整体进度**: 约 50% (4/8 个主要模块)
 
 ---
 
-**文档版本**: 1.3.0  
+**文档版本**: 1.4.0  
 **最后更新**: 2026-02-01  
 **维护者**: Development Team  
 **变更记录**: 
+- 2026-02-01: 添加数据层模块完成标记，更新开发进度（50%），完善数据层设计文档
 - 2026-02-01: 添加"重要技术决策"章节，明确 HTTP-Only 架构和技术选型说明
 - 2026-02-01: 优化 HTTP 客户端，移除 HTTPS 支持，简化依赖（不需要 OpenSSL）
 - 2026-02-01: 添加网络层模块完成标记，更新设计模式应用，更新开发进度（30%）

@@ -5,3 +5,5 @@ cmake-build-debug/
 .cache/
 .cursor/
 logs/
+
+stock.db

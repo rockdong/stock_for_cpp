@@ -58,6 +58,20 @@ HTTP 客户端和 Tushare Pro API 封装。
 - ✅ **工厂模式**：统一创建接口
 - ✅ **自动配置**：从配置模块获取参数
 
+### 4. 数据层 (data::)
+
+数据库访问、缓存管理和文件操作。
+
+#### 特性
+
+- ✅ **SQLite 支持**：轻量级嵌入式数据库
+- ✅ **DAO 模式**：StockDAO、PriceDAO
+- ✅ **事务支持**：支持事务的 ACID 特性
+- ✅ **LRU 缓存**：基于 LRU 算法的内存缓存
+- ✅ **TTL 支持**：缓存项自动过期
+- ✅ **CSV 支持**：读写 CSV 文件
+- ✅ **线程安全**：使用互斥锁保护共享资源
+
 ### 快速开始
 
 #### 1. 创建配置文件
@@ -74,6 +88,7 @@ cp env.example .env
 #include "Logger.h"
 #include "Config.h"
 #include "Network.h"
+#include "Data.h"
 
 int main() {
     // 初始化配置
@@ -88,6 +103,20 @@ int main() {
     auto stocks = source->getStockList();
     
     LOG_INFO("获取到 " + std::to_string(stocks.size()) + " 只股票");
+    
+    // 使用数据层存储数据
+    auto& conn = data::database::Connection::getInstance();
+    conn.connect("stock.db");
+    
+    data::database::StockDAO stockDao(conn);
+    stockDao.createTable();
+    
+    // 保存股票信息到数据库
+    for (const auto& stock : stocks) {
+        stockDao.insert(stock);
+    }
+    
+    LOG_INFO("股票数据已保存到数据库");
     
     return 0;
 }
@@ -121,6 +150,9 @@ make
 - **[README.md](network/README.md)** - 完整使用文档
 - **[SUMMARY.md](network/SUMMARY.md)** - 开发总结
 - **[examples/](network/examples/)** - 使用示例
+
+#### 数据层文档
+- **[Data.h](data/Data.h)** - 统一头文件和使用说明
 
 #### 项目文档
 - **[DESIGN.md](DESIGN.md)** - 系统设计文档
@@ -329,21 +361,22 @@ cat logs/app.log
 - [x] 完善日志系统（已完成）
 - [x] 实现配置管理（已完成）
 - [x] 完善股票数据获取模块（已完成）
-- [ ] 实现数据库存储功能
+- [x] 实现数据库存储功能（已完成）
+- [x] 添加数据缓存（已完成）
 - [ ] 实现技术分析指标
-- [ ] 添加数据缓存
+- [ ] 实现策略引擎
 - [ ] 添加单元测试
 
 ## 📊 开发进度
 
 - **基础设施层**: ✅ 100% (日志系统 + 配置系统)
-- **网络层**: ✅ 80% (HTTP 客户端 + Tushare API)
-- **数据层**: ⏳ 0%
+- **网络层**: ✅ 100% (HTTP 客户端 + Tushare API)
+- **数据层**: ✅ 100% (数据库 + 缓存 + 文件操作)
 - **业务层**: ⏳ 0%
 - **分析层**: ⏳ 0%
 - **输出层**: ⏳ 0%
 
-**整体进度**: 约 30%
+**整体进度**: 约 50%
 
 ## 📞 联系方式
 
@@ -351,7 +384,7 @@ cat logs/app.log
 
 ---
 
-**版本**: 1.0.0  
+**版本**: 1.1.0  
 **更新日期**: 2026-02-01  
-**整体进度**: 30% (3/10 个主要模块)
+**整体进度**: 50% (4/8 个主要模块)
 

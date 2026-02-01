@@ -87,6 +87,33 @@ target_link_libraries(network_lib PUBLIC
     config_lib
 )
 
+# 添加数据层库
+add_library(data_lib STATIC
+    data/database/Connection.cpp
+    data/database/StockDAO.cpp
+    data/database/PriceDAO.cpp
+    data/cache/MemoryCache.cpp
+    data/file/CSVReader.cpp
+    data/file/CSVWriter.cpp
+)
+
+target_include_directories(data_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/data
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/database
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/cache
+    ${CMAKE_CURRENT_SOURCE_DIR}/data/file
+    ${CMAKE_CURRENT_SOURCE_DIR}/log
+    ${CMAKE_CURRENT_SOURCE_DIR}/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/sqlpp11/include
+)
+
+target_link_libraries(data_lib PUBLIC
+    sqlpp11::sqlpp11
+    sqlite3
+    log_lib
+    config_lib
+)
+
 # 创建可执行文件
 add_executable(stock_for_cpp main.cpp)
 
@@ -95,8 +122,10 @@ target_link_libraries(stock_for_cpp PRIVATE
     config_lib
     log_lib
     network_lib
+    data_lib
     spdlog::spdlog
     sqlpp11::sqlpp11
+    sqlite3
     nlohmann_json::nlohmann_json
     httplib::httplib
     dotenv
@@ -107,6 +136,7 @@ target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/data
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/spdlog/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/sqlpp11/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include

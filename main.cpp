@@ -3,6 +3,8 @@
 #include "Config.h"
 #include "DataSourceFactory.h"
 #include "TushareDataSource.h"
+#include "Connection.h"
+#include "StockDAO.h"
 
 int main() {
     // 初始化配置系统
@@ -62,11 +64,67 @@ int main() {
     // 刷新所有日志
     logger::LoggerManager::getInstance().flushAll();
 
-    // 获取股票列表
-    auto dataSource = network::DataSourceFactory::createFromConfig();
-    auto stock_list = dataSource->getStockList();
-    for (const auto& stock : stock_list) {
-        LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name);
+    // 初始化数据库连接
+    auto& conn = data::Connection::getInstance();
+    if (!conn.initialize("stock.db")) {
+        LOG_ERROR("数据库初始化失败");
+        return 1;
+    }
+    
+    if (!conn.connect()) {
+        LOG_ERROR("数据库连接失败");
+        return 1;
+    }
+    LOG_INFO("数据库连接成功");
+
+    // 创建数据库表
+    if (!conn.createTables()) {
+        LOG_ERROR("创建数据库表失败");
+        return 1;
+    }
+
+    // 创建 StockDAO 实例
+    data::StockDAO stockDao;
+
+    // 先从数据库中查询是否有股票列表
+    auto stock_list = stockDao.findAll();
+    LOG_INFO("数据库中已有 " + std::to_string(stock_list.size()) + " 只股票");
+    
+    if (!stock_list.empty()) {
+        // 只显示前 10 只股票
+        int count = 0;
+        for (const auto& stock : stock_list) {
+            LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name);
+            if (++count >= 10) {
+                LOG_INFO("... 还有 " + std::to_string(stock_list.size() - 10) + " 只股票");
+                break;
+            }
+        }
+    }
+
+    // 如果没有就通过接口获取并且保存到数据库中
+    if (stock_list.empty()) {
+        LOG_INFO("数据库为空，从 Tushare API 获取股票列表...");
+        auto dataSource = network::DataSourceFactory::createFromConfig();
+        auto api_stock_list = dataSource->getStockList();
+        LOG_INFO("从 API 获取到 " + std::to_string(api_stock_list.size()) + " 只股票");
+        
+        // 转换并保存到数据库
+        std::vector<data::Stock> stocks_to_save;
+        for (const auto& api_stock : api_stock_list) {
+            data::Stock stock;
+            stock.ts_code = api_stock.ts_code;
+            stock.symbol = api_stock.symbol;
+            stock.name = api_stock.name;
+            stock.area = api_stock.area;
+            stock.industry = api_stock.industry;
+            stock.market = api_stock.market;
+            stock.list_date = api_stock.list_date;
+            stocks_to_save.push_back(stock);
+        }
+        
+        int saved_count = stockDao.batchInsert(stocks_to_save);
+        LOG_INFO("成功保存 " + std::to_string(saved_count) + " 只股票到数据库");
     }
     
     LOG_INFO("应用程序正常退出");
