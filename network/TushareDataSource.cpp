@@ -80,6 +80,40 @@ std::vector<StockData> TushareDataSource::getDailyData(
     }
 }
 
+std::vector<StockData> TushareDataSource::getQuoteData(
+    const std::string& ts_code,
+    const std::string& start_date,
+    const std::string& end_date,
+    const std::string& freq) {
+    
+    std::string freq_name;
+    TushareResponse response;
+    
+    // 根据频率参数调用不同的接口
+    if (freq == "d" || freq == "D") {
+        freq_name = "日线";
+        response = client_->getDailyQuote(ts_code, "", start_date, end_date);
+    } else if (freq == "w" || freq == "W") {
+        freq_name = "周线";
+        response = client_->getWeeklyQuote(ts_code, "", start_date, end_date);
+    } else if (freq == "m" || freq == "M") {
+        freq_name = "月线";
+        response = client_->getMonthlyQuote(ts_code, "", start_date, end_date);
+    } else {
+        LOG_ERROR("不支持的频率参数: " + freq + "，支持的参数: d(日线), w(周线), m(月线)");
+        return {};
+    }
+    
+    LOG_DEBUG("获取" + freq_name + "数据: " + ts_code + " [" + start_date + " - " + end_date + "]");
+    
+    if (response.isSuccess()) {
+        return parseStockData(response);
+    } else {
+        LOG_ERROR("获取" + freq_name + "数据失败: " + response.msg);
+        return {};
+    }
+}
+
 StockData TushareDataSource::getLatestQuote(const std::string& ts_code) {
     LOG_DEBUG("获取最新行情: " + ts_code);
     

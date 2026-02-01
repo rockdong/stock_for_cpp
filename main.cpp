@@ -123,6 +123,42 @@ int main() {
     
     LOG_INFO("应用程序正常退出");
     
+    // 测试新增的周线和月线接口
+    LOG_INFO("========================================");
+    LOG_INFO("测试行情数据接口（日线、周线、月线）");
+    LOG_INFO("========================================");
+    
+    if (!stock_list.empty()) {
+        // 使用第一只股票进行测试
+        std::string test_ts_code = stock_list[0].ts_code;
+        LOG_INFO("测试股票: " + test_ts_code + " (" + stock_list[0].name + ")");
+        
+        try {
+            auto dataSource = network::DataSourceFactory::createFromConfig();
+            
+            // 测试日线数据
+            LOG_INFO("获取日线数据...");
+            auto daily_data = dataSource->getQuoteData(test_ts_code, "20240101", "20240110", "d");
+            LOG_INFO("日线数据条数: " + std::to_string(daily_data.size()));
+            
+            // 测试周线数据
+            LOG_INFO("获取周线数据...");
+            auto weekly_data = dataSource->getQuoteData(test_ts_code, "20240101", "20240331", "w");
+            LOG_INFO("周线数据条数: " + std::to_string(weekly_data.size()));
+            
+            // 测试月线数据
+            LOG_INFO("获取月线数据...");
+            auto monthly_data = dataSource->getQuoteData(test_ts_code, "20230101", "20231231", "m");
+            LOG_INFO("月线数据条数: " + std::to_string(monthly_data.size()));
+            
+            LOG_INFO("行情数据接口测试完成");
+        } catch (const std::exception& e) {
+            LOG_ERROR("测试失败: " + std::string(e.what()));
+        }
+    }
+    
+    LOG_INFO("========================================");
+    
     // 断开数据库连接
     conn.disconnect();
     

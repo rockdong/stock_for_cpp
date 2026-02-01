@@ -89,6 +89,32 @@ TushareResponse TushareClient::getDailyQuote(const std::string& ts_code,
     return query("daily", params);
 }
 
+TushareResponse TushareClient::getWeeklyQuote(const std::string& ts_code,
+                                              const std::string& trade_date,
+                                              const std::string& start_date,
+                                              const std::string& end_date) {
+    std::map<std::string, std::string> params;
+    if (!ts_code.empty()) params["ts_code"] = ts_code;
+    if (!trade_date.empty()) params["trade_date"] = trade_date;
+    if (!start_date.empty()) params["start_date"] = start_date;
+    if (!end_date.empty()) params["end_date"] = end_date;
+    
+    return query("weekly", params);
+}
+
+TushareResponse TushareClient::getMonthlyQuote(const std::string& ts_code,
+                                               const std::string& trade_date,
+                                               const std::string& start_date,
+                                               const std::string& end_date) {
+    std::map<std::string, std::string> params;
+    if (!ts_code.empty()) params["ts_code"] = ts_code;
+    if (!trade_date.empty()) params["trade_date"] = trade_date;
+    if (!start_date.empty()) params["start_date"] = start_date;
+    if (!end_date.empty()) params["end_date"] = end_date;
+    
+    return query("monthly", params);
+}
+
 TushareResponse TushareClient::getAdjFactor(const std::string& ts_code,
                                             const std::string& trade_date,
                                             const std::string& start_date,

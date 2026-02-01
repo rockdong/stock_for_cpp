@@ -98,6 +98,32 @@ public:
                                   const std::string& end_date = "");
 
     /**
+     * @brief 获取周线行情
+     * @param ts_code 股票代码（如 000001.SZ）
+     * @param trade_date 交易日期（YYYYMMDD）
+     * @param start_date 开始日期（YYYYMMDD）
+     * @param end_date 结束日期（YYYYMMDD）
+     * @return Tushare 响应
+     */
+    TushareResponse getWeeklyQuote(const std::string& ts_code = "",
+                                   const std::string& trade_date = "",
+                                   const std::string& start_date = "",
+                                   const std::string& end_date = "");
+
+    /**
+     * @brief 获取月线行情
+     * @param ts_code 股票代码（如 000001.SZ）
+     * @param trade_date 交易日期（YYYYMMDD）
+     * @param start_date 开始日期（YYYYMMDD）
+     * @param end_date 结束日期（YYYYMMDD）
+     * @return Tushare 响应
+     */
+    TushareResponse getMonthlyQuote(const std::string& ts_code = "",
+                                    const std::string& trade_date = "",
+                                    const std::string& start_date = "",
+                                    const std::string& end_date = "");
+
+    /**
      * @brief 获取复权因子
      * @param ts_code 股票代码
      * @param trade_date 交易日期

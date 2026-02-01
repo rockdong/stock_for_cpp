@@ -68,6 +68,21 @@ public:
     ) override;
 
     /**
+     * @brief 获取股票行情数据（支持日线、周线、月线）
+     * @param ts_code 股票代码
+     * @param start_date 开始日期（YYYYMMDD）
+     * @param end_date 结束日期（YYYYMMDD）
+     * @param freq 频率（d=日线, w=周线, m=月线）
+     * @return 股票数据列表
+     */
+    std::vector<StockData> getQuoteData(
+        const std::string& ts_code,
+        const std::string& start_date,
+        const std::string& end_date,
+        const std::string& freq = "d"
+    ) override;
+
+    /**
      * @brief 获取最新行情
      * @param ts_code 股票代码
      * @return 股票数据
