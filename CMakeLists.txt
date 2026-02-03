@@ -40,6 +40,13 @@ target_link_libraries(config_lib PUBLIC
     dotenv
 )
 
+# 添加核心模块库（只有头文件）
+add_library(core_lib INTERFACE)
+
+target_include_directories(core_lib INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
+)
+
 # 添加日志库
 add_library(log_lib STATIC
     log/LogConfig.cpp
@@ -74,6 +81,7 @@ add_library(network_lib STATIC
 target_include_directories(network_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/network/http
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
     ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-httplib
@@ -83,6 +91,7 @@ target_include_directories(network_lib PUBLIC
 target_link_libraries(network_lib PUBLIC
     httplib::httplib
     nlohmann_json::nlohmann_json
+    core_lib
     log_lib
     config_lib
 )
@@ -103,6 +112,7 @@ target_include_directories(data_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/data/database
     ${CMAKE_CURRENT_SOURCE_DIR}/data/cache
     ${CMAKE_CURRENT_SOURCE_DIR}/data/file
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
     ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/network
@@ -112,6 +122,7 @@ target_include_directories(data_lib PUBLIC
 target_link_libraries(data_lib PUBLIC
     sqlpp11::sqlpp11
     sqlite3
+    core_lib
     log_lib
     config_lib
 )
@@ -156,6 +167,7 @@ add_executable(stock_for_cpp main.cpp)
 # 链接第三方库
 target_link_libraries(stock_for_cpp PRIVATE
     config_lib
+    core_lib
     log_lib
     network_lib
     data_lib
@@ -173,6 +185,7 @@ target_link_libraries(stock_for_cpp PRIVATE
 # 包含第三方库头文件目录
 target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
     ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/data
@@ -185,3 +198,6 @@ target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dotenv-cpp/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ta-lib/include
 )
+
+# 把 .env 拷贝到可执行文件所在目录
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/.env DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})

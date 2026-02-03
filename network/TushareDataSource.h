@@ -34,7 +34,7 @@ public:
      * @brief 获取股票列表（默认获取所有上市股票）
      * @return 股票基本信息列表
      */
-    std::vector<StockBasic> getStockList() override;
+    std::vector<Stock> getStockList() override;
     
     /**
      * @brief 获取股票列表（带参数）
@@ -42,7 +42,7 @@ public:
      * @param exchange 交易所（SSE上交所 SZSE深交所，默认为空表示全部）
      * @return 股票基本信息列表
      */
-    std::vector<StockBasic> getStockList(
+    std::vector<Stock> getStockList(
         const std::string& list_status,
         const std::string& exchange
     ) override;
@@ -52,7 +52,7 @@ public:
      * @param ts_code 股票代码（如 000001.SZ）
      * @return 股票基本信息
      */
-    StockBasic getStockInfo(const std::string& ts_code) override;
+    Stock getStockInfo(const std::string& ts_code) override;
 
     /**
      * @brief 获取股票日线数据
@@ -107,7 +107,7 @@ private:
      * @param response Tushare 响应
      * @return 股票基本信息列表
      */
-    std::vector<StockBasic> parseStockBasic(const TushareResponse& response);
+    std::vector<Stock> parseStockBasic(const TushareResponse& response);
 
     /**
      * @brief 解析股票数据

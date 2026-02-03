@@ -431,6 +431,29 @@ auto mmin = utils::MathUtil::movingMin(values, 3);
 // [1.0, 2.0, 3.0, 4.0, 5.0]
 ```
 
+#### 7. 数据提取（股票数据专用）
+
+```cpp
+#include "Utils.h"
+#include "Network.h"
+
+// 获取股票数据
+auto dataSource = network::DataSourceFactory::createFromConfig();
+auto stockData = dataSource->getDailyData("000001.SZ", "20240101", "20240131");
+
+// 提取收盘价
+auto closes = utils::MathUtil::extractClose(stockData);
+
+// 直接用于统计分析
+double avgPrice = utils::MathUtil::mean(closes);
+double volatility = utils::MathUtil::stddev(closes);
+auto returns = utils::MathUtil::pctChange(closes);
+
+// 用于技术指标计算
+auto ma20 = analysis::MA::compute(closes, 20);
+auto rsi = analysis::RSI::compute(closes, 14);
+```
+
 ## 🎨 实际应用示例
 
 ### 示例1：股票数据处理
@@ -550,6 +573,7 @@ int main() {
 | `returnRate()` | 计算收益率 | double |
 | `maxDrawdown()` | 计算最大回撤 | double |
 | `normalize()` | 归一化 | vector<double> |
+| `extractClose()` | 提取收盘价 | vector<double> |
 
 ## 🔧 编译和使用
 

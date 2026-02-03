@@ -10,7 +10,7 @@ namespace {
     template<typename Row>
     Stock buildStockFromRow(const Row& row) {
         Stock stock;
-        stock.id = row.id;
+        // 只填充业务字段，不包含数据库元信息（id, created_at, updated_at）
         stock.ts_code = row.tsCode;
         stock.symbol = row.symbol.is_null() ? "" : row.symbol.value();
         stock.name = row.name.is_null() ? "" : row.name.value();
@@ -26,8 +26,6 @@ namespace {
         stock.list_date = row.listDate.is_null() ? "" : row.listDate.value();
         stock.delist_date = row.delistDate.is_null() ? "" : row.delistDate.value();
         stock.is_hs = row.isHs.is_null() ? "" : row.isHs.value();
-        stock.created_at = row.createdAt;
-        stock.updated_at = row.updatedAt;
         return stock;
     }
 }

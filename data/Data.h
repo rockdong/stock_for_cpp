@@ -54,26 +54,7 @@
 #include "file/CSVReader.h"
 #include "file/CSVWriter.h"
 
-// 前向声明
-namespace network {
-    struct StockBasic;
-}
-
 namespace data {
-
-/**
- * @brief 将 network::StockBasic 转换为 data::Stock
- * @param stockBasic 网络层的股票基本信息
- * @return 数据层的股票对象
- */
-Stock convertFromStockBasic(const network::StockBasic& stockBasic);
-
-/**
- * @brief 批量转换 network::StockBasic 为 data::Stock
- * @param stockBasics 网络层的股票基本信息列表
- * @return 数据层的股票对象列表
- */
-std::vector<Stock> convertFromStockBasics(const std::vector<network::StockBasic>& stockBasics);
 
 /**
  * @brief 初始化数据层

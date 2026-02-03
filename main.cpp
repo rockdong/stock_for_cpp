@@ -4,6 +4,8 @@
 #include "DataSourceFactory.h"
 #include "TushareDataSource.h"
 #include "Connection.h"
+#include "MA.h"
+#include "MathUtil.h"
 #include "StockDAO.h"
 
 int main() {
@@ -101,7 +103,7 @@ int main() {
     // 如果没有就通过接口获取并且保存到数据库中
     if (stock_list.empty()) {
         LOG_INFO("数据库为空，从 Tushare API 获取股票列表...");
-        auto stock_list = dataSource->getStockList();
+        stock_list = dataSource->getStockList();
         LOG_INFO("从 API 获取到 " + std::to_string(stock_list.size()) + " 只股票");
         
         // 转换并保存到数据库
@@ -122,12 +124,31 @@ int main() {
         LOG_INFO("成功保存 " + std::to_string(saved_count) + " 只股票到数据库");
     }
 
+    // 打印 stock_list 的 size
+    LOG_INFO("stock_list 的 size: " + std::to_string(stock_list.size()));
+
     for (const auto& stock : stock_list) {
         LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name);
         // 循环 日 周 月
-        for (const auto& freq : {"d", "w", "m"}) {
+        // for (const auto& freq : {"d", "w", "m"}) {
+        for (const auto& freq : {"d"}) {
             auto data = dataSource->getQuoteData(stock.ts_code, "", "", freq);
-            LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(data.size()));
+
+            // 打印前 5 条数据
+            for (size_t i = 0; i < 5; i++) {
+                LOG_INFO("日期: " + data[i].trade_date + ", 收盘价: " + std::to_string(data[i].close));
+            }
+
+            auto closes = utils::MathUtil::extractClose(data);
+
+            auto ma5 = analysis::MA::compute(closes, 5);
+
+            // 打印 后 10 个
+            for (size_t i = ma5.size() - 10; i < ma5.size(); i++) {
+                LOG_INFO("MA5: " + std::to_string(ma5[i]) + ", 收盘价: " + std::to_string(closes[i]));
+            }
+            LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(closes.size()));
+            // LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(data.size()));
         }
     }
     

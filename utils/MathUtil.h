@@ -292,10 +292,35 @@ public:
      * @return 移动最小值列表
      */
     static std::vector<double> movingMin(const std::vector<double>& values, int window);
+    
+    // ==================== 数据提取（用于股票数据） ====================
+    
+    /**
+     * @brief 从 StockData 列表中提取收盘价
+     * @tparam StockData 股票数据类型（需要有 close 字段）
+     * @param stockData 股票数据列表
+     * @return 收盘价列表
+     */
+    template<typename StockData>
+    static std::vector<double> extractClose(const std::vector<StockData>& stockData);
 
 private:
     static constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
 };
+
+// ==================== 模板函数实现 ====================
+
+template<typename StockData>
+std::vector<double> MathUtil::extractClose(const std::vector<StockData>& stockData) {
+    std::vector<double> closes;
+    closes.reserve(stockData.size());
+    
+    for (const auto& data : stockData) {
+        closes.push_back(data.close);
+    }
+    
+    return closes;
+}
 
 } // namespace utils
 

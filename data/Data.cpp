@@ -1,38 +1,10 @@
 #include "Data.h"
-#include "IDataSource.h"  // 包含 network::StockBasic 定义
+
+// Data.cpp 现在为空，因为所有转换函数都已删除
+// network::Stock 和 data::Stock 现在是同一个类型（core::Stock）
+// 无需任何转换
 
 namespace data {
-
-Stock convertFromStockBasic(const network::StockBasic& stockBasic) {
-    Stock stock;
-    stock.ts_code = stockBasic.ts_code;
-    stock.symbol = stockBasic.symbol;
-    stock.name = stockBasic.name;
-    stock.area = stockBasic.area;
-    stock.industry = stockBasic.industry;
-    stock.fullname = stockBasic.fullname;
-    stock.enname = stockBasic.enname;
-    stock.cnspell = stockBasic.cnspell;
-    stock.market = stockBasic.market;
-    stock.exchange = stockBasic.exchange;
-    stock.curr_type = stockBasic.curr_type;
-    stock.list_status = stockBasic.list_status;
-    stock.list_date = stockBasic.list_date;
-    stock.delist_date = stockBasic.delist_date;
-    stock.is_hs = stockBasic.is_hs;
-    return stock;
+    // 空实现文件
+    // 所有功能都在头文件中以 inline 函数形式提供
 }
-
-std::vector<Stock> convertFromStockBasics(const std::vector<network::StockBasic>& stockBasics) {
-    std::vector<Stock> stocks;
-    stocks.reserve(stockBasics.size());
-    
-    for (const auto& stockBasic : stockBasics) {
-        stocks.push_back(convertFromStockBasic(stockBasic));
-    }
-    
-    return stocks;
-}
-
-} // namespace data
-

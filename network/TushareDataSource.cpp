@@ -19,11 +19,11 @@ TushareDataSource::TushareDataSource(const std::string& api_token) {
     LOG_INFO("TushareDataSource 初始化完成（手动配置）");
 }
 
-std::vector<StockBasic> TushareDataSource::getStockList() {
+std::vector<Stock> TushareDataSource::getStockList() {
     return getStockList("L", "");
 }
 
-std::vector<StockBasic> TushareDataSource::getStockList(
+std::vector<Stock> TushareDataSource::getStockList(
     const std::string& list_status,
     const std::string& exchange) {
     
@@ -40,7 +40,7 @@ std::vector<StockBasic> TushareDataSource::getStockList(
     }
 }
 
-StockBasic TushareDataSource::getStockInfo(const std::string& ts_code) {
+Stock TushareDataSource::getStockInfo(const std::string& ts_code) {
     LOG_DEBUG("获取股票信息: " + ts_code);
     
     // 使用通用查询接口，指定 ts_code 参数
@@ -55,11 +55,11 @@ StockBasic TushareDataSource::getStockInfo(const std::string& ts_code) {
             return stocks[0];
         } else {
             LOG_WARN("未找到股票: " + ts_code);
-            return StockBasic{};
+            return Stock{};
         }
     } else {
         LOG_ERROR("获取股票信息失败: " + response.msg);
-        return StockBasic{};
+        return Stock{};
     }
 }
 
@@ -141,8 +141,8 @@ bool TushareDataSource::testConnection() {
 
 // ========== 私有方法 ==========
 
-std::vector<StockBasic> TushareDataSource::parseStockBasic(const TushareResponse& response) {
-    std::vector<StockBasic> result;
+std::vector<Stock> TushareDataSource::parseStockBasic(const TushareResponse& response) {
+    std::vector<Stock> result;
     
     try {
         if (!response.data.contains("fields") || !response.data.contains("items")) {
@@ -170,7 +170,7 @@ std::vector<StockBasic> TushareDataSource::parseStockBasic(const TushareResponse
         
         // 解析数据
         for (const auto& item : items) {
-            StockBasic stock;
+            Stock stock;
             
             // 基础字段
             stock.ts_code = get_string(item, "ts_code");
