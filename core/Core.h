@@ -1,28 +1,28 @@
-#ifndef CORE_H
-#define CORE_H
+#ifndef CORE_CORE_H
+#define CORE_CORE_H
 
 /**
  * @file Core.h
- * @brief 核心模块统一头文件
+ * @brief 核心业务模块统一头文件
  * 
- * 核心模块提供系统的核心数据结构和业务实体
- * 
- * 包含内容：
- * - Stock: 股票基本信息（核心数据结构）
- * - StockEntity: 股票数据库实体
- * - StockData: 股票行情数据
- * 
- * 使用方式：
- * ```cpp
- * #include "Core.h"
- * 
- * core::Stock stock;
- * stock.ts_code = "000001.SZ";
- * stock.name = "平安银行";
- * ```
+ * 包含所有核心业务相关的头文件
  */
 
+// 数据结构
 #include "Stock.h"
+#include "Trade.h"
+#include "Position.h"
+#include "Portfolio.h"
 
-#endif // CORE_H
+// 策略系统
+#include "Strategy.h"
+#include "StrategyFactory.h"
 
+// 具体策略
+#include "strategies/MACrossStrategy.h"
+#include "strategies/MACDStrategy.h"
+#include "strategies/RSIStrategy.h"
+#include "strategies/BOLLStrategy.h"
+#include "strategies/GridStrategy.h"
+
+#endif // CORE_CORE_H

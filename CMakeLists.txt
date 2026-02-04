@@ -40,11 +40,28 @@ target_link_libraries(config_lib PUBLIC
     dotenv
 )
 
-# 添加核心模块库（只有头文件）
-add_library(core_lib INTERFACE)
+# 添加核心业务模块库
+add_library(core_lib STATIC
+    core/Trade.cpp
+    core/Position.cpp
+    core/Portfolio.cpp
+    core/Strategy.cpp
+    core/StrategyFactory.cpp
+    core/strategies/MACrossStrategy.cpp
+    core/strategies/MACDStrategy.cpp
+    core/strategies/RSIStrategy.cpp
+    core/strategies/BOLLStrategy.cpp
+    core/strategies/GridStrategy.cpp
+)
 
-target_include_directories(core_lib INTERFACE
+target_include_directories(core_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/core/strategies
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+)
+
+target_link_libraries(core_lib PUBLIC
+    utils_lib
 )
 
 # 添加日志库

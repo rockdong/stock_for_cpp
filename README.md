@@ -98,6 +98,21 @@ HTTP 客户端和 Tushare Pro API 封装。
 - ✅ **跨平台**：支持 Windows/Linux/macOS
 - ✅ **错误处理**：返回默认值或 NaN，不抛出异常
 
+### 7. 核心业务模块 (core::)
+
+交易管理、持仓管理、投资组合和策略系统。
+
+#### 特性
+
+- ✅ **Trade**：交易记录管理，支持买入/卖出
+- ✅ **Position**：持仓管理，自动计算盈亏
+- ✅ **Portfolio**：投资组合管理，资金和持仓统一管理
+- ✅ **Strategy**：策略接口，支持自定义策略
+- ✅ **5种内置策略**：MA交叉、MACD、RSI、布林带、网格交易
+- ✅ **建造者模式**：优雅的 Trade 构建方式
+- ✅ **工厂模式**：统一的策略创建接口
+- ✅ **SOLID原则**：完全遵循面向对象设计原则
+
 ### 快速开始
 
 #### 1. 创建配置文件
@@ -269,6 +284,20 @@ stock_for_cpp/
 │   ├── Utils.h            # 统一头文件
 │   ├── README.md          # 使用文档
 │   └── SUMMARY.md         # 开发总结
+├── core/                  # 核心业务模块 (已完成 ✅)
+│   ├── Stock.h            # 股票数据结构
+│   ├── Trade.h/cpp        # 交易记录
+│   ├── Position.h/cpp     # 持仓管理
+│   ├── Portfolio.h/cpp    # 投资组合
+│   ├── Strategy.h/cpp     # 策略接口和基类
+│   ├── StrategyFactory.h/cpp # 策略工厂
+│   ├── strategies/        # 具体策略实现
+│   │   ├── MACrossStrategy.h/cpp  # 均线交叉策略
+│   │   ├── MACDStrategy.h/cpp     # MACD策略
+│   │   ├── RSIStrategy.h/cpp      # RSI策略
+│   │   ├── BOLLStrategy.h/cpp     # 布林带策略
+│   │   └── GridStrategy.h/cpp     # 网格交易策略
+│   └── Core.h             # 统一头文件
 ├── thirdparty/            # 第三方库
 │   ├── spdlog/
 │   ├── dotenv-cpp/
@@ -465,6 +494,49 @@ int main() {
 }
 ```
 
+### 核心业务使用
+
+```cpp
+#include "Core.h"
+
+int main() {
+    // 创建投资组合
+    core::Portfolio portfolio("我的组合", 100000.0); // 初始资金10万
+    
+    // 买入股票（使用建造者模式）
+    portfolio.buy("000001.SZ", 10.5, 1000, 5.0); // 价格10.5，数量1000，手续费5元
+    
+    // 更新价格
+    portfolio.updatePrice("000001.SZ", 11.2);
+    
+    // 查看持仓
+    auto position = portfolio.getPosition("000001.SZ");
+    if (position) {
+        std::cout << "持仓数量: " << position->getQuantity() << std::endl;
+        std::cout << "盈亏: " << position->getProfit() << std::endl;
+        std::cout << "盈亏率: " << position->getProfitRate() << "%" << std::endl;
+    }
+    
+    // 使用策略分析
+    auto strategy = core::StrategyFactory::create("MA_CROSS", {
+        {"short_period", 5}, {"long_period", 20}
+    });
+    
+    std::vector<core::StockData> data; // 历史数据
+    auto signal = strategy->analyze("000001.SZ", data, portfolio);
+    
+    if (signal.signal == core::Signal::BUY) {
+        std::cout << "买入信号: " << signal.reason << std::endl;
+        portfolio.buy(signal.tsCode, signal.price, signal.quantity);
+    }
+    
+    // 查看组合摘要
+    std::cout << portfolio.getPositionsSummary() << std::endl;
+    
+    return 0;
+}
+```
+
 ## 🚀 性能优化
 
 ### 开发环境
@@ -529,7 +601,8 @@ cat logs/app.log
 - [x] 添加数据缓存（已完成）
 - [x] 实现技术分析指标（已完成）
 - [x] 实现工具类模块（已完成）
-- [ ] 实现策略引擎
+- [x] 实现核心业务模块（已完成）
+- [x] 实现策略引擎（已完成）
 - [ ] 实现回测系统
 - [ ] 添加单元测试
 
@@ -539,10 +612,10 @@ cat logs/app.log
 - **网络层**: ✅ 100% (HTTP 客户端 + Tushare API)
 - **数据层**: ✅ 100% (数据库 + 缓存 + 文件操作)
 - **分析层**: ✅ 100% (7种技术指标 + 工厂模式)
-- **业务层**: ⏳ 0%
+- **核心业务层**: ✅ 100% (交易 + 持仓 + 组合 + 5种策略)
 - **输出层**: ⏳ 0%
 
-**整体进度**: 约 67% (5/7 个主要模块)
+**整体进度**: 约 83% (5/6 个主要模块)
 
 ## 📞 联系方式
 
@@ -550,7 +623,7 @@ cat logs/app.log
 
 ---
 
-**版本**: 1.3.0  
-**更新日期**: 2026-02-01  
-**整体进度**: 67% (5/7 个主要模块)
+**版本**: 1.4.0  
+**更新日期**: 2026-02-05  
+**整体进度**: 83% (5/6 个主要模块)
 

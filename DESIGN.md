@@ -269,11 +269,20 @@ stock_for_cpp/
 │   ├── README.md              # 使用文档
 │   └── SUMMARY.md             # 开发总结
 │
-├── core/                       # 核心业务模块 (待开发)
-│   ├── Stock.h/cpp            # 股票实体
-│   ├── Trade.h/cpp            # 交易实体
+├── core/                       # 核心业务模块 (已完成 ✅)
+│   ├── Stock.h                # 股票数据结构
+│   ├── Trade.h/cpp            # 交易记录
+│   ├── Position.h/cpp         # 持仓管理
 │   ├── Portfolio.h/cpp        # 投资组合
-│   └── StockManager.h/cpp     # 股票管理器
+│   ├── Strategy.h/cpp         # 策略接口和基类
+│   ├── StrategyFactory.h/cpp  # 策略工厂
+│   ├── strategies/            # 具体策略实现
+│   │   ├── MACrossStrategy.h/cpp  # 均线交叉策略
+│   │   ├── MACDStrategy.h/cpp     # MACD策略
+│   │   ├── RSIStrategy.h/cpp      # RSI策略
+│   │   ├── BOLLStrategy.h/cpp     # 布林带策略
+│   │   └── GridStrategy.h/cpp     # 网格交易策略
+│   └── Core.h                 # 统一头文件
 │
 ├── utils/                      # 工具类模块 (已完成 ✅)
 │   ├── TimeUtil.h/cpp         # 时间工具
@@ -1169,51 +1178,218 @@ public:
 } // namespace output
 ```
 
-### 8. 核心业务设计 (待开发)
+### 8. 核心业务设计 (已完成 ✅)
 
-#### 股票实体
+#### 核心数据结构
 ```cpp
 namespace core {
 
-// 股票实体类
-class Stock {
+// 交易记录
+class Trade {
 public:
-    Stock(const std::string& symbol, const std::string& name);
+    Trade(const std::string& tsCode, TradeType type, double price, int quantity, const std::string& tradeTime = "");
     
     // Getters
-    std::string getSymbol() const;
-    std::string getName() const;
+    int getId() const;
+    std::string getTsCode() const;
+    TradeType getType() const;
     double getPrice() const;
-    double getChange() const;
+    int getQuantity() const;
+    double getAmount() const;
+    double getCommission() const;
+    TradeStatus getStatus() const;
     
     // Setters
-    void setPrice(double price);
-    void setVolume(long volume);
+    void setCommission(double commission);
+    void setStatus(TradeStatus status);
     
-private:
-    std::string symbol_;
-    std::string name_;
-    double price_;
-    double change_;
-    long volume_;
-    std::time_t updateTime_;
+    // 计算盈亏
+    double calculateProfit(const Trade& other) const;
+    std::string toString() const;
 };
 
-// 股票管理器
-class StockManager {
+// 建造者模式
+class TradeBuilder {
 public:
-    static StockManager& getInstance();
+    TradeBuilder& tsCode(const std::string& tsCode);
+    TradeBuilder& buy();
+    TradeBuilder& sell();
+    TradeBuilder& price(double price);
+    TradeBuilder& quantity(int quantity);
+    TradeBuilder& commission(double commission);
+    TradePtr build() const;
+};
+
+// 持仓管理
+class Position {
+public:
+    explicit Position(const std::string& tsCode);
     
-    bool addStock(const Stock& stock);
-    Stock getStock(const std::string& symbol);
-    std::vector<Stock> getAllStocks();
-    bool updatePrice(const std::string& symbol, double price);
+    // Getters
+    std::string getTsCode() const;
+    int getQuantity() const;
+    double getAvgCost() const;
+    double getTotalCost() const;
+    double getCurrentPrice() const;
+    double getMarketValue() const;
+    double getProfit() const;
+    double getProfitRate() const;
     
-private:
-    std::unordered_map<std::string, Stock> stocks_;
+    // 操作
+    void updatePrice(double price);
+    void addTrade(TradePtr trade);
+    void buy(double price, int quantity, double commission = 0.0);
+    void sell(double price, int quantity, double commission = 0.0);
+    bool isEmpty() const;
+};
+
+// 投资组合
+class Portfolio {
+public:
+    explicit Portfolio(const std::string& name = "Default", double initialCash = 0.0);
+    
+    // Getters
+    std::string getName() const;
+    double getCash() const;
+    double getTotalValue() const;
+    double getTotalProfit() const;
+    double getTotalProfitRate() const;
+    const std::map<std::string, PositionPtr>& getPositions() const;
+    
+    // 操作
+    void addCash(double amount);
+    bool buy(const std::string& tsCode, double price, int quantity, double commission = 0.0);
+    bool sell(const std::string& tsCode, double price, int quantity, double commission = 0.0);
+    void updatePrice(const std::string& tsCode, double price);
+    void updatePrices(const std::map<std::string, double>& prices);
+    void calculate();
+    void clear();
+    void reset();
+    
+    std::string toString() const;
+    std::string getPositionsSummary() const;
 };
 
 } // namespace core
+```
+
+#### 策略系统
+```cpp
+namespace core {
+
+// 策略接口
+class IStrategy {
+public:
+    virtual ~IStrategy() = default;
+    
+    virtual std::string getName() const = 0;
+    virtual std::string getDescription() const = 0;
+    
+    virtual TradeSignal analyze(
+        const std::string& tsCode,
+        const std::vector<StockData>& data,
+        const Portfolio& portfolio
+    ) = 0;
+    
+    virtual void setParameters(const std::map<std::string, double>& params) = 0;
+    virtual std::map<std::string, double> getParameters() const = 0;
+    virtual bool validateParameters() const = 0;
+};
+
+// 策略基类
+class StrategyBase : public IStrategy {
+protected:
+    std::string name_;
+    std::string description_;
+    std::map<std::string, double> parameters_;
+    
+    double getParameter(const std::string& key, double defaultValue = 0.0) const;
+    void setParameter(const std::string& key, double value);
+    bool hasEnoughData(const std::vector<StockData>& data, size_t minSize) const;
+    TradeSignal createSignal(...) const;
+};
+
+// 策略工厂
+class StrategyFactory {
+public:
+    enum class StrategyType {
+        MA_CROSS,   // 均线交叉策略
+        MACD,       // MACD 策略
+        RSI,        // RSI 策略
+        BOLL,       // 布林带策略
+        GRID        // 网格交易策略
+    };
+    
+    static StrategyPtr create(StrategyType type, const std::map<std::string, double>& params = {});
+    static StrategyPtr create(const std::string& name, const std::map<std::string, double>& params = {});
+    static void registerStrategy(const std::string& name, std::function<StrategyPtr(...)> creator);
+    static std::vector<std::string> getSupportedStrategies();
+};
+
+} // namespace core
+```
+
+#### 内置策略
+
+**1. 均线交叉策略 (MACrossStrategy)**
+- 短期均线上穿长期均线：买入信号（金叉）
+- 短期均线下穿长期均线：卖出信号（死叉）
+- 参数：short_period（默认5）、long_period（默认20）
+
+**2. MACD 策略 (MACDStrategy)**
+- MACD 线上穿信号线：买入信号
+- MACD 线下穿信号线：卖出信号
+- 柱状图由负转正：买入确认
+- 柱状图由正转负：卖出确认
+- 参数：fast_period（默认12）、slow_period（默认26）、signal_period（默认9）
+
+**3. RSI 策略 (RSIStrategy)**
+- RSI < 30：超卖，买入信号
+- RSI > 70：超买，卖出信号
+- 参数：period（默认14）、oversold（默认30）、overbought（默认70）
+
+**4. 布林带策略 (BOLLStrategy)**
+- 价格触及下轨：买入信号
+- 价格触及上轨：卖出信号
+- 参数：period（默认20）、std_dev（默认2.0）
+
+**5. 网格交易策略 (GridStrategy)**
+- 价格下穿网格线：买入信号
+- 价格上穿网格线：卖出信号
+- 参数：grid_size（默认5.0%）、base_price（默认当前价格）、max_grids（默认10）
+
+#### 使用示例
+```cpp
+#include "Core.h"
+
+int main() {
+    // 创建投资组合
+    core::Portfolio portfolio("我的组合", 100000.0);
+    
+    // 买入股票
+    portfolio.buy("000001.SZ", 10.5, 1000, 5.0);
+    
+    // 更新价格
+    portfolio.updatePrice("000001.SZ", 11.2);
+    
+    // 查看持仓
+    auto position = portfolio.getPosition("000001.SZ");
+    std::cout << "盈亏: " << position->getProfit() << std::endl;
+    
+    // 使用策略
+    auto strategy = core::StrategyFactory::create("MA_CROSS", {
+        {"short_period", 5}, {"long_period", 20}
+    });
+    
+    std::vector<core::StockData> data; // 历史数据
+    auto signal = strategy->analyze("000001.SZ", data, portfolio);
+    
+    if (signal.signal == core::Signal::BUY) {
+        portfolio.buy(signal.tsCode, signal.price, signal.quantity);
+    }
+    
+    return 0;
+}
 ```
 
 ## 📝 配置管理 (已完成 ✅)
@@ -1325,11 +1501,13 @@ CHART_ENABLED=false
 - ✅ MathUtil - 数学工具类（34个方法）
 - ✅ 统一头文件和文档
 
-### Phase 6: 业务层 (待开发)
-- ⏳ 股票实体设计
-- ⏳ 股票管理器
-- ⏳ 交易记录
-- ⏳ 投资组合
+### Phase 6: 核心业务层 (已完成 ✅)
+- ✅ 股票数据结构（Stock、StockEntity、StockData）
+- ✅ 交易记录（Trade、TradeBuilder）
+- ✅ 持仓管理（Position）
+- ✅ 投资组合（Portfolio）
+- ✅ 策略系统（IStrategy、StrategyBase、StrategyFactory）
+- ✅ 5种内置策略（MA交叉、MACD、RSI、布林带、网格交易）
 
 ### Phase 7: 输出层 (待开发)
 - ⏳ 控制台输出
@@ -1519,14 +1697,13 @@ CREATE TABLE trades (
 | 数据层 | ✅ 完成 | 2026-02-01 | 13 个 | ~1500 行 | 待完善 |
 | 分析层 | ✅ 完成 | 2026-02-01 | 19 个 | ~1000 行 | ~500 行 |
 | 工具类模块 | ✅ 完成 | 2026-02-01 | 9 个 | ~1950 行 | ~950 行 |
+| 核心业务模块 | ✅ 完成 | 2026-02-05 | 17 个 | ~2000 行 | 待完善 |
 
 ### 待开发模块 ⏳
 
 | 模块 | 优先级 | 预计工作量 |
 |------|--------|-----------|
-| 核心业务层 | 高 | 3-4 天 |
 | 输出层 | 中 | 2-3 天 |
-| 策略层 | 中 | 3-4 天 |
 | 回测系统 | 中 | 3-4 天 |
 | 测试 | 高 | 持续 |
 
@@ -1536,17 +1713,18 @@ CREATE TABLE trades (
 - **网络层**: ✅ 100% (HTTP 客户端 + Tushare API)
 - **数据层**: ✅ 100% (数据库 + 缓存 + 文件操作)
 - **分析层**: ✅ 100% (7种技术指标 + 工厂模式)
-- **业务层**: ⏳ 0%
+- **核心业务层**: ✅ 100% (交易 + 持仓 + 组合 + 5种策略)
 - **输出层**: ⏳ 0%
 
-**整体进度**: 约 67% (5/7 个主要模块)
+**整体进度**: 约 83% (5/6 个主要模块)
 
 ---
 
-**文档版本**: 1.6.0  
-**最后更新**: 2026-02-01  
+**文档版本**: 1.7.0  
+**最后更新**: 2026-02-05  
 **维护者**: Development Team  
 **变更记录**: 
+- 2026-02-05: 添加核心业务模块完成标记，更新开发进度（83%），完善核心业务设计文档
 - 2026-02-01: 添加工具类模块完成标记，更新开发进度（67%），完善工具类设计文档
 - 2026-02-01: 添加分析层模块完成标记，更新开发进度（67%），完善分析层设计文档
 - 2026-02-01: 添加数据层模块完成标记，更新开发进度（50%），完善数据层设计文档
