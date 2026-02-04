@@ -316,7 +316,8 @@ std::vector<double> MathUtil::extractClose(const std::vector<StockData>& stockDa
     closes.reserve(stockData.size());
     
     for (const auto& data : stockData) {
-        closes.push_back(data.close);
+        // 前插入
+        closes.insert(closes.begin(), data.close);
     }
     
     return closes;

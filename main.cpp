@@ -141,6 +141,11 @@ int main() {
 
             auto closes = utils::MathUtil::extractClose(data);
 
+            // 打印前 5 条数据
+            for (size_t i = closes.size() - 5; i < closes.size(); i++) {
+                LOG_INFO("收盘价: " + std::to_string(closes[i]));
+            }
+
             auto ma5 = analysis::MA::compute(closes, 5);
 
             // 打印 后 10 个
