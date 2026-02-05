@@ -40,11 +40,8 @@ target_link_libraries(config_lib PUBLIC
     dotenv
 )
 
-# 添加核心业务模块库
+# 添加核心业务模块库（策略系统）
 add_library(core_lib STATIC
-    core/Trade.cpp
-    core/Position.cpp
-    core/Portfolio.cpp
     core/Strategy.cpp
     core/StrategyFactory.cpp
     core/strategies/MACrossStrategy.cpp

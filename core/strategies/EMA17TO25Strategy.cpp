@@ -3,3 +3,7 @@
 //
 
 #include "EMA17TO25Strategy.h"
+
+namespace core {
+
+}

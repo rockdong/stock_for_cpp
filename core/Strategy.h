@@ -4,8 +4,8 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <map>
 #include "Stock.h"
-#include "Portfolio.h"
 
 namespace core {
 
@@ -74,13 +74,11 @@ public:
      * @brief 分析并生成交易信号
      * @param tsCode 股票代码
      * @param data 历史数据
-     * @param portfolio 当前投资组合
      * @return 交易信号
      */
     virtual TradeSignal analyze(
         const std::string& tsCode,
-        const std::vector<StockData>& data,
-        const Portfolio& portfolio
+        const std::vector<StockData>& data
     ) = 0;
     
     /**

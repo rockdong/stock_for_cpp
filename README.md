@@ -100,17 +100,16 @@ HTTP 客户端和 Tushare Pro API 封装。
 
 ### 7. 核心业务模块 (core::)
 
-交易管理、持仓管理、投资组合和策略系统。
+策略系统，提供多种技术分析策略。
 
 #### 特性
 
-- ✅ **Trade**：交易记录管理，支持买入/卖出
-- ✅ **Position**：持仓管理，自动计算盈亏
-- ✅ **Portfolio**：投资组合管理，资金和持仓统一管理
 - ✅ **Strategy**：策略接口，支持自定义策略
 - ✅ **5种内置策略**：MA交叉、MACD、RSI、布林带、网格交易
-- ✅ **建造者模式**：优雅的 Trade 构建方式
 - ✅ **工厂模式**：统一的策略创建接口
+- ✅ **信号系统**：标准化的交易信号（买入/卖出/持有）
+- ✅ **信号强度**：弱/中/强三个级别
+- ✅ **参数化配置**：每个策略支持自定义参数
 - ✅ **SOLID原则**：完全遵循面向对象设计原则
 
 ### 快速开始
@@ -286,9 +285,6 @@ stock_for_cpp/
 │   └── SUMMARY.md         # 开发总结
 ├── core/                  # 核心业务模块 (已完成 ✅)
 │   ├── Stock.h            # 股票数据结构
-│   ├── Trade.h/cpp        # 交易记录
-│   ├── Position.h/cpp     # 持仓管理
-│   ├── Portfolio.h/cpp    # 投资组合
 │   ├── Strategy.h/cpp     # 策略接口和基类
 │   ├── StrategyFactory.h/cpp # 策略工厂
 │   ├── strategies/        # 具体策略实现
@@ -494,44 +490,46 @@ int main() {
 }
 ```
 
-### 核心业务使用
+### 策略系统使用
 
 ```cpp
 #include "Core.h"
 
 int main() {
-    // 创建投资组合
-    core::Portfolio portfolio("我的组合", 100000.0); // 初始资金10万
+    // 准备历史数据
+    std::vector<core::StockData> data;
+    // ... 填充历史数据
     
-    // 买入股票（使用建造者模式）
-    portfolio.buy("000001.SZ", 10.5, 1000, 5.0); // 价格10.5，数量1000，手续费5元
-    
-    // 更新价格
-    portfolio.updatePrice("000001.SZ", 11.2);
-    
-    // 查看持仓
-    auto position = portfolio.getPosition("000001.SZ");
-    if (position) {
-        std::cout << "持仓数量: " << position->getQuantity() << std::endl;
-        std::cout << "盈亏: " << position->getProfit() << std::endl;
-        std::cout << "盈亏率: " << position->getProfitRate() << "%" << std::endl;
-    }
-    
-    // 使用策略分析
+    // 方法1：使用工厂模式创建策略
     auto strategy = core::StrategyFactory::create("MA_CROSS", {
-        {"short_period", 5}, {"long_period", 20}
+        {"short_period", 5}, 
+        {"long_period", 20}
     });
     
-    std::vector<core::StockData> data; // 历史数据
-    auto signal = strategy->analyze("000001.SZ", data, portfolio);
+    // 分析并生成交易信号
+    auto signal = strategy->analyze("000001.SZ", data);
     
+    // 根据信号类型处理
     if (signal.signal == core::Signal::BUY) {
         std::cout << "买入信号: " << signal.reason << std::endl;
-        portfolio.buy(signal.tsCode, signal.price, signal.quantity);
+        std::cout << "建议价格: " << signal.price << std::endl;
+        std::cout << "信号强度: " << (signal.strength == core::SignalStrength::STRONG ? "强" : "中") << std::endl;
+    } else if (signal.signal == core::Signal::SELL) {
+        std::cout << "卖出信号: " << signal.reason << std::endl;
+    } else {
+        std::cout << "持有: " << signal.reason << std::endl;
     }
     
-    // 查看组合摘要
-    std::cout << portfolio.getPositionsSummary() << std::endl;
+    // 方法2：使用不同的策略
+    auto macdStrategy = core::StrategyFactory::create("MACD");
+    auto rsiStrategy = core::StrategyFactory::create("RSI");
+    auto bollStrategy = core::StrategyFactory::create("BOLL");
+    
+    // 获取所有支持的策略
+    auto strategies = core::StrategyFactory::getSupportedStrategies();
+    for (const auto& name : strategies) {
+        std::cout << "支持的策略: " << name << std::endl;
+    }
     
     return 0;
 }
@@ -612,7 +610,7 @@ cat logs/app.log
 - **网络层**: ✅ 100% (HTTP 客户端 + Tushare API)
 - **数据层**: ✅ 100% (数据库 + 缓存 + 文件操作)
 - **分析层**: ✅ 100% (7种技术指标 + 工厂模式)
-- **核心业务层**: ✅ 100% (交易 + 持仓 + 组合 + 5种策略)
+- **核心业务层**: ✅ 100% (策略系统 + 5种内置策略)
 - **输出层**: ⏳ 0%
 
 **整体进度**: 约 83% (5/6 个主要模块)

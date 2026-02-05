@@ -271,9 +271,6 @@ stock_for_cpp/
 │
 ├── core/                       # 核心业务模块 (已完成 ✅)
 │   ├── Stock.h                # 股票数据结构
-│   ├── Trade.h/cpp            # 交易记录
-│   ├── Position.h/cpp         # 持仓管理
-│   ├── Portfolio.h/cpp        # 投资组合
 │   ├── Strategy.h/cpp         # 策略接口和基类
 │   ├── StrategyFactory.h/cpp  # 策略工厂
 │   ├── strategies/            # 具体策略实现
@@ -1180,99 +1177,6 @@ public:
 
 ### 8. 核心业务设计 (已完成 ✅)
 
-#### 核心数据结构
-```cpp
-namespace core {
-
-// 交易记录
-class Trade {
-public:
-    Trade(const std::string& tsCode, TradeType type, double price, int quantity, const std::string& tradeTime = "");
-    
-    // Getters
-    int getId() const;
-    std::string getTsCode() const;
-    TradeType getType() const;
-    double getPrice() const;
-    int getQuantity() const;
-    double getAmount() const;
-    double getCommission() const;
-    TradeStatus getStatus() const;
-    
-    // Setters
-    void setCommission(double commission);
-    void setStatus(TradeStatus status);
-    
-    // 计算盈亏
-    double calculateProfit(const Trade& other) const;
-    std::string toString() const;
-};
-
-// 建造者模式
-class TradeBuilder {
-public:
-    TradeBuilder& tsCode(const std::string& tsCode);
-    TradeBuilder& buy();
-    TradeBuilder& sell();
-    TradeBuilder& price(double price);
-    TradeBuilder& quantity(int quantity);
-    TradeBuilder& commission(double commission);
-    TradePtr build() const;
-};
-
-// 持仓管理
-class Position {
-public:
-    explicit Position(const std::string& tsCode);
-    
-    // Getters
-    std::string getTsCode() const;
-    int getQuantity() const;
-    double getAvgCost() const;
-    double getTotalCost() const;
-    double getCurrentPrice() const;
-    double getMarketValue() const;
-    double getProfit() const;
-    double getProfitRate() const;
-    
-    // 操作
-    void updatePrice(double price);
-    void addTrade(TradePtr trade);
-    void buy(double price, int quantity, double commission = 0.0);
-    void sell(double price, int quantity, double commission = 0.0);
-    bool isEmpty() const;
-};
-
-// 投资组合
-class Portfolio {
-public:
-    explicit Portfolio(const std::string& name = "Default", double initialCash = 0.0);
-    
-    // Getters
-    std::string getName() const;
-    double getCash() const;
-    double getTotalValue() const;
-    double getTotalProfit() const;
-    double getTotalProfitRate() const;
-    const std::map<std::string, PositionPtr>& getPositions() const;
-    
-    // 操作
-    void addCash(double amount);
-    bool buy(const std::string& tsCode, double price, int quantity, double commission = 0.0);
-    bool sell(const std::string& tsCode, double price, int quantity, double commission = 0.0);
-    void updatePrice(const std::string& tsCode, double price);
-    void updatePrices(const std::map<std::string, double>& prices);
-    void calculate();
-    void clear();
-    void reset();
-    
-    std::string toString() const;
-    std::string getPositionsSummary() const;
-};
-
-} // namespace core
-```
-
 #### 策略系统
 ```cpp
 namespace core {
@@ -1287,8 +1191,7 @@ public:
     
     virtual TradeSignal analyze(
         const std::string& tsCode,
-        const std::vector<StockData>& data,
-        const Portfolio& portfolio
+        const std::vector<StockData>& data
     ) = 0;
     
     virtual void setParameters(const std::map<std::string, double>& params) = 0;
@@ -1363,30 +1266,30 @@ public:
 #include "Core.h"
 
 int main() {
-    // 创建投资组合
-    core::Portfolio portfolio("我的组合", 100000.0);
+    // 准备历史数据
+    std::vector<core::StockData> data;
+    // ... 填充历史数据
     
-    // 买入股票
-    portfolio.buy("000001.SZ", 10.5, 1000, 5.0);
-    
-    // 更新价格
-    portfolio.updatePrice("000001.SZ", 11.2);
-    
-    // 查看持仓
-    auto position = portfolio.getPosition("000001.SZ");
-    std::cout << "盈亏: " << position->getProfit() << std::endl;
-    
-    // 使用策略
+    // 创建策略
     auto strategy = core::StrategyFactory::create("MA_CROSS", {
-        {"short_period", 5}, {"long_period", 20}
+        {"short_period", 5}, 
+        {"long_period", 20}
     });
     
-    std::vector<core::StockData> data; // 历史数据
-    auto signal = strategy->analyze("000001.SZ", data, portfolio);
+    // 分析并生成交易信号
+    auto signal = strategy->analyze("000001.SZ", data);
     
+    // 根据信号类型处理
     if (signal.signal == core::Signal::BUY) {
-        portfolio.buy(signal.tsCode, signal.price, signal.quantity);
+        std::cout << "买入信号: " << signal.reason << std::endl;
+        std::cout << "建议价格: " << signal.price << std::endl;
+    } else if (signal.signal == core::Signal::SELL) {
+        std::cout << "卖出信号: " << signal.reason << std::endl;
     }
+    
+    // 使用不同的策略
+    auto macdStrategy = core::StrategyFactory::create("MACD");
+    auto rsiStrategy = core::StrategyFactory::create("RSI");
     
     return 0;
 }
@@ -1503,10 +1406,8 @@ CHART_ENABLED=false
 
 ### Phase 6: 核心业务层 (已完成 ✅)
 - ✅ 股票数据结构（Stock、StockEntity、StockData）
-- ✅ 交易记录（Trade、TradeBuilder）
-- ✅ 持仓管理（Position）
-- ✅ 投资组合（Portfolio）
 - ✅ 策略系统（IStrategy、StrategyBase、StrategyFactory）
+- ✅ 交易信号（TradeSignal、Signal、SignalStrength）
 - ✅ 5种内置策略（MA交叉、MACD、RSI、布林带、网格交易）
 
 ### Phase 7: 输出层 (待开发)
@@ -1697,7 +1598,7 @@ CREATE TABLE trades (
 | 数据层 | ✅ 完成 | 2026-02-01 | 13 个 | ~1500 行 | 待完善 |
 | 分析层 | ✅ 完成 | 2026-02-01 | 19 个 | ~1000 行 | ~500 行 |
 | 工具类模块 | ✅ 完成 | 2026-02-01 | 9 个 | ~1950 行 | ~950 行 |
-| 核心业务模块 | ✅ 完成 | 2026-02-05 | 17 个 | ~2000 行 | 待完善 |
+| 核心业务模块 | ✅ 完成 | 2026-02-05 | 12 个 | ~1500 行 | 待完善 |
 
 ### 待开发模块 ⏳
 
@@ -1713,7 +1614,7 @@ CREATE TABLE trades (
 - **网络层**: ✅ 100% (HTTP 客户端 + Tushare API)
 - **数据层**: ✅ 100% (数据库 + 缓存 + 文件操作)
 - **分析层**: ✅ 100% (7种技术指标 + 工厂模式)
-- **核心业务层**: ✅ 100% (交易 + 持仓 + 组合 + 5种策略)
+- **核心业务层**: ✅ 100% (策略系统 + 5种内置策略)
 - **输出层**: ⏳ 0%
 
 **整体进度**: 约 83% (5/6 个主要模块)

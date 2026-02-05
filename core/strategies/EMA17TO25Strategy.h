@@ -4,13 +4,13 @@
 
 #ifndef STOCK_FOR_CPP_EMA17TO25STRATEGY_H
 #define STOCK_FOR_CPP_EMA17TO25STRATEGY_H
+#include "Strategy.h"
 
+namespace core {
 
+    class EMA17TO25Strategy : public StrategyBase {
+    };
 
-class EMA17TO25Strategy {
-
-};
-
-
+}
 
 #endif //STOCK_FOR_CPP_EMA17TO25STRATEGY_H

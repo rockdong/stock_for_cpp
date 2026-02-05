@@ -16,8 +16,7 @@ BOLLStrategy::BOLLStrategy(const std::map<std::string, double>& params)
 
 TradeSignal BOLLStrategy::analyze(
     const std::string& tsCode,
-    const std::vector<StockData>& data,
-    const Portfolio& portfolio
+    const std::vector<StockData>& data
 ) {
     int period = static_cast<int>(getParameter("period", 20));
     double stdDev = getParameter("std_dev", 2.0);
@@ -46,41 +45,32 @@ TradeSignal BOLLStrategy::analyze(
     
     // 价格触及下轨（买入信号）
     if (currentPrice <= lowerBand) {
-        double availableCash = portfolio.getCash();
-        int quantity = static_cast<int>(availableCash * 0.3 / currentPrice / 100) * 100;
+        double distance = (lowerBand - currentPrice) / lowerBand * 100;
+        SignalStrength strength = (distance > 2.0) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
         
-        if (quantity > 0) {
-            double distance = (lowerBand - currentPrice) / lowerBand * 100;
-            SignalStrength strength = (distance > 2.0) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
-            
-            return createSignal(
-                tsCode,
-                Signal::BUY,
-                strength,
-                currentPrice,
-                quantity,
-                "价格触及布林带下轨，买入信号"
-            );
-        }
+        return createSignal(
+            tsCode,
+            Signal::BUY,
+            strength,
+            currentPrice,
+            0,
+            "价格触及布林带下轨，买入信号"
+        );
     }
     
     // 价格触及上轨（卖出信号）
     if (currentPrice >= upperBand) {
-        auto position = portfolio.getPosition(tsCode);
-        if (position && position->getQuantity() > 0) {
-            int quantity = position->getQuantity();
-            double distance = (currentPrice - upperBand) / upperBand * 100;
-            SignalStrength strength = (distance > 2.0) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
-            
-            return createSignal(
-                tsCode,
-                Signal::SELL,
-                strength,
-                currentPrice,
-                quantity,
-                "价格触及布林带上轨，卖出信号"
-            );
-        }
+        double distance = (currentPrice - upperBand) / upperBand * 100;
+        SignalStrength strength = (distance > 2.0) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
+        
+        return createSignal(
+            tsCode,
+            Signal::SELL,
+            strength,
+            currentPrice,
+            0,
+            "价格触及布林带上轨，卖出信号"
+        );
     }
     
     // 无明确信号

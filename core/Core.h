@@ -10,9 +10,6 @@
 
 // 数据结构
 #include "Stock.h"
-#include "Trade.h"
-#include "Position.h"
-#include "Portfolio.h"
 
 // 策略系统
 #include "Strategy.h"

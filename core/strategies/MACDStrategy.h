@@ -25,8 +25,7 @@ public:
     
     TradeSignal analyze(
         const std::string& tsCode,
-        const std::vector<StockData>& data,
-        const Portfolio& portfolio
+        const std::vector<StockData>& data
     ) override;
     
     bool validateParameters() const override;

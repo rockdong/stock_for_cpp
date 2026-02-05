@@ -16,8 +16,7 @@ MACDStrategy::MACDStrategy(const std::map<std::string, double>& params)
 
 TradeSignal MACDStrategy::analyze(
     const std::string& tsCode,
-    const std::vector<StockData>& data,
-    const Portfolio& portfolio
+    const std::vector<StockData>& data
 ) {
     int fastPeriod = static_cast<int>(getParameter("fast_period", 12));
     int slowPeriod = static_cast<int>(getParameter("slow_period", 26));
@@ -58,20 +57,15 @@ TradeSignal MACDStrategy::analyze(
     bool histogramTurnsPositive = (currentHist > 0) && (prevHist <= 0);
     
     if (macdGoldenCross || histogramTurnsPositive) {
-        double availableCash = portfolio.getCash();
-        int quantity = static_cast<int>(availableCash * 0.3 / currentPrice / 100) * 100;
+        SignalStrength strength = (macdGoldenCross && histogramTurnsPositive) 
+            ? SignalStrength::STRONG 
+            : SignalStrength::MEDIUM;
         
-        if (quantity > 0) {
-            SignalStrength strength = (macdGoldenCross && histogramTurnsPositive) 
-                ? SignalStrength::STRONG 
-                : SignalStrength::MEDIUM;
-            
-            std::string reason = macdGoldenCross 
-                ? "MACD金叉，买入信号" 
-                : "MACD柱状图由负转正，买入确认";
-            
-            return createSignal(tsCode, Signal::BUY, strength, currentPrice, quantity, reason);
-        }
+        std::string reason = macdGoldenCross 
+            ? "MACD金叉，买入信号" 
+            : "MACD柱状图由负转正，买入确认";
+        
+        return createSignal(tsCode, Signal::BUY, strength, currentPrice, 0, reason);
     }
     
     // 检测 MACD 死叉（卖出信号）
@@ -79,20 +73,15 @@ TradeSignal MACDStrategy::analyze(
     bool histogramTurnsNegative = (currentHist < 0) && (prevHist >= 0);
     
     if (macdDeathCross || histogramTurnsNegative) {
-        auto position = portfolio.getPosition(tsCode);
-        if (position && position->getQuantity() > 0) {
-            int quantity = position->getQuantity();
-            
-            SignalStrength strength = (macdDeathCross && histogramTurnsNegative)
-                ? SignalStrength::STRONG
-                : SignalStrength::MEDIUM;
-            
-            std::string reason = macdDeathCross
-                ? "MACD死叉，卖出信号"
-                : "MACD柱状图由正转负，卖出确认";
-            
-            return createSignal(tsCode, Signal::SELL, strength, currentPrice, quantity, reason);
-        }
+        SignalStrength strength = (macdDeathCross && histogramTurnsNegative)
+            ? SignalStrength::STRONG
+            : SignalStrength::MEDIUM;
+        
+        std::string reason = macdDeathCross
+            ? "MACD死叉，卖出信号"
+            : "MACD柱状图由正转负，卖出确认";
+        
+        return createSignal(tsCode, Signal::SELL, strength, currentPrice, 0, reason);
     }
     
     // 无明确信号

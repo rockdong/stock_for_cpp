@@ -17,8 +17,7 @@ MACrossStrategy::MACrossStrategy(const std::map<std::string, double>& params)
 
 TradeSignal MACrossStrategy::analyze(
     const std::string& tsCode,
-    const std::vector<StockData>& data,
-    const Portfolio& portfolio
+    const std::vector<StockData>& data
 ) {
     int shortPeriod = static_cast<int>(getParameter("short_period", 5));
     int longPeriod = static_cast<int>(getParameter("long_period", 20));
@@ -45,37 +44,26 @@ TradeSignal MACrossStrategy::analyze(
     
     // 检测金叉（买入信号）
     if (isGoldenCross(shortMA, longMA)) {
-        // 计算建议买入数量（使用可用资金的一定比例）
-        double availableCash = portfolio.getCash();
-        int quantity = static_cast<int>(availableCash * 0.3 / currentPrice / 100) * 100; // 30%资金，100股为单位
-        
-        if (quantity > 0) {
-            return createSignal(
-                tsCode, 
-                Signal::BUY, 
-                SignalStrength::STRONG,
-                currentPrice,
-                quantity,
-                "短期均线(" + std::to_string(shortPeriod) + ")上穿长期均线(" + std::to_string(longPeriod) + ")，金叉买入"
-            );
-        }
+        return createSignal(
+            tsCode, 
+            Signal::BUY, 
+            SignalStrength::STRONG,
+            currentPrice,
+            0,  // 数量由外部决定
+            "短期均线(" + std::to_string(shortPeriod) + ")上穿长期均线(" + std::to_string(longPeriod) + ")，金叉买入"
+        );
     }
     
     // 检测死叉（卖出信号）
     if (isDeathCross(shortMA, longMA)) {
-        // 检查是否持有该股票
-        auto position = portfolio.getPosition(tsCode);
-        if (position && position->getQuantity() > 0) {
-            int quantity = position->getQuantity();
-            return createSignal(
-                tsCode,
-                Signal::SELL,
-                SignalStrength::STRONG,
-                currentPrice,
-                quantity,
-                "短期均线(" + std::to_string(shortPeriod) + ")下穿长期均线(" + std::to_string(longPeriod) + ")，死叉卖出"
-            );
-        }
+        return createSignal(
+            tsCode,
+            Signal::SELL,
+            SignalStrength::STRONG,
+            currentPrice,
+            0,  // 数量由外部决定
+            "短期均线(" + std::to_string(shortPeriod) + ")下穿长期均线(" + std::to_string(longPeriod) + ")，死叉卖出"
+        );
     }
     
     // 无明确信号

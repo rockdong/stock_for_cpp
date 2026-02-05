@@ -16,8 +16,7 @@ RSIStrategy::RSIStrategy(const std::map<std::string, double>& params)
 
 TradeSignal RSIStrategy::analyze(
     const std::string& tsCode,
-    const std::vector<StockData>& data,
-    const Portfolio& portfolio
+    const std::vector<StockData>& data
 ) {
     int period = static_cast<int>(getParameter("period", 14));
     double oversold = getParameter("oversold", 30);
@@ -45,37 +44,28 @@ TradeSignal RSIStrategy::analyze(
     
     // 超卖信号（买入）
     if (currentRSI < oversold) {
-        double availableCash = portfolio.getCash();
-        int quantity = static_cast<int>(availableCash * 0.3 / currentPrice / 100) * 100;
-        
-        if (quantity > 0) {
-            SignalStrength strength = (currentRSI < 20) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
-            return createSignal(
-                tsCode,
-                Signal::BUY,
-                strength,
-                currentPrice,
-                quantity,
-                "RSI=" + std::to_string(static_cast<int>(currentRSI)) + " 超卖，买入信号"
-            );
-        }
+        SignalStrength strength = (currentRSI < 20) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
+        return createSignal(
+            tsCode,
+            Signal::BUY,
+            strength,
+            currentPrice,
+            0,
+            "RSI=" + std::to_string(static_cast<int>(currentRSI)) + " 超卖，买入信号"
+        );
     }
     
     // 超买信号（卖出）
     if (currentRSI > overbought) {
-        auto position = portfolio.getPosition(tsCode);
-        if (position && position->getQuantity() > 0) {
-            int quantity = position->getQuantity();
-            SignalStrength strength = (currentRSI > 80) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
-            return createSignal(
-                tsCode,
-                Signal::SELL,
-                strength,
-                currentPrice,
-                quantity,
-                "RSI=" + std::to_string(static_cast<int>(currentRSI)) + " 超买，卖出信号"
-            );
-        }
+        SignalStrength strength = (currentRSI > 80) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
+        return createSignal(
+            tsCode,
+            Signal::SELL,
+            strength,
+            currentPrice,
+            0,
+            "RSI=" + std::to_string(static_cast<int>(currentRSI)) + " 超买，卖出信号"
+        );
     }
     
     // 无明确信号

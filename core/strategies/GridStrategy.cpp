@@ -18,8 +18,7 @@ GridStrategy::GridStrategy(const std::map<std::string, double>& params)
 
 TradeSignal GridStrategy::analyze(
     const std::string& tsCode,
-    const std::vector<StockData>& data,
-    const Portfolio& portfolio
+    const std::vector<StockData>& data
 ) {
     double gridSize = getParameter("grid_size", 5.0);
     double basePrice = getParameter("base_price", 0.0);
@@ -49,41 +48,26 @@ TradeSignal GridStrategy::analyze(
     
     // 价格下穿网格线（买入信号）
     if (currentPrice < currentGrid && prevPrice >= prevGrid && currentGrid < prevGrid) {
-        double availableCash = portfolio.getCash();
-        int quantity = static_cast<int>(availableCash * 0.2 / currentPrice / 100) * 100; // 使用20%资金
-        
-        if (quantity > 0) {
-            return createSignal(
-                tsCode,
-                Signal::BUY,
-                SignalStrength::MEDIUM,
-                currentPrice,
-                quantity,
-                "价格下穿网格线 " + std::to_string(currentGrid) + "，买入信号"
-            );
-        }
+        return createSignal(
+            tsCode,
+            Signal::BUY,
+            SignalStrength::MEDIUM,
+            currentPrice,
+            0,
+            "价格下穿网格线 " + std::to_string(currentGrid) + "，买入信号"
+        );
     }
     
     // 价格上穿网格线（卖出信号）
     if (currentPrice > currentGrid && prevPrice <= prevGrid && currentGrid > prevGrid) {
-        auto position = portfolio.getPosition(tsCode);
-        if (position && position->getQuantity() > 0) {
-            // 卖出部分持仓
-            int quantity = std::min(position->getQuantity(), 
-                                   static_cast<int>(position->getQuantity() * 0.3));
-            quantity = (quantity / 100) * 100; // 调整为100的倍数
-            
-            if (quantity > 0) {
-                return createSignal(
-                    tsCode,
-                    Signal::SELL,
-                    SignalStrength::MEDIUM,
-                    currentPrice,
-                    quantity,
-                    "价格上穿网格线 " + std::to_string(currentGrid) + "，卖出信号"
-                );
-            }
-        }
+        return createSignal(
+            tsCode,
+            Signal::SELL,
+            SignalStrength::MEDIUM,
+            currentPrice,
+            0,
+            "价格上穿网格线 " + std::to_string(currentGrid) + "，卖出信号"
+        );
     }
     
     // 无明确信号
