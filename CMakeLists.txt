@@ -49,6 +49,7 @@ add_library(core_lib STATIC
     core/strategies/RSIStrategy.cpp
     core/strategies/BOLLStrategy.cpp
     core/strategies/GridStrategy.cpp
+    core/strategies/EMA17TO25Strategy.cpp
 )
 
 target_include_directories(core_lib PUBLIC

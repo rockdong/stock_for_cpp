@@ -4,6 +4,7 @@
 #include "strategies/RSIStrategy.h"
 #include "strategies/BOLLStrategy.h"
 #include "strategies/GridStrategy.h"
+#include "strategies/EMA17TO25Strategy.h"
 #include <stdexcept>
 
 namespace core {
@@ -29,6 +30,9 @@ StrategyPtr StrategyFactory::create(StrategyType type, const std::map<std::strin
         case StrategyType::GRID:
             return std::make_shared<GridStrategy>(params);
         
+        case StrategyType::EMA17TO25:
+            return std::make_shared<EMA17TO25Strategy>(params);
+        
         default:
             throw std::invalid_argument("Unknown strategy type");
     }
@@ -52,6 +56,8 @@ StrategyPtr StrategyFactory::create(const std::string& name, const std::map<std:
         return create(StrategyType::BOLL, params);
     } else if (name == "GRID" || name == "Grid") {
         return create(StrategyType::GRID, params);
+    } else if (name == "EMA17TO25" || name == "EMA17_25" || name == "ema17to25") {
+        return create(StrategyType::EMA17TO25, params);
     }
     
     throw std::invalid_argument("Unknown strategy name: " + name);
@@ -70,7 +76,8 @@ std::vector<std::string> StrategyFactory::getSupportedStrategies() {
         "MACD",
         "RSI",
         "BOLL",
-        "GRID"
+        "GRID",
+        "EMA17TO25"
     };
     
     // 添加自定义策略
@@ -88,6 +95,7 @@ std::string StrategyFactory::getStrategyName(StrategyType type) {
         case StrategyType::RSI: return "RSI";
         case StrategyType::BOLL: return "BOLL";
         case StrategyType::GRID: return "GRID";
+        case StrategyType::EMA17TO25: return "EMA17TO25";
         case StrategyType::CUSTOM: return "CUSTOM";
         default: return "UNKNOWN";
     }

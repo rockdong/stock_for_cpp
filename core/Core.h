@@ -21,5 +21,6 @@
 #include "strategies/RSIStrategy.h"
 #include "strategies/BOLLStrategy.h"
 #include "strategies/GridStrategy.h"
+#include "strategies/EMA17TO25Strategy.h"
 
 #endif // CORE_CORE_H

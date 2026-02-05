@@ -26,6 +26,7 @@ public:
         RSI,            // RSI 策略
         BOLL,           // 布林带策略
         GRID,           // 网格交易策略
+        EMA17TO25,      // EMA17/EMA25 交叉策略
         CUSTOM          // 自定义策略
     };
     
