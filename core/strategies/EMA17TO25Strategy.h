@@ -1,0 +1,16 @@
+//
+// Created by 蔡冬 on 2026/2/6.
+//
+
+#ifndef STOCK_FOR_CPP_EMA17TO25STRATEGY_H
+#define STOCK_FOR_CPP_EMA17TO25STRATEGY_H
+
+
+
+class EMA17TO25Strategy {
+
+};
+
+
+
+#endif //STOCK_FOR_CPP_EMA17TO25STRATEGY_H
