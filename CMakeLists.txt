@@ -56,10 +56,14 @@ target_include_directories(core_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/core
     ${CMAKE_CURRENT_SOURCE_DIR}/core/strategies
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
+    ${CMAKE_CURRENT_SOURCE_DIR}/analysis/indicators
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ta-lib/include
 )
 
 target_link_libraries(core_lib PUBLIC
     utils_lib
+    analysis_lib
 )
 
 # 添加日志库
