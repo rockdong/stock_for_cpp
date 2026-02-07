@@ -16,7 +16,7 @@ GridStrategy::GridStrategy(const std::map<std::string, double>& params)
     setParameters(params);
 }
 
-AnalysisResult GridStrategy::analyze(
+std::optional<AnalysisResult> GridStrategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -26,7 +26,7 @@ AnalysisResult GridStrategy::analyze(
     
     // 检查数据是否足够
     if (!hasEnoughData(data, 2)) {
-        return createResult(tsCode, "", "数据不足");
+        return std::nullopt;
     }
     
     // 获取当前价格和前一天价格

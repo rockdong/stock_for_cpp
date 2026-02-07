@@ -45,6 +45,7 @@
 #include "database/Connection.h"
 #include "database/StockDAO.h"
 #include "database/PriceDAO.h"
+#include "database/AnalysisResultDAO.h"
 
 // 缓存管理
 #include "cache/ICache.h"

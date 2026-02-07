@@ -14,7 +14,7 @@ BOLLStrategy::BOLLStrategy(const std::map<std::string, double>& params)
     setParameters(params);
 }
 
-AnalysisResult BOLLStrategy::analyze(
+std::optional<AnalysisResult> BOLLStrategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -23,7 +23,7 @@ AnalysisResult BOLLStrategy::analyze(
     
     // 检查数据是否足够
     if (!hasEnoughData(data, period + 2)) {
-        return createResult(tsCode, "", "数据不足");
+        return std::nullopt;
     }
     
     // 提取收盘价

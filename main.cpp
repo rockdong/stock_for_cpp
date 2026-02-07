@@ -138,7 +138,11 @@ int main() {
             core::EMA17TO25Strategy ema17to25Strategy;
 
             auto result = ema17to25Strategy.analyze(stock.ts_code, data);
-            LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 分析结果: " + result.toString());
+            if (result.has_value()) {
+                LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 分析结果: " + result->toString());
+            } else {
+                LOG_WARN("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 分析失败: 数据不足");
+            }
 
 
             // // 打印前 5 条数据

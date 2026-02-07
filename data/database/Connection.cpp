@@ -197,10 +197,34 @@ bool Connection::createTables() {
         return false;
     }
     
+    // 创建分析结果表
+    std::string createAnalysisResultsTable = R"(
+        CREATE TABLE IF NOT EXISTS analysis_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts_code TEXT NOT NULL,
+            strategy_name TEXT NOT NULL,
+            trade_date TEXT NOT NULL,
+            label TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(ts_code, strategy_name, trade_date)
+        )
+    )";
+    
+    LOG_INFO("创建 analysis_results 表");
+    if (!executeInternal(createAnalysisResultsTable)) {
+        LOG_ERROR("创建 analysis_results 表失败");
+        return false;
+    }
+    
     // 创建索引
     executeInternal("CREATE INDEX IF NOT EXISTS idx_stocks_ts_code ON stocks(ts_code)");
     executeInternal("CREATE INDEX IF NOT EXISTS idx_prices_stock_date ON prices(stock_id, trade_date)");
     executeInternal("CREATE INDEX IF NOT EXISTS idx_trades_stock_time ON trades(stock_id, trade_time)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_ts_code ON analysis_results(ts_code)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_strategy ON analysis_results(strategy_name)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_date ON analysis_results(trade_date)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_label ON analysis_results(label)");
     
     LOG_INFO("数据库表创建成功");
     return true;

@@ -23,7 +23,7 @@ class MACDStrategy : public StrategyBase {
 public:
     explicit MACDStrategy(const std::map<std::string, double>& params = {});
     
-    AnalysisResult analyze(
+    std::optional<AnalysisResult> analyze(
         const std::string& tsCode,
         const std::vector<StockData>& data
     ) override;

@@ -15,7 +15,7 @@ MACrossStrategy::MACrossStrategy(const std::map<std::string, double>& params)
     setParameters(params);
 }
 
-AnalysisResult MACrossStrategy::analyze(
+std::optional<AnalysisResult> MACrossStrategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -24,7 +24,7 @@ AnalysisResult MACrossStrategy::analyze(
     
     // 检查数据是否足够
     if (!hasEnoughData(data, longPeriod + 2)) {
-        return createResult(tsCode, "", "数据不足");
+        return std::nullopt;
     }
     
     // 提取收盘价

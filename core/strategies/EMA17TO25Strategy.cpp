@@ -18,7 +18,7 @@ EMA17TO25Strategy::EMA17TO25Strategy(const std::map<std::string, double>& params
     setParameters(params);
 }
 
-AnalysisResult EMA17TO25Strategy::analyze(
+std::optional<AnalysisResult> EMA17TO25Strategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -27,7 +27,7 @@ AnalysisResult EMA17TO25Strategy::analyze(
     
     // 检查数据是否足够
     if (!hasEnoughData(data, slowPeriod + 2)) {
-        return createResult(tsCode, "", "数据不足");
+        return std::nullopt;
     }
     
     // 提取收盘价

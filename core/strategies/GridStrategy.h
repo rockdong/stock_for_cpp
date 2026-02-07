@@ -19,7 +19,7 @@ class GridStrategy : public StrategyBase {
 public:
     explicit GridStrategy(const std::map<std::string, double>& params = {});
     
-    AnalysisResult analyze(
+    std::optional<AnalysisResult> analyze(
         const std::string& tsCode,
         const std::vector<StockData>& data
     ) override;

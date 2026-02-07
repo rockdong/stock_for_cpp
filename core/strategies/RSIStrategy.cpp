@@ -14,7 +14,7 @@ RSIStrategy::RSIStrategy(const std::map<std::string, double>& params)
     setParameters(params);
 }
 
-AnalysisResult RSIStrategy::analyze(
+std::optional<AnalysisResult> RSIStrategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -24,7 +24,7 @@ AnalysisResult RSIStrategy::analyze(
     
     // 检查数据是否足够
     if (!hasEnoughData(data, period + 2)) {
-        return createResult(tsCode, "", "数据不足");
+        return std::nullopt;
     }
     
     // 提取收盘价

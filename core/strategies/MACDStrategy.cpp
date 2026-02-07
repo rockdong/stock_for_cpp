@@ -14,7 +14,7 @@ MACDStrategy::MACDStrategy(const std::map<std::string, double>& params)
     setParameters(params);
 }
 
-AnalysisResult MACDStrategy::analyze(
+std::optional<AnalysisResult> MACDStrategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -25,7 +25,7 @@ AnalysisResult MACDStrategy::analyze(
     // 检查数据是否足够
     size_t minSize = slowPeriod + signalPeriod + 2;
     if (!hasEnoughData(data, minSize)) {
-        return createResult(tsCode, "", "数据不足");
+        return std::nullopt;
     }
     
     // 提取收盘价

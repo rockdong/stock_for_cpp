@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <optional>
 #include "Stock.h"
 #include "AnalysisResult.h"
 
@@ -34,9 +35,9 @@ public:
      * @brief 分析并生成分析结果
      * @param tsCode 股票代码
      * @param data 历史数据
-     * @return 分析结果
+     * @return 分析结果（可选，如果分析失败则返回 std::nullopt）
      */
-    virtual AnalysisResult analyze(
+    virtual std::optional<AnalysisResult> analyze(
         const std::string& tsCode,
         const std::vector<StockData>& data
     ) = 0;
