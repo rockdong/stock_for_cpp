@@ -1,4 +1,6 @@
 #include <iostream>
+
+#include "AnalysisResultDAO.h"
 #include "Logger.h"
 #include "Config.h"
 #include "DataSourceFactory.h"
@@ -8,6 +10,7 @@
 #include "MA.h"
 #include "MathUtil.h"
 #include "StockDAO.h"
+#include "StrategyManager.h"
 
 int main() {
     // 初始化配置系统
@@ -80,8 +83,17 @@ int main() {
     }
     LOG_INFO("数据库连接成功");
 
-    // 创建 StockDAO 实例
+    // 创建 DAO 实例
     data::StockDAO stockDao;
+    data::AnalysisResultDAO analysisResultDao;
+
+    // 初始化 StrategyManager（单例模式）
+    auto& strategyManager = core::StrategyManager::getInstance();
+    if (!strategyManager.initializeFromEnv("STRATEGIES")) {
+        LOG_ERROR("策略管理器初始化失败");
+        return 1;
+    }
+    LOG_INFO("策略管理器初始化成功，已注册 " + std::to_string(strategyManager.count()) + " 个策略");
 
     // 先从数据库中查询是否有股票列表
     auto stock_list = stockDao.findAll();
@@ -110,15 +122,7 @@ int main() {
         // 转换并保存到数据库
         std::vector<data::Stock> stocks_to_save;
         for (const auto& api_stock : stock_list) {
-            data::Stock stock;
-            stock.ts_code = api_stock.ts_code;
-            stock.symbol = api_stock.symbol;
-            stock.name = api_stock.name;
-            stock.area = api_stock.area;
-            stock.industry = api_stock.industry;
-            stock.market = api_stock.market;
-            stock.list_date = api_stock.list_date;
-            stocks_to_save.push_back(stock);
+            stocks_to_save.push_back(api_stock);
         }
         
         int saved_count = stockDao.batchInsert(stocks_to_save);
@@ -128,81 +132,32 @@ int main() {
     // 打印 stock_list 的 size
     LOG_INFO("stock_list 的 size: " + std::to_string(stock_list.size()));
 
+    std::vector<core::AnalysisResult> analysisResults;
+
     for (const auto& stock : stock_list) {
         LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name);
-        // 循环 日 周 月
-        for (const auto& freq : {"d", "w", "m"}) {
-            auto data = dataSource->getQuoteData(stock.ts_code, "", "", freq);
 
-            // 使用 EMA17TO25 策略
-            core::EMA17TO25Strategy ema17to25Strategy;
+        // 通过 StrategyManager 获取已注册的策略进行分析
+        for (const auto& strategy : strategyManager.getStrategies()) {
 
-            auto result = ema17to25Strategy.analyze(stock.ts_code, data);
-            if (result.has_value()) {
-                LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 分析结果: " + result->toString());
-            } else {
-                LOG_WARN("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 分析失败: 数据不足");
+            // 循环 日 周 月
+            for (const auto& freq : {"d", "w", "m"}) {
+                auto data = dataSource->getQuoteData(stock.ts_code, "", "", freq);
+                auto result = strategy->analyze(stock.ts_code, data);
+                if (result.has_value()) {
+                    LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 分析结果: " + result->toString());
+                    // 写入数据库
+                    analysisResults.push_back(*result);
+                }
             }
 
-
-            // // 打印前 5 条数据
-            // for (size_t i = 0; i < 5; i++) {
-            //     LOG_INFO("日期: " + data[i].trade_date + ", 收盘价: " + std::to_string(data[i].close));
-            // }
-
-            // auto closes = utils::MathUtil::extractClose(data);
-
-            // // 打印前 5 条数据
-            // for (size_t i = closes.size() - 5; i < closes.size(); i++) {
-            //     LOG_INFO("收盘价: " + std::to_string(closes[i]));
-            // }
-
-            // auto ma5 = analysis::MA::compute(closes, 5);
-
-            // // 打印 后 10 个
-            // for (size_t i = ma5.size() - 10; i < ma5.size(); i++) {
-            //     LOG_INFO("MA5: " + std::to_string(ma5[i]) + ", 收盘价: " + std::to_string(closes[i]));
-            // }
-            // LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(closes.size()));
-            // // LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(data.size()));
+            if (!analysisResults.empty()) {
+                analysisResultDao.batchInsert(analysisResults);
+                analysisResults.clear();
+            }
         }
-    }
-    
-    // 测试新增的周线和月线接口
-    LOG_INFO("========================================");
-    LOG_INFO("测试行情数据接口（日线、周线、月线）");
-    LOG_INFO("========================================");
-    
-    if (!stock_list.empty()) {
-        // 使用第一只股票进行测试
-        std::string test_ts_code = stock_list[0].ts_code;
-        LOG_INFO("测试股票: " + test_ts_code + " (" + stock_list[0].name + ")");
         
-        try {
-            auto dataSource = network::DataSourceFactory::createFromConfig();
-            
-            // 测试日线数据
-            LOG_INFO("获取日线数据...");
-            auto daily_data = dataSource->getQuoteData(test_ts_code, "20240101", "20240110", "d");
-            LOG_INFO("日线数据条数: " + std::to_string(daily_data.size()));
-            
-            // 测试周线数据
-            LOG_INFO("获取周线数据...");
-            auto weekly_data = dataSource->getQuoteData(test_ts_code, "20240101", "20240331", "w");
-            LOG_INFO("周线数据条数: " + std::to_string(weekly_data.size()));
-            
-            // 测试月线数据
-            LOG_INFO("获取月线数据...");
-            auto monthly_data = dataSource->getQuoteData(test_ts_code, "20230101", "20231231", "m");
-            LOG_INFO("月线数据条数: " + std::to_string(monthly_data.size()));
-            
-            LOG_INFO("行情数据接口测试完成");
-        } catch (const std::exception& e) {
-            LOG_ERROR("测试失败: " + std::string(e.what()));
-        }
     }
-    
-    LOG_INFO("========================================");
     
     // 断开数据库连接
     conn.disconnect();

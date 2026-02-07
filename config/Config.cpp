@@ -99,6 +99,7 @@ void Config::loadConfig() {
     default_macd_slow_ = getEnvInt("DEFAULT_MACD_SLOW", 26);
     default_macd_signal_ = getEnvInt("DEFAULT_MACD_SIGNAL", 9);
     default_rsi_period_ = getEnvInt("DEFAULT_RSI_PERIOD", 14);
+    strategies_ = getEnvString("STRATEGIES", "EMA17TO25;MACD;RSI");
 
     // ========== 应用配置 ==========
     app_name_ = getEnvString("APP_NAME", "Stock Analysis System");

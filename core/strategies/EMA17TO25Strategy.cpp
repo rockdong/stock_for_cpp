@@ -43,19 +43,17 @@ std::optional<AnalysisResult> EMA17TO25Strategy::analyze(
     
     // 获取最新交易日期
     std::string tradeDate = data.back().trade_date;
-    
-    // 检测金叉（买入信号）
+
+    // 判断最后两天的 ema17 和 ema25 的交叉情况
     if (isGoldenCross(fastEMA, slowEMA)) {
         return createResult(tsCode, tradeDate, "买入");
     }
-    
-    // 检测死叉（卖出信号）
-    if (isDeathCross(fastEMA, slowEMA)) {
-        return createResult(tsCode, tradeDate, "卖出");
-    }
-    
-    // 无明确信号
-    return createResult(tsCode, tradeDate, "持有");
+
+    // if (isDeathCross(fastEMA, slowEMA)) {
+    //     return createResult(tsCode, tradeDate, "卖出");
+    // }
+
+    return std::nullopt;
 }
 
 bool EMA17TO25Strategy::validateParameters() const {

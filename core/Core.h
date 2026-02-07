@@ -15,6 +15,7 @@
 // 策略系统
 #include "Strategy.h"
 #include "StrategyFactory.h"
+#include "StrategyManager.h"
 
 // 具体策略
 #include "strategies/MACrossStrategy.h"

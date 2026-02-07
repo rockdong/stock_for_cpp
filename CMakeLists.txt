@@ -45,6 +45,7 @@ add_library(core_lib STATIC
     core/AnalysisResult.cpp
     core/Strategy.cpp
     core/StrategyFactory.cpp
+    core/StrategyManager.cpp
     core/strategies/MACrossStrategy.cpp
     core/strategies/MACDStrategy.cpp
     core/strategies/RSIStrategy.cpp
