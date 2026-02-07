@@ -6,49 +6,9 @@
 #include <vector>
 #include <map>
 #include "Stock.h"
+#include "AnalysisResult.h"
 
 namespace core {
-
-/**
- * @brief 交易信号枚举
- */
-enum class Signal {
-    BUY,        // 买入信号
-    SELL,       // 卖出信号
-    HOLD,       // 持有信号
-    NONE        // 无信号
-};
-
-/**
- * @brief 信号强度枚举
- */
-enum class SignalStrength {
-    WEAK,       // 弱信号
-    MEDIUM,     // 中等信号
-    STRONG      // 强信号
-};
-
-/**
- * @brief 交易信号结构
- */
-struct TradeSignal {
-    std::string tsCode;         // 股票代码
-    Signal signal;              // 信号类型
-    SignalStrength strength;    // 信号强度
-    double price;               // 建议价格
-    int quantity;               // 建议数量
-    std::string reason;         // 信号原因
-    std::string timestamp;      // 信号时间
-    
-    TradeSignal()
-        : signal(Signal::NONE)
-        , strength(SignalStrength::WEAK)
-        , price(0.0)
-        , quantity(0)
-    {}
-    
-    std::string toString() const;
-};
 
 /**
  * @brief 策略接口
@@ -71,12 +31,12 @@ public:
     virtual std::string getDescription() const = 0;
     
     /**
-     * @brief 分析并生成交易信号
+     * @brief 分析并生成分析结果
      * @param tsCode 股票代码
      * @param data 历史数据
-     * @return 交易信号
+     * @return 分析结果
      */
-    virtual TradeSignal analyze(
+    virtual AnalysisResult analyze(
         const std::string& tsCode,
         const std::vector<StockData>& data
     ) = 0;
@@ -141,15 +101,12 @@ protected:
     bool hasEnoughData(const std::vector<StockData>& data, size_t minSize) const;
     
     /**
-     * @brief 创建交易信号
+     * @brief 创建分析结果
      */
-    TradeSignal createSignal(
+    AnalysisResult createResult(
         const std::string& tsCode,
-        Signal signal,
-        SignalStrength strength,
-        double price,
-        int quantity,
-        const std::string& reason
+        const std::string& tradeDate,
+        const std::string& label
     ) const;
 };
 

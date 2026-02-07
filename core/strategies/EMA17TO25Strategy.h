@@ -24,7 +24,7 @@ class EMA17TO25Strategy : public StrategyBase {
 public:
     explicit EMA17TO25Strategy(const std::map<std::string, double>& params = {});
     
-    TradeSignal analyze(
+    AnalysisResult analyze(
         const std::string& tsCode,
         const std::vector<StockData>& data
     ) override;

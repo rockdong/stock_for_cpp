@@ -21,7 +21,7 @@ class RSIStrategy : public StrategyBase {
 public:
     explicit RSIStrategy(const std::map<std::string, double>& params = {});
     
-    TradeSignal analyze(
+    AnalysisResult analyze(
         const std::string& tsCode,
         const std::vector<StockData>& data
     ) override;

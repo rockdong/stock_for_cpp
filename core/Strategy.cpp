@@ -1,38 +1,6 @@
 #include "Strategy.h"
-#include <sstream>
-#include <iomanip>
-#include <ctime>
 
 namespace core {
-
-std::string TradeSignal::toString() const {
-    std::ostringstream oss;
-    oss << "TradeSignal[tsCode=" << tsCode
-        << ", signal=";
-    
-    switch (signal) {
-        case Signal::BUY: oss << "BUY"; break;
-        case Signal::SELL: oss << "SELL"; break;
-        case Signal::HOLD: oss << "HOLD"; break;
-        case Signal::NONE: oss << "NONE"; break;
-    }
-    
-    oss << ", strength=";
-    switch (strength) {
-        case SignalStrength::WEAK: oss << "WEAK"; break;
-        case SignalStrength::MEDIUM: oss << "MEDIUM"; break;
-        case SignalStrength::STRONG: oss << "STRONG"; break;
-    }
-    
-    oss << std::fixed << std::setprecision(2);
-    oss << ", price=" << price
-        << ", quantity=" << quantity
-        << ", reason=" << reason
-        << ", timestamp=" << timestamp
-        << "]";
-    
-    return oss.str();
-}
 
 // StrategyBase implementation
 StrategyBase::StrategyBase(const std::string& name, const std::string& description)
@@ -70,29 +38,12 @@ bool StrategyBase::hasEnoughData(const std::vector<StockData>& data, size_t minS
     return data.size() >= minSize;
 }
 
-TradeSignal StrategyBase::createSignal(
+AnalysisResult StrategyBase::createResult(
     const std::string& tsCode,
-    Signal signal,
-    SignalStrength strength,
-    double price,
-    int quantity,
-    const std::string& reason
+    const std::string& tradeDate,
+    const std::string& label
 ) const {
-    TradeSignal tradeSignal;
-    tradeSignal.tsCode = tsCode;
-    tradeSignal.signal = signal;
-    tradeSignal.strength = strength;
-    tradeSignal.price = price;
-    tradeSignal.quantity = quantity;
-    tradeSignal.reason = reason;
-    
-    // 设置时间戳
-    std::time_t now = std::time(nullptr);
-    char buf[20];
-    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-    tradeSignal.timestamp = buf;
-    
-    return tradeSignal;
+    return AnalysisResult(tsCode, name_, tradeDate, label);
 }
 
 } // namespace core

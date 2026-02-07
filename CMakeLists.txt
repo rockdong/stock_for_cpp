@@ -42,6 +42,7 @@ target_link_libraries(config_lib PUBLIC
 
 # 添加核心业务模块库（策略系统）
 add_library(core_lib STATIC
+    core/AnalysisResult.cpp
     core/Strategy.cpp
     core/StrategyFactory.cpp
     core/strategies/MACrossStrategy.cpp

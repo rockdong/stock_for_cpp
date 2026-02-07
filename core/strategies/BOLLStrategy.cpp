@@ -14,7 +14,7 @@ BOLLStrategy::BOLLStrategy(const std::map<std::string, double>& params)
     setParameters(params);
 }
 
-TradeSignal BOLLStrategy::analyze(
+AnalysisResult BOLLStrategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -23,8 +23,7 @@ TradeSignal BOLLStrategy::analyze(
     
     // 检查数据是否足够
     if (!hasEnoughData(data, period + 2)) {
-        return createSignal(tsCode, Signal::NONE, SignalStrength::WEAK, 0.0, 0,
-                          "数据不足，需要至少 " + std::to_string(period + 2) + " 条数据");
+        return createResult(tsCode, "", "数据不足");
     }
     
     // 提取收盘价
@@ -40,41 +39,23 @@ TradeSignal BOLLStrategy::analyze(
     // 获取当前价格和布林带值
     double currentPrice = closes.back();
     double upperBand = boll.upper.back();
-    double middleBand = boll.middle.back();
     double lowerBand = boll.lower.back();
+    
+    // 获取最新交易日期
+    std::string tradeDate = data.back().trade_date;
     
     // 价格触及下轨（买入信号）
     if (currentPrice <= lowerBand) {
-        double distance = (lowerBand - currentPrice) / lowerBand * 100;
-        SignalStrength strength = (distance > 2.0) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
-        
-        return createSignal(
-            tsCode,
-            Signal::BUY,
-            strength,
-            currentPrice,
-            0,
-            "价格触及布林带下轨，买入信号"
-        );
+        return createResult(tsCode, tradeDate, "买入");
     }
     
     // 价格触及上轨（卖出信号）
     if (currentPrice >= upperBand) {
-        double distance = (currentPrice - upperBand) / upperBand * 100;
-        SignalStrength strength = (distance > 2.0) ? SignalStrength::STRONG : SignalStrength::MEDIUM;
-        
-        return createSignal(
-            tsCode,
-            Signal::SELL,
-            strength,
-            currentPrice,
-            0,
-            "价格触及布林带上轨，卖出信号"
-        );
+        return createResult(tsCode, tradeDate, "卖出");
     }
     
     // 无明确信号
-    return createSignal(tsCode, Signal::HOLD, SignalStrength::WEAK, currentPrice, 0, "无明确交易信号");
+    return createResult(tsCode, tradeDate, "持有");
 }
 
 bool BOLLStrategy::validateParameters() const {

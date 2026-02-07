@@ -10,6 +10,7 @@
 
 // 数据结构
 #include "Stock.h"
+#include "AnalysisResult.h"
 
 // 策略系统
 #include "Strategy.h"

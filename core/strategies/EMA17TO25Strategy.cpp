@@ -18,7 +18,7 @@ EMA17TO25Strategy::EMA17TO25Strategy(const std::map<std::string, double>& params
     setParameters(params);
 }
 
-TradeSignal EMA17TO25Strategy::analyze(
+AnalysisResult EMA17TO25Strategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -27,8 +27,7 @@ TradeSignal EMA17TO25Strategy::analyze(
     
     // 检查数据是否足够
     if (!hasEnoughData(data, slowPeriod + 2)) {
-        return createSignal(tsCode, Signal::NONE, SignalStrength::WEAK, 0.0, 0, 
-                          "数据不足，需要至少 " + std::to_string(slowPeriod + 2) + " 条数据");
+        return createResult(tsCode, "", "数据不足");
     }
     
     // 提取收盘价
@@ -42,35 +41,21 @@ TradeSignal EMA17TO25Strategy::analyze(
     auto fastEMA = analysis::EMA::compute(closes, fastPeriod);
     auto slowEMA = analysis::EMA::compute(closes, slowPeriod);
     
-    // 获取当前价格
-    double currentPrice = closes.back();
+    // 获取最新交易日期
+    std::string tradeDate = data.back().trade_date;
     
     // 检测金叉（买入信号）
     if (isGoldenCross(fastEMA, slowEMA)) {
-        return createSignal(
-            tsCode, 
-            Signal::BUY, 
-            SignalStrength::STRONG,
-            currentPrice,
-            0,
-            "EMA" + std::to_string(fastPeriod) + " 上穿 EMA" + std::to_string(slowPeriod) + "，金叉买入"
-        );
+        return createResult(tsCode, tradeDate, "买入");
     }
     
     // 检测死叉（卖出信号）
     if (isDeathCross(fastEMA, slowEMA)) {
-        return createSignal(
-            tsCode,
-            Signal::SELL,
-            SignalStrength::STRONG,
-            currentPrice,
-            0,
-            "EMA" + std::to_string(fastPeriod) + " 下穿 EMA" + std::to_string(slowPeriod) + "，死叉卖出"
-        );
+        return createResult(tsCode, tradeDate, "卖出");
     }
     
     // 无明确信号
-    return createSignal(tsCode, Signal::HOLD, SignalStrength::WEAK, currentPrice, 0, "无明确交易信号");
+    return createResult(tsCode, tradeDate, "持有");
 }
 
 bool EMA17TO25Strategy::validateParameters() const {

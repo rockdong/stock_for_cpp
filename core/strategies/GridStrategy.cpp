@@ -16,7 +16,7 @@ GridStrategy::GridStrategy(const std::map<std::string, double>& params)
     setParameters(params);
 }
 
-TradeSignal GridStrategy::analyze(
+AnalysisResult GridStrategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -26,8 +26,7 @@ TradeSignal GridStrategy::analyze(
     
     // 检查数据是否足够
     if (!hasEnoughData(data, 2)) {
-        return createSignal(tsCode, Signal::NONE, SignalStrength::WEAK, 0.0, 0,
-                          "数据不足");
+        return createResult(tsCode, "", "数据不足");
     }
     
     // 获取当前价格和前一天价格
@@ -46,32 +45,21 @@ TradeSignal GridStrategy::analyze(
     double currentGrid = findNearestGrid(currentPrice, gridPrices);
     double prevGrid = findNearestGrid(prevPrice, gridPrices);
     
+    // 获取最新交易日期
+    std::string tradeDate = data.back().trade_date;
+    
     // 价格下穿网格线（买入信号）
     if (currentPrice < currentGrid && prevPrice >= prevGrid && currentGrid < prevGrid) {
-        return createSignal(
-            tsCode,
-            Signal::BUY,
-            SignalStrength::MEDIUM,
-            currentPrice,
-            0,
-            "价格下穿网格线 " + std::to_string(currentGrid) + "，买入信号"
-        );
+        return createResult(tsCode, tradeDate, "买入");
     }
     
     // 价格上穿网格线（卖出信号）
     if (currentPrice > currentGrid && prevPrice <= prevGrid && currentGrid > prevGrid) {
-        return createSignal(
-            tsCode,
-            Signal::SELL,
-            SignalStrength::MEDIUM,
-            currentPrice,
-            0,
-            "价格上穿网格线 " + std::to_string(currentGrid) + "，卖出信号"
-        );
+        return createResult(tsCode, tradeDate, "卖出");
     }
     
     // 无明确信号
-    return createSignal(tsCode, Signal::HOLD, SignalStrength::WEAK, currentPrice, 0, "无明确交易信号");
+    return createResult(tsCode, tradeDate, "持有");
 }
 
 bool GridStrategy::validateParameters() const {

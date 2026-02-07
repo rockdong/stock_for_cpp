@@ -15,7 +15,7 @@ MACrossStrategy::MACrossStrategy(const std::map<std::string, double>& params)
     setParameters(params);
 }
 
-TradeSignal MACrossStrategy::analyze(
+AnalysisResult MACrossStrategy::analyze(
     const std::string& tsCode,
     const std::vector<StockData>& data
 ) {
@@ -24,8 +24,7 @@ TradeSignal MACrossStrategy::analyze(
     
     // 检查数据是否足够
     if (!hasEnoughData(data, longPeriod + 2)) {
-        return createSignal(tsCode, Signal::NONE, SignalStrength::WEAK, 0.0, 0, 
-                          "数据不足，需要至少 " + std::to_string(longPeriod + 2) + " 条数据");
+        return createResult(tsCode, "", "数据不足");
     }
     
     // 提取收盘价
@@ -39,35 +38,21 @@ TradeSignal MACrossStrategy::analyze(
     auto shortMA = calculateMA(closes, shortPeriod);
     auto longMA = calculateMA(closes, longPeriod);
     
-    // 获取当前价格
-    double currentPrice = closes.back();
+    // 获取最新交易日期
+    std::string tradeDate = data.back().trade_date;
     
     // 检测金叉（买入信号）
     if (isGoldenCross(shortMA, longMA)) {
-        return createSignal(
-            tsCode, 
-            Signal::BUY, 
-            SignalStrength::STRONG,
-            currentPrice,
-            0,  // 数量由外部决定
-            "短期均线(" + std::to_string(shortPeriod) + ")上穿长期均线(" + std::to_string(longPeriod) + ")，金叉买入"
-        );
+        return createResult(tsCode, tradeDate, "买入");
     }
     
     // 检测死叉（卖出信号）
     if (isDeathCross(shortMA, longMA)) {
-        return createSignal(
-            tsCode,
-            Signal::SELL,
-            SignalStrength::STRONG,
-            currentPrice,
-            0,  // 数量由外部决定
-            "短期均线(" + std::to_string(shortPeriod) + ")下穿长期均线(" + std::to_string(longPeriod) + ")，死叉卖出"
-        );
+        return createResult(tsCode, tradeDate, "卖出");
     }
     
     // 无明确信号
-    return createSignal(tsCode, Signal::HOLD, SignalStrength::WEAK, currentPrice, 0, "无明确交易信号");
+    return createResult(tsCode, tradeDate, "持有");
 }
 
 bool MACrossStrategy::validateParameters() const {

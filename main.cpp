@@ -4,6 +4,7 @@
 #include "DataSourceFactory.h"
 #include "TushareDataSource.h"
 #include "Connection.h"
+#include "EMA17TO25Strategy.h"
 #include "MA.h"
 #include "MathUtil.h"
 #include "StockDAO.h"
@@ -130,30 +131,36 @@ int main() {
     for (const auto& stock : stock_list) {
         LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name);
         // 循环 日 周 月
-        // for (const auto& freq : {"d", "w", "m"}) {
-        for (const auto& freq : {"d"}) {
+        for (const auto& freq : {"d", "w", "m"}) {
             auto data = dataSource->getQuoteData(stock.ts_code, "", "", freq);
 
-            // 打印前 5 条数据
-            for (size_t i = 0; i < 5; i++) {
-                LOG_INFO("日期: " + data[i].trade_date + ", 收盘价: " + std::to_string(data[i].close));
-            }
+            // 使用 EMA17TO25 策略
+            core::EMA17TO25Strategy ema17to25Strategy;
 
-            auto closes = utils::MathUtil::extractClose(data);
+            auto result = ema17to25Strategy.analyze(stock.ts_code, data);
+            LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 分析结果: " + result.toString());
 
-            // 打印前 5 条数据
-            for (size_t i = closes.size() - 5; i < closes.size(); i++) {
-                LOG_INFO("收盘价: " + std::to_string(closes[i]));
-            }
 
-            auto ma5 = analysis::MA::compute(closes, 5);
+            // // 打印前 5 条数据
+            // for (size_t i = 0; i < 5; i++) {
+            //     LOG_INFO("日期: " + data[i].trade_date + ", 收盘价: " + std::to_string(data[i].close));
+            // }
 
-            // 打印 后 10 个
-            for (size_t i = ma5.size() - 10; i < ma5.size(); i++) {
-                LOG_INFO("MA5: " + std::to_string(ma5[i]) + ", 收盘价: " + std::to_string(closes[i]));
-            }
-            LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(closes.size()));
-            // LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(data.size()));
+            // auto closes = utils::MathUtil::extractClose(data);
+
+            // // 打印前 5 条数据
+            // for (size_t i = closes.size() - 5; i < closes.size(); i++) {
+            //     LOG_INFO("收盘价: " + std::to_string(closes[i]));
+            // }
+
+            // auto ma5 = analysis::MA::compute(closes, 5);
+
+            // // 打印 后 10 个
+            // for (size_t i = ma5.size() - 10; i < ma5.size(); i++) {
+            //     LOG_INFO("MA5: " + std::to_string(ma5[i]) + ", 收盘价: " + std::to_string(closes[i]));
+            // }
+            // LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(closes.size()));
+            // // LOG_INFO("股票代码: " + stock.ts_code + ", 股票名称: " + stock.name + ", 频率: " + freq + ", 数据条数: " + std::to_string(data.size()));
         }
     }
     
