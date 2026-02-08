@@ -5,6 +5,7 @@
 #include "strategies/BOLLStrategy.h"
 #include "strategies/GridStrategy.h"
 #include "strategies/EMA17TO25Strategy.h"
+#include "strategies/EMA17BreakoutStrategy.h"
 #include <stdexcept>
 
 namespace core {
@@ -33,6 +34,9 @@ StrategyPtr StrategyFactory::create(StrategyType type, const std::map<std::strin
         case StrategyType::EMA17TO25:
             return std::make_shared<EMA17TO25Strategy>(params);
         
+        case StrategyType::EMA17_BREAKOUT:
+            return std::make_shared<EMA17BreakoutStrategy>(params);
+        
         default:
             throw std::invalid_argument("Unknown strategy type");
     }
@@ -58,6 +62,8 @@ StrategyPtr StrategyFactory::create(const std::string& name, const std::map<std:
         return create(StrategyType::GRID, params);
     } else if (name == "EMA17TO25" || name == "EMA17_25" || name == "ema17to25") {
         return create(StrategyType::EMA17TO25, params);
+    } else if (name == "EMA17_BREAKOUT" || name == "EMA17BREAKOUT" || name == "ema17_breakout") {
+        return create(StrategyType::EMA17_BREAKOUT, params);
     }
     
     throw std::invalid_argument("Unknown strategy name: " + name);
@@ -77,7 +83,8 @@ std::vector<std::string> StrategyFactory::getSupportedStrategies() {
         "RSI",
         "BOLL",
         "GRID",
-        "EMA17TO25"
+        "EMA17TO25",
+        "EMA17_BREAKOUT"
     };
     
     // 添加自定义策略
@@ -96,6 +103,7 @@ std::string StrategyFactory::getStrategyName(StrategyType type) {
         case StrategyType::BOLL: return "BOLL";
         case StrategyType::GRID: return "GRID";
         case StrategyType::EMA17TO25: return "EMA17TO25";
+        case StrategyType::EMA17_BREAKOUT: return "EMA17_BREAKOUT";
         case StrategyType::CUSTOM: return "CUSTOM";
         default: return "UNKNOWN";
     }

@@ -24,5 +24,6 @@
 #include "strategies/BOLLStrategy.h"
 #include "strategies/GridStrategy.h"
 #include "strategies/EMA17TO25Strategy.h"
+#include "strategies/EMA17BreakoutStrategy.h"
 
 #endif // CORE_CORE_H
