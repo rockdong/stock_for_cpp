@@ -41,9 +41,11 @@ bool StrategyBase::hasEnoughData(const std::vector<StockData>& data, size_t minS
 AnalysisResult StrategyBase::createResult(
     const std::string& tsCode,
     const std::string& tradeDate,
-    const std::string& label
+    const std::string& label,
+    const std::string& opt,
+    const std::string& freq
 ) const {
-    return AnalysisResult(tsCode, name_, tradeDate, label);
+    return AnalysisResult(tsCode, name_, tradeDate, label, opt, freq);
 }
 
 } // namespace core

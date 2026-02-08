@@ -10,6 +10,8 @@ std::string AnalysisResult::toString() const {
         << ", strategy=" << strategy_name
         << ", date=" << trade_date
         << ", label=" << label
+        << ", opt=" << opt
+        << ", freq=" << freq
         << "}";
     return oss.str();
 }

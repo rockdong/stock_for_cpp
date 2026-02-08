@@ -78,6 +78,34 @@ namespace AnalysisResultTable_ {
         using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::require_insert>;
     };
 
+    struct Opt {
+        struct _alias_t {
+            static constexpr const char _literal[] = "opt";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T opt;
+                T& operator()() { return opt; }
+                const T& operator()() const { return opt; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
+    struct Freq {
+        struct _alias_t {
+            static constexpr const char _literal[] = "freq";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T freq;
+                T& operator()() { return freq; }
+                const T& operator()() const { return freq; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
     struct CreatedAt {
         struct _alias_t {
             static constexpr const char _literal[] = "created_at";
@@ -113,6 +141,8 @@ struct AnalysisResultTable : sqlpp::table_t<AnalysisResultTable,
     AnalysisResultTable_::StrategyName,
     AnalysisResultTable_::TradeDate,
     AnalysisResultTable_::Label,
+    AnalysisResultTable_::Opt,
+    AnalysisResultTable_::Freq,
     AnalysisResultTable_::CreatedAt,
     AnalysisResultTable_::UpdatedAt>
 {

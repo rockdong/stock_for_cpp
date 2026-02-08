@@ -95,6 +95,20 @@ public:
     );
 
     /**
+     * @brief 根据操作类型查找
+     * @param opt 操作类型（buy/sell/hold）
+     * @return 分析结果列表
+     */
+    std::vector<AnalysisResult> findByOpt(const std::string& opt);
+
+    /**
+     * @brief 根据频率查找
+     * @param freq 频率（d/w/m）
+     * @return 分析结果列表
+     */
+    std::vector<AnalysisResult> findByFreq(const std::string& freq);
+
+    /**
      * @brief 更新分析结果
      * @param id 分析结果 ID
      * @param result 分析结果对象

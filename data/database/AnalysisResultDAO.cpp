@@ -13,6 +13,8 @@ namespace {
         result.strategy_name = row.strategyName;
         result.trade_date = row.tradeDate;
         result.label = row.label;
+        result.opt = row.opt.is_null() ? "" : row.opt.value();
+        result.freq = row.freq.is_null() ? "" : row.freq.value();
         return result;
     }
 }
@@ -32,7 +34,9 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
             results.tsCode = result.ts_code,
             results.strategyName = result.strategy_name,
             results.tradeDate = result.trade_date,
-            results.label = result.label
+            results.label = result.label,
+            results.opt = result.opt,
+            results.freq = result.freq
         ));
         
         LOG_DEBUG("插入分析结果成功: " + result.ts_code + " - " + result.strategy_name);
@@ -259,6 +263,60 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByDateRange(
     }
 }
 
+std::vector<AnalysisResult> AnalysisResultDAO::findByOpt(const std::string& opt) {
+    auto& conn = Connection::getInstance();
+    std::vector<AnalysisResult> result;
+
+    if (!conn.isConnected()) {
+        LOG_ERROR("数据库未连接");
+        return result;
+    }
+
+    try {
+        AnalysisResultTable results;
+        auto db = conn.getDb();
+        
+        for (const auto& row : (*db)(sqlpp::select(all_of(results))
+                                     .from(results)
+                                     .where(results.opt == opt)
+                                     .order_by(results.tradeDate.desc()))) {
+            result.push_back(buildAnalysisResultFromRow(row));
+        }
+        
+        return result;
+    } catch (const std::exception& e) {
+        LOG_ERROR("查询分析结果失败: " + std::string(e.what()));
+        return result;
+    }
+}
+
+std::vector<AnalysisResult> AnalysisResultDAO::findByFreq(const std::string& freq) {
+    auto& conn = Connection::getInstance();
+    std::vector<AnalysisResult> result;
+
+    if (!conn.isConnected()) {
+        LOG_ERROR("数据库未连接");
+        return result;
+    }
+
+    try {
+        AnalysisResultTable results;
+        auto db = conn.getDb();
+        
+        for (const auto& row : (*db)(sqlpp::select(all_of(results))
+                                     .from(results)
+                                     .where(results.freq == freq)
+                                     .order_by(results.tradeDate.desc()))) {
+            result.push_back(buildAnalysisResultFromRow(row));
+        }
+        
+        return result;
+    } catch (const std::exception& e) {
+        LOG_ERROR("查询分析结果失败: " + std::string(e.what()));
+        return result;
+    }
+}
+
 bool AnalysisResultDAO::update(int id, const AnalysisResult& result) {
     auto& conn = Connection::getInstance();
     if (!conn.isConnected()) {
@@ -275,7 +333,9 @@ bool AnalysisResultDAO::update(int id, const AnalysisResult& result) {
                   results.tsCode = result.ts_code,
                   results.strategyName = result.strategy_name,
                   results.tradeDate = result.trade_date,
-                  results.label = result.label
+                  results.label = result.label,
+                  results.opt = result.opt,
+                  results.freq = result.freq
               )
               .where(results.id == id));
         

@@ -205,9 +205,11 @@ bool Connection::createTables() {
             strategy_name TEXT NOT NULL,
             trade_date TEXT NOT NULL,
             label TEXT NOT NULL,
+            opt TEXT,
+            freq TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(ts_code, strategy_name, trade_date)
+            UNIQUE(ts_code, strategy_name, trade_date, freq)
         )
     )";
     

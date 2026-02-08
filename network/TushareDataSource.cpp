@@ -268,9 +268,15 @@ std::vector<StockData> TushareDataSource::parseStockData(const TushareResponse& 
             data.volume = get_long(item, "vol");
             data.amount = get_double(item, "amount");
             
-            result.push_back(data);
+            // 向前插入
+            result.insert(result.begin(), data);
         }
-        
+
+        // 打印最后一个的日期
+        if (!result.empty()) {
+            LOG_INFO("最后一个的日期: " + result.back().trade_date);
+        }
+
         LOG_INFO("解析股票数据成功，共 " + std::to_string(result.size()) + " 条");
         
     } catch (const json::exception& e) {

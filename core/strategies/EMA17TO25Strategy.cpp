@@ -3,6 +3,7 @@
 //
 
 #include "EMA17TO25Strategy.h"
+#include <iostream>
 #include "../../analysis/indicators/EMA.h"
 
 namespace core {
@@ -36,7 +37,16 @@ std::optional<AnalysisResult> EMA17TO25Strategy::analyze(
     for (const auto& d : data) {
         closes.push_back(d.close);
     }
-    
+
+    // DEBUG编译才打印：使用 cout 打印最后 5 个元素的收盘价 和 日期，用于调试
+    #ifdef DEBUG
+    std::cout << "--------------------------------" << std::endl;
+    for (size_t i = 0; i < 5; i++) {
+        std::cout << "收盘价: " << data[data.size() - 1 - i].close << ", 日期: " << data[data.size() - 1 - i].trade_date << std::endl;
+    }
+    std::cout << "--------------------------------" << std::endl;
+    #endif
+
     // 使用 analysis 模块的 EMA 计算方法
     auto fastEMA = analysis::EMA::compute(closes, fastPeriod);
     auto slowEMA = analysis::EMA::compute(closes, slowPeriod);
@@ -44,16 +54,26 @@ std::optional<AnalysisResult> EMA17TO25Strategy::analyze(
     // 获取最新交易日期
     std::string tradeDate = data.back().trade_date;
 
+    // 分别判断两条线的走势都是向上的，如果不是返回nullopt
+    if (!isUpTrend(fastEMA) || !isUpTrend(slowEMA)) {
+        return std::nullopt;
+    }
+
     // 判断最后两天的 ema17 和 ema25 的交叉情况
     if (isGoldenCross(fastEMA, slowEMA)) {
         return createResult(tsCode, tradeDate, "买入");
     }
 
-    // if (isDeathCross(fastEMA, slowEMA)) {
-    //     return createResult(tsCode, tradeDate, "卖出");
-    // }
-
     return std::nullopt;
+}
+
+bool EMA17TO25Strategy::isUpTrend(const std::vector<double>& ema) const {
+    for (size_t i = 1; i < ema.size(); i++) {
+        if (ema[i] < ema[i - 1]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool EMA17TO25Strategy::validateParameters() const {

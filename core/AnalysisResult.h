@@ -22,6 +22,8 @@ struct AnalysisResult {
     std::string strategy_name;  // 策略名称
     std::string trade_date;     // 分析日期（格式：YYYYMMDD）
     std::string label;          // 标签（如：买入、卖出、持有等）
+    std::string opt;            // 操作类型（buy/sell/hold）
+    std::string freq;           // 频率（d=日线, w=周线, m=月线）
     
     AnalysisResult() = default;
     
@@ -29,11 +31,15 @@ struct AnalysisResult {
         const std::string& tsCode,
         const std::string& strategyName,
         const std::string& tradeDate,
-        const std::string& label
+        const std::string& label,
+        const std::string& opt = "",
+        const std::string& freq = "d"
     ) : ts_code(tsCode)
       , strategy_name(strategyName)
       , trade_date(tradeDate)
       , label(label)
+      , opt(opt)
+      , freq(freq)
     {}
     
     /**

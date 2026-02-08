@@ -107,7 +107,9 @@ protected:
     AnalysisResult createResult(
         const std::string& tsCode,
         const std::string& tradeDate,
-        const std::string& label
+        const std::string& label,
+        const std::string& opt = "",
+        const std::string& freq = "d"
     ) const;
 };
 

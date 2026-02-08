@@ -33,6 +33,13 @@ public:
 
 private:
     /**
+     * @brief 检测上升趋势
+     * @param ema EMA 数据
+     * @return 是否为上升趋势
+     */
+    bool isUpTrend(const std::vector<double>& ema) const;
+    
+    /**
      * @brief 检测金叉（快线上穿慢线）
      * @param fastEMA 快线 EMA
      * @param slowEMA 慢线 EMA
