@@ -180,11 +180,7 @@ void analyzeStock(
                     result.freq = freq;
                     // 根据 label 设置 opt
                     if (result.label == "买入") {
-                        result.opt = "buy";
-                    } else if (result.label == "卖出") {
-                        result.opt = "sell";
-                    } else {
-                        result.opt = "hold";
+                        result.opt = "买入";
                     }
                     
                     results.push_back(result);
