@@ -112,19 +112,10 @@ bool initializeStrategies() {
  * @return 股票列表
  */
 std::vector<core::Stock> loadStockList(
-    data::StockDAO& stockDao,
     std::shared_ptr<network::IDataSource> dataSource
-) {
-    // 先从数据库查询
-    auto stock_list = stockDao.findAll();
-    
-    if (!stock_list.empty()) {
-        LOG_INFO("从数据库加载 " + std::to_string(stock_list.size()) + " 只股票");
-        return stock_list;
-    }
-    
+) { 
     // 数据库为空，从 API 获取
-    LOG_INFO("数据库为空，从 Tushare API 获取股票列表...");
+    LOG_INFO("从 Tushare API 获取股票列表...");
     stock_list = dataSource->getStockList();
     LOG_INFO("从 API 获取到 " + std::to_string(stock_list.size()) + " 只股票");
     
@@ -281,7 +272,7 @@ int main() {
         auto& strategyManager = core::StrategyManager::getInstance();
         
         // 6. 加载股票列表
-        auto stockList = loadStockList(stockDao, dataSource);
+        auto stockList = loadStockList(dataSource);
         
         // 7. 执行批量分析
         performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao);
