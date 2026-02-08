@@ -69,7 +69,7 @@ std::optional<AnalysisResult> EMA17TO25Strategy::analyze(
 
 bool EMA17TO25Strategy::isUpTrend(const std::vector<double>& ema) const {
     for (size_t i = 1; i < ema.size(); i++) {
-        if (ema[i] < ema[i - 1]) {
+        if (ema[i] <= ema[i - 1]) {
             return false;
         }
     }

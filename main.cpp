@@ -116,12 +116,8 @@ std::vector<core::Stock> loadStockList(
 ) { 
     // 数据库为空，从 API 获取
     LOG_INFO("从 Tushare API 获取股票列表...");
-    stock_list = dataSource->getStockList();
+    auto stock_list = dataSource->getStockList();
     LOG_INFO("从 API 获取到 " + std::to_string(stock_list.size()) + " 只股票");
-    
-    // 保存到数据库
-    int saved_count = stockDao.batchInsert(stock_list);
-    LOG_INFO("成功保存 " + std::to_string(saved_count) + " 只股票到数据库");
     
     return stock_list;
 }
