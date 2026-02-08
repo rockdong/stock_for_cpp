@@ -20,7 +20,7 @@ TushareDataSource::TushareDataSource(const std::string& api_token) {
 }
 
 std::vector<Stock> TushareDataSource::getStockList() {
-    return getStockList("L", "");
+    return getStockList("L", "SSE,SZSE");
 }
 
 std::vector<Stock> TushareDataSource::getStockList(
