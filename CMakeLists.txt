@@ -53,6 +53,7 @@ add_library(core_lib STATIC
     core/strategies/GridStrategy.cpp
     core/strategies/EMA17TO25Strategy.cpp
     core/strategies/EMA17BreakoutStrategy.cpp
+    core/strategies/EMAConvergenceStrategy.cpp
 )
 
 target_include_directories(core_lib PUBLIC

@@ -28,6 +28,7 @@ public:
         GRID,           // 网格交易策略
         EMA17TO25,      // EMA17/EMA25 交叉策略
         EMA17_BREAKOUT, // EMA17 突破策略
+        EMA_CONVERGENCE,// EMA 收敛策略
         CUSTOM          // 自定义策略
     };
     
