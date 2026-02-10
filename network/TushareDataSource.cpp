@@ -20,12 +20,13 @@ TushareDataSource::TushareDataSource(const std::string& api_token) {
 }
 
 std::vector<Stock> TushareDataSource::getStockList() {
-    return getStockList("L", "SSE,SZSE");
+    return getStockList("L", "SSE,SZSE", "主板");
 }
 
 std::vector<Stock> TushareDataSource::getStockList(
     const std::string& list_status,
-    const std::string& exchange) {
+    const std::string& exchange,
+    const std::string& market) {
     
     LOG_DEBUG("获取股票列表 [状态=" + list_status + ", 交易所=" + 
               (exchange.empty() ? "全部" : exchange) + "]");

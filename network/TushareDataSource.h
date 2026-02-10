@@ -40,11 +40,13 @@ public:
      * @brief 获取股票列表（带参数）
      * @param list_status 上市状态（L上市 D退市 P暂停上市，默认L）
      * @param exchange 交易所（SSE上交所 SZSE深交所，默认为空表示全部）
+     * @param market 市场（主板A股 创业板C股 科创板K股 北交所BB股，默认为空表示全部）
      * @return 股票基本信息列表
      */
     std::vector<Stock> getStockList(
         const std::string& list_status,
-        const std::string& exchange
+        const std::string& exchange,
+        const std::string& market
     ) override;
     
     /**
