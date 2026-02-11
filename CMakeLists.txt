@@ -54,6 +54,7 @@ add_library(core_lib STATIC
     core/strategies/EMA17TO25Strategy.cpp
     core/strategies/EMA17BreakoutStrategy.cpp
     core/strategies/EMAConvergenceStrategy.cpp
+    core/strategies/EMA25Greater17PriceMatchStrategy.cpp
 )
 
 target_include_directories(core_lib PUBLIC
@@ -221,6 +222,7 @@ target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-httplib
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dotenv-cpp/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ta-lib/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-sdk/include
 )
 
 # 把 .env 拷贝到可执行文件所在目录
