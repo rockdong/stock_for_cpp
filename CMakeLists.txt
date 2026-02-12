@@ -222,7 +222,6 @@ target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-httplib
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dotenv-cpp/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ta-lib/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-sdk/include
 )
 
 # 把 .env 拷贝到可执行文件所在目录
