@@ -15,6 +15,7 @@ EMA25Greater17PriceMatchStrategy::EMA25Greater17PriceMatchStrategy(
 {
     setParameter("fast_period", 17.0);
     setParameter("slow_period", 25.0);
+    setParameter("below_days", 3.0);
     setParameters(params);
 }
 
@@ -24,7 +25,8 @@ std::optional<AnalysisResult> EMA25Greater17PriceMatchStrategy::analyze(
 ) {
     int fastPeriod = static_cast<int>(getParameter("fast_period", 17.0));
     int slowPeriod = static_cast<int>(getParameter("slow_period", 25.0));
-    if (!hasEnoughData(data, static_cast<size_t>(slowPeriod))) {
+    int belowDays = static_cast<int>(getParameter("below_days", 3.0));
+    if (!hasEnoughData(data, static_cast<size_t>(slowPeriod + belowDays))) {
         return std::nullopt;
     }
     std::vector<double> closes;
@@ -44,6 +46,9 @@ std::optional<AnalysisResult> EMA25Greater17PriceMatchStrategy::analyze(
     if (lastSlow <= lastFast) {
         return std::nullopt;
     }
+    if (!isCloseBelowFastForDays(closes, fastEMA, static_cast<size_t>(belowDays))) {
+        return std::nullopt;
+    }
     double roundedClose = roundToTwoDecimals(lastClose);
     double roundedFast = roundToTwoDecimals(lastFast);
     if (roundedClose != roundedFast) {
@@ -56,10 +61,14 @@ std::optional<AnalysisResult> EMA25Greater17PriceMatchStrategy::analyze(
 bool EMA25Greater17PriceMatchStrategy::validateParameters() const {
     int fastPeriod = static_cast<int>(getParameter("fast_period", 17.0));
     int slowPeriod = static_cast<int>(getParameter("slow_period", 25.0));
+    int belowDays = static_cast<int>(getParameter("below_days", 3.0));
     if (fastPeriod <= 0 || slowPeriod <= 0) {
         return false;
     }
     if (fastPeriod >= slowPeriod) {
+        return false;
+    }
+    if (belowDays <= 0) {
         return false;
     }
     return true;
@@ -69,6 +78,24 @@ double EMA25Greater17PriceMatchStrategy::roundToTwoDecimals(double value) const 
     double scaled = value * 100.0;
     double rounded = std::round(scaled);
     return rounded / 100.0;
+}
+
+bool EMA25Greater17PriceMatchStrategy::isCloseBelowFastForDays(
+    const std::vector<double>& closes,
+    const std::vector<double>& fastEMA,
+    size_t days
+) const {
+    if (closes.size() < days + 1 || fastEMA.size() < days + 1) {
+        return false;
+    }
+    size_t lastIndex = closes.size() - 1;
+    for (size_t i = 1; i <= days; ++i) {
+        size_t idx = lastIndex - i;
+        if (closes[idx] >= fastEMA[idx]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace core
