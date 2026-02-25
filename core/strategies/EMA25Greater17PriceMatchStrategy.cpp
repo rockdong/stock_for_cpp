@@ -43,9 +43,11 @@ std::optional<AnalysisResult> EMA25Greater17PriceMatchStrategy::analyze(
     double lastClose = closes[lastIndex];
     double lastFast = fastEMA.back();
     double lastSlow = slowEMA.back();
-    if (lastSlow <= lastFast) {
+    // 条件 1：最近 belowDays 天内，EMA25 始终大于 EMA17（包含今天）
+    if (!isSlowAboveFastForDays(fastEMA, slowEMA, static_cast<size_t>(belowDays))) {
         return std::nullopt;
     }
+    // 条件 2：最近 belowDays 天内，收盘价都小于 EMA17（不包含今天）
     if (!isCloseBelowFastForDays(closes, fastEMA, static_cast<size_t>(belowDays))) {
         return std::nullopt;
     }
@@ -89,9 +91,27 @@ bool EMA25Greater17PriceMatchStrategy::isCloseBelowFastForDays(
         return false;
     }
     size_t lastIndex = closes.size() - 1;
-    for (size_t i = 1; i <= days; ++i) {
+    for (size_t i = 1; i <= days; ++i) { // 从昨天开始往前数 days 天
         size_t idx = lastIndex - i;
         if (closes[idx] >= fastEMA[idx]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool EMA25Greater17PriceMatchStrategy::isSlowAboveFastForDays(
+    const std::vector<double>& fastEMA,
+    const std::vector<double>& slowEMA,
+    size_t days
+) const {
+    if (fastEMA.size() < days || slowEMA.size() < days) {
+        return false;
+    }
+    size_t lastIndex = fastEMA.size() - 1;
+    for (size_t i = 0; i < days; ++i) { // 从今天开始往前数 days 天
+        size_t idx = lastIndex - i;
+        if (slowEMA[idx] <= fastEMA[idx]) {
             return false;
         }
     }

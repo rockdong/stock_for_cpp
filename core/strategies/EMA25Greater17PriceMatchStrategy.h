@@ -53,6 +53,19 @@ private:
         const std::vector<double>& fastEMA,
         size_t days
     ) const;
+
+    /**
+     * @brief 判断最近若干天 EMA25 是否都大于 EMA17
+     * @param fastEMA EMA17 序列
+     * @param slowEMA EMA25 序列
+     * @param days 检查天数
+     * @return 是否满足条件
+     */
+    bool isSlowAboveFastForDays(
+        const std::vector<double>& fastEMA,
+        const std::vector<double>& slowEMA,
+        size_t days
+    ) const;
 };
 
 } // namespace core
