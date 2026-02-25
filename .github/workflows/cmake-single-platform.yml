@@ -1,6 +1,6 @@
 # This starter workflow is for a CMake project running on a single platform. There is a different starter workflow if you need cross-platform coverage.
 # See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
-name: CMake on a single platform
+name: CMake build (single platform)
 
 on:
   push:
@@ -14,26 +14,39 @@ env:
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    # 单平台构建（如需多平台可改为 matrix）
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository with submodules
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        # 基础工具 + SQLite 开发库（项目中链接 sqlite3）
+        sudo apt-get install -y build-essential cmake libsqlite3-dev
 
     - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      # 在 build 目录下生成构建文件，使用项目自己的 CMakeLists.txt
+      run: cmake -S ${{ github.workspace }} -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
 
     - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      # 编译可执行文件 stock_for_cpp
+      run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} -- -j$(nproc)
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
-      # Execute tests defined by the CMake configuration.
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{env.BUILD_TYPE}}
+      working-directory: ${{ github.workspace }}/build
+      # 运行由 CMake 配置的测试（当前可能为空，但保持接口）
+      run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
+
+    - name: Upload build artifact
+      # 上传打包产物，方便在 GitHub Actions 页面下载
+      uses: actions/upload-artifact@v4
+      with:
+        name: stock_for_cpp-${{ runner.os }}-${{ env.BUILD_TYPE }}
+        path: |
+          ${{ github.workspace }}/build/stock_for_cpp
 
