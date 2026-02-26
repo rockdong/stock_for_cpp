@@ -4,9 +4,11 @@ name: CMake build (single platform)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "v2" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "v2" ]
+  # 支持在 GitHub Actions 界面手动触发
+  workflow_dispatch:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
