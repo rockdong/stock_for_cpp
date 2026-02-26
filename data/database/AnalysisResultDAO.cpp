@@ -17,6 +17,23 @@ namespace {
         result.freq = row.freq.is_null() ? "" : row.freq.value();
         return result;
     }
+
+    /**
+     * @brief 将分析结果的 opt 字段从 d/w/m 映射为对应的 emoji
+     * d -> ☀️（日线），w -> ⭐（周线），m -> 🌙（月线）
+     */
+    std::string mapOptToEmoji(const std::string& opt) {
+        if (opt == "d") {
+            return u8"☀️";
+        }
+        if (opt == "w") {
+            return u8"⭐";
+        }
+        if (opt == "m") {
+            return u8"🌙";
+        }
+        return opt;
+    }
 }
 
 bool AnalysisResultDAO::insert(const AnalysisResult& result) {
@@ -29,17 +46,60 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
     try {
         AnalysisResultTable results;
         auto db = conn.getDb();
-        
-        (*db)(sqlpp::insert_into(results).set(
-            results.tsCode = result.ts_code,
-            results.strategyName = result.strategy_name,
-            results.tradeDate = result.trade_date,
-            results.label = result.label,
-            results.opt = result.opt,
-            results.freq = result.freq
-        ));
-        
-        LOG_DEBUG("插入分析结果成功: " + result.ts_code + " - " + result.strategy_name);
+
+        // 业务规则：
+        // - 如果当天同一只股票、同一策略、同一频率的记录已存在，则仅更新 opt 字段
+        // - 如果不存在，则插入一条新记录
+        int existingId = -1;
+        for (const auto& row : (*db)(
+                 sqlpp::select(results.id)
+                     .from(results)
+                     .where(results.tsCode == result.ts_code
+                            and results.tradeDate == result.trade_date
+                            and results.strategyName == result.strategy_name
+                            and results.freq == result.freq)
+                     .limit(1u))) {
+            existingId = row.id;
+        }
+
+        if (existingId >= 0) {
+            // 更新已有记录的 opt 字段：在原有 opt 后追加（使用 "|" 分隔）
+            std::string newOptToken = mapOptToEmoji(result.opt);
+            std::string newOpt = newOptToken;
+            for (const auto& row : (*db)(
+                     sqlpp::select(results.opt)
+                         .from(results)
+                         .where(results.id == existingId)
+                         .limit(1u))) {
+                if (!row.opt.is_null()) {
+                    std::string oldOpt = row.opt.value();
+                    if (!oldOpt.empty()) {
+                        newOpt = oldOpt + "|" + newOptToken;
+                    }
+                }
+            }
+
+            (*db)(sqlpp::update(results)
+                      .set(results.opt = newOpt)
+                      .where(results.id == existingId));
+            LOG_DEBUG("追加分析结果 opt 成功: " + result.ts_code + " - " +
+                      result.strategy_name + " - " + result.trade_date +
+                      " - freq=" + result.freq + " - opt=" + newOpt);
+        } else {
+            // 插入新记录
+            std::string emojiOpt = mapOptToEmoji(result.opt);
+            (*db)(sqlpp::insert_into(results).set(
+                results.tsCode = result.ts_code,
+                results.strategyName = result.strategy_name,
+                results.tradeDate = result.trade_date,
+                results.label = result.label,
+                results.opt = emojiOpt,
+                results.freq = result.freq));
+            LOG_DEBUG("插入分析结果成功: " + result.ts_code + " - " +
+                      result.strategy_name + " - " + result.trade_date +
+                      " - freq=" + result.freq);
+        }
+
         return true;
     } catch (const std::exception& e) {
         LOG_ERROR("插入分析结果失败: " + std::string(e.what()));
