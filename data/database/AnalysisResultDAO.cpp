@@ -46,7 +46,7 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
     try {
         AnalysisResultTable results;
         auto db = conn.getDb();
-
+        
         // 业务规则：
         // - 如果当天同一只股票、同一策略、同一频率的记录已存在，则仅更新 opt 字段
         // - 如果不存在，则插入一条新记录
@@ -88,11 +88,11 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
         } else {
             // 插入新记录
             std::string emojiOpt = mapOptToEmoji(result.opt);
-            (*db)(sqlpp::insert_into(results).set(
-                results.tsCode = result.ts_code,
-                results.strategyName = result.strategy_name,
-                results.tradeDate = result.trade_date,
-                results.label = result.label,
+        (*db)(sqlpp::insert_into(results).set(
+            results.tsCode = result.ts_code,
+            results.strategyName = result.strategy_name,
+            results.tradeDate = result.trade_date,
+            results.label = result.label,
                 results.opt = emojiOpt,
                 results.freq = result.freq));
             LOG_DEBUG("插入分析结果成功: " + result.ts_code + " - " +
