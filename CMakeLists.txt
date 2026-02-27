@@ -4,6 +4,48 @@ project(stock_for_cpp)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ========== 版本信息 ==========
+# 读取 VERSION 文件
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION_STRING)
+string(STRIP "${VERSION_STRING}" VERSION_STRING)
+string(REPLACE "." ";" VERSION_LIST ${VERSION_STRING})
+list(GET VERSION_LIST 0 VERSION_MAJOR)
+list(GET VERSION_LIST 1 VERSION_MINOR)
+list(GET VERSION_LIST 2 VERSION_PATCH)
+
+# 构建号（从环境变量获取，默认为 0）
+if(DEFINED ENV{BUILD_NUMBER})
+    set(VERSION_BUILD $ENV{BUILD_NUMBER})
+else()
+    set(VERSION_BUILD 0)
+endif()
+
+# 构建日期
+string(TIMESTAMP BUILD_DATE "%Y-%m-%d %H:%M:%S")
+
+# Git 提交哈希（如果可用）
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(NOT GIT_COMMIT)
+    set(GIT_COMMIT "unknown")
+endif()
+
+# 生成版本头文件
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/version.h"
+    @ONLY
+)
+
+message(STATUS "版本信息: ${VERSION_STRING}.${VERSION_BUILD}")
+message(STATUS "构建日期: ${BUILD_DATE}")
+message(STATUS "Git 提交: ${GIT_COMMIT}")
+
 # ========== 禁用 cpp-httplib 的 SSL 支持 ==========
 # 必须在 add_subdirectory(thirdparty/cpp-httplib) 之前设置
 set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "Disable OpenSSL support" FORCE)
@@ -222,6 +264,7 @@ target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-httplib
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dotenv-cpp/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ta-lib/include
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 # 把 .env 拷贝到可执行文件所在目录

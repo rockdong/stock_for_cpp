@@ -2,6 +2,9 @@
 #include <vector>
 #include <string>
 
+// 版本信息
+#include "version.h"
+
 // 配置和日志
 #include "Config.h"
 #include "Logger.h"
@@ -16,6 +19,20 @@
 
 // 核心业务
 #include "Core.h"
+
+/**
+ * @brief 打印版本信息
+ */
+void printVersion() {
+    std::cout << "========================================" << std::endl;
+    std::cout << "📊 Stock Analysis System" << std::endl;
+    std::cout << "========================================" << std::endl;
+    std::cout << "版本号: " << VERSION_STRING << "." << VERSION_BUILD << std::endl;
+    std::cout << "构建日期: " << BUILD_DATE << std::endl;
+    std::cout << "Git 提交: " << GIT_COMMIT << std::endl;
+    std::cout << "========================================" << std::endl;
+    std::cout << std::endl;
+}
 
 /**
  * @brief 初始化系统配置和日志
@@ -34,8 +51,10 @@ bool initializeSystem() {
     
     LOG_INFO("========================================");
     LOG_INFO("应用名称: " + config.getAppName());
-    LOG_INFO("应用版本: " + config.getAppVersion());
+    LOG_INFO("应用版本: " + std::string(VERSION_STRING) + "." + std::to_string(VERSION_BUILD));
     LOG_INFO("运行环境: " + config.getAppEnv());
+    LOG_INFO("构建日期: " + std::string(BUILD_DATE));
+    LOG_INFO("Git 提交: " + std::string(GIT_COMMIT));
     LOG_INFO("========================================");
     
     return true;
@@ -243,6 +262,9 @@ void cleanup() {
  */
 int main() {
     try {
+        // 0. 打印版本信息
+        printVersion();
+        
         // 1. 初始化系统
         if (!initializeSystem()) {
             return 1;
