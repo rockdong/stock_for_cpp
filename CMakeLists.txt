@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 project(stock_for_cpp)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -218,14 +218,22 @@ target_link_libraries(analysis_lib PUBLIC
 )
 
 # 添加工具类库
+find_package(OpenSSL REQUIRED)
+
 add_library(utils_lib STATIC
     utils/TimeUtil.cpp
     utils/StringUtil.cpp
     utils/MathUtil.cpp
+    utils/Encryptor.cpp
 )
 
 target_include_directories(utils_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
+)
+
+target_link_libraries(utils_lib PUBLIC
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 # 创建可执行文件
