@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# C++ 构建产物
+cpp/build/
+build/
+*.o
+*.a
+*.so
+*.dylib
+
+# Node.js
+nodejs/node_modules
+nodejs/package-lock.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 文档
+*.md
+!README.md
+docs/
+
+# 测试
+*_test.cpp
+test/
+tests/
+
+# 其他
+.env
+!nodejs/.env
+!cpp/.env
+.DS_Store
+
+# GitHub
+.github/
