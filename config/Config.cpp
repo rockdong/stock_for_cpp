@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <sstream>
 #include <iostream>
+#include <fstream>
+#include "../utils/Encryptor.h"
 
 namespace config {
 
@@ -20,8 +22,44 @@ bool Config::initialize(const char* env_file) {
     }
 
     try {
-        // 加载 .env 文件
-        dotenv::init(env_file);
+        // 检查是否存在 secret.key，如果存在则尝试解密 .env 中的加密字段
+        std::ifstream keyFile("secret.key");
+        if (keyFile.is_open()) {
+            std::string secretKey;
+            std::getline(keyFile, secretKey);
+            keyFile.close();
+            
+            if (!secretKey.empty()) {
+                // 加载 .env 文件
+                dotenv::init(env_file);
+                
+                // 检查是否有加密的 API key
+                std::string encryptedKey = getEnvString("DATA_SOURCE_API_KEY_ENC", "");
+                if (!encryptedKey.empty()) {
+                    try {
+                        std::string decryptedKey = utils::Encryptor::decrypt(encryptedKey, secretKey);
+                        // 设置环境变量，覆盖加密的值
+                        setenv("DATA_SOURCE_API_KEY", decryptedKey.c_str(), 1);
+                    } catch (const std::exception& e) {
+                        std::cerr << "Config: 解密 API key 失败: " << e.what() << std::endl;
+                    }
+                }
+                
+                // 检查是否有加密的数据库密码
+                std::string encryptedDbPass = getEnvString("DB_PASSWORD_ENC", "");
+                if (!encryptedDbPass.empty()) {
+                    try {
+                        std::string decryptedPass = utils::Encryptor::decrypt(encryptedDbPass, secretKey);
+                        setenv("DB_PASSWORD", decryptedPass.c_str(), 1);
+                    } catch (const std::exception& e) {
+                        std::cerr << "Config: 解密数据库密码失败: " << e.what() << std::endl;
+                    }
+                }
+            }
+        } else {
+            // 没有 secret.key，直接加载 .env
+            dotenv::init(env_file);
+        }
         
         // 加载所有配置
         loadConfig();

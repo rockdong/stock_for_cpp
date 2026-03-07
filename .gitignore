@@ -7,3 +7,9 @@ cmake-build-debug/
 logs/
 
 stock.db
+
+# 敏感文件
+.env
+.env.local
+.env.*.local
+secret.key
