@@ -82,6 +82,25 @@ target_link_libraries(config_lib PUBLIC
     dotenv
 )
 
+# 添加调度器模块
+add_library(scheduler_lib STATIC
+    scheduler/Scheduler.cpp
+    scheduler/TradeCalendar.cpp
+)
+
+target_include_directories(scheduler_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/scheduler
+    ${CMAKE_CURRENT_SOURCE_DIR}/log
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
+)
+
+target_link_libraries(scheduler_lib PUBLIC
+    log_lib
+    utils_lib
+    core_lib
+)
+
 # 添加核心业务模块库（策略系统）
 add_library(core_lib STATIC
     core/AnalysisResult.cpp
@@ -243,6 +262,7 @@ add_executable(stock_for_cpp main.cpp)
 # 链接第三方库
 target_link_libraries(stock_for_cpp PRIVATE
     config_lib
+    scheduler_lib
     core_lib
     log_lib
     network_lib

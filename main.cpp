@@ -22,8 +22,64 @@
 // 核心业务
 #include "Core.h"
 
+// 调度器
+#include "Scheduler.h"
+
 // 工具类
 #include "ThreadPool.h"
+
+#include <csignal>
+
+// 全局调度器指针（用于信号处理）
+scheduler::Scheduler* g_scheduler = nullptr;
+
+// 信号处理函数
+void signalHandler(int signal) {
+    LOG_INFO("收到退出信号，正在优雅关闭...");
+    if (g_scheduler) {
+        g_scheduler->stop();
+    }
+}
+
+struct ProgramOptions {
+    bool onceMode = false;
+    std::string executeTime = "20:00";
+    bool help = false;
+};
+
+ProgramOptions parseArgs(int argc, char* argv[]) {
+    ProgramOptions options;
+    
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        
+        if (arg == "--once" || arg == "-o") {
+            options.onceMode = true;
+        } else if (arg == "--help" || arg == "-h") {
+            options.help = true;
+        } else if (arg == "--time" || arg == "-t") {
+            if (i + 1 < argc) {
+                options.executeTime = argv[++i];
+            }
+        }
+    }
+    
+    return options;
+}
+
+void printHelp(const char* programName) {
+    std::cout << "用法: " << programName << " [选项]" << std::endl;
+    std::cout << std::endl;
+    std::cout << "选项:" << std::endl;
+    std::cout << "  --once, -o       单次执行模式（默认：定时模式）" << std::endl;
+    std::cout << "  --time, -t TIME  设置执行时间，格式 HH:MM（默认：20:00）" << std::endl;
+    std::cout << "  --help, -h       显示帮助信息" << std::endl;
+    std::cout << std::endl;
+    std::cout << "示例:" << std::endl;
+    std::cout << "  " << programName << "           # 定时模式，每天 20:00 执行" << std::endl;
+    std::cout << "  " << programName << " --once   # 单次执行模式" << std::endl;
+    std::cout << "  " << programName << " -t 09:30 # 每天 09:30 执行" << std::endl;
+}
 
 /**
  * @brief 打印版本信息
@@ -276,8 +332,20 @@ void cleanup() {
 /**
  * @brief 主函数
  */
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        // 0. 解析命令行参数
+        ProgramOptions options = parseArgs(argc, argv);
+        
+        if (options.help) {
+            printHelp(argv[0]);
+            return 0;
+        }
+        
+        // 注册信号处理
+        std::signal(SIGINT, signalHandler);
+        std::signal(SIGTERM, signalHandler);
+        
         // 0. 打印版本信息
         printVersion();
         
@@ -308,8 +376,22 @@ int main() {
         // 6. 加载股票列表
         auto stockList = loadStockList(dataSource);
         
-        // 7. 执行批量分析
-        performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao);
+        // 7. 根据模式执行
+        if (options.onceMode) {
+            // 单次执行模式
+            LOG_INFO("执行单次分析...");
+            performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao);
+        } else {
+            // 定时执行模式
+            LOG_INFO("启动定时调度模式，执行时间: " + options.executeTime);
+            
+            scheduler::Scheduler sched(options.executeTime, [&]() {
+                performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao);
+            });
+            
+            g_scheduler = &sched;
+            sched.run();
+        }
         
         // 8. 清理资源
         cleanup();
