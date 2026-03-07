@@ -1,15 +1,22 @@
-build/
-cmake-build-debug/
+# cpp build
+cpp/build/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+yarn.lock
+package-lock.json
+.pnp
+.pnp.js
+
+# IDE
 .idea/
 .vscode/
-.cache/
-.cursor/
-logs/
+*.swp
+*.swo
 
-stock.db
-
-# 敏感文件
-.env
-.env.local
-.env.*.local
-secret.key
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,119 @@
+#ifndef CORE_STRATEGY_H
+#define CORE_STRATEGY_H
+
+#include <string>
+#include <memory>
+#include <vector>
+#include <map>
+#include <optional>
+#include "Stock.h"
+#include "AnalysisResult.h"
+
+namespace core {
+
+/**
+ * @brief 策略接口
+ * 
+ * 定义交易策略的统一接口
+ * 遵循开闭原则（OCP）和依赖倒置原则（DIP）
+ */
+class IStrategy {
+public:
+    virtual ~IStrategy() = default;
+    
+    /**
+     * @brief 获取策略名称
+     */
+    virtual std::string getName() const = 0;
+    
+    /**
+     * @brief 获取策略描述
+     */
+    virtual std::string getDescription() const = 0;
+    
+    /**
+     * @brief 分析并生成分析结果
+     * @param tsCode 股票代码
+     * @param data 历史数据
+     * @return 分析结果（可选，如果分析失败则返回 std::nullopt）
+     */
+    virtual std::optional<AnalysisResult> analyze(
+        const std::string& tsCode,
+        const std::vector<StockData>& data
+    ) = 0;
+    
+    /**
+     * @brief 设置策略参数
+     * @param params 参数映射
+     */
+    virtual void setParameters(const std::map<std::string, double>& params) = 0;
+    
+    /**
+     * @brief 获取策略参数
+     */
+    virtual std::map<std::string, double> getParameters() const = 0;
+    
+    /**
+     * @brief 验证策略参数
+     */
+    virtual bool validateParameters() const = 0;
+};
+
+using StrategyPtr = std::shared_ptr<IStrategy>;
+
+/**
+ * @brief 策略基类
+ * 
+ * 提供策略的通用实现
+ * 遵循模板方法模式
+ */
+class StrategyBase : public IStrategy {
+public:
+    explicit StrategyBase(const std::string& name, const std::string& description);
+    
+    std::string getName() const override { return name_; }
+    std::string getDescription() const override { return description_; }
+    
+    void setParameters(const std::map<std::string, double>& params) override;
+    std::map<std::string, double> getParameters() const override;
+    
+    bool validateParameters() const override;
+
+protected:
+    std::string name_;
+    std::string description_;
+    std::map<std::string, double> parameters_;
+    
+    /**
+     * @brief 获取参数值
+     * @param key 参数名
+     * @param defaultValue 默认值
+     */
+    double getParameter(const std::string& key, double defaultValue = 0.0) const;
+    
+    /**
+     * @brief 设置参数值
+     */
+    void setParameter(const std::string& key, double value);
+    
+    /**
+     * @brief 检查数据是否足够
+     */
+    bool hasEnoughData(const std::vector<StockData>& data, size_t minSize) const;
+    
+    /**
+     * @brief 创建分析结果
+     */
+    AnalysisResult createResult(
+        const std::string& tsCode,
+        const std::string& tradeDate,
+        const std::string& label,
+        const std::string& opt = "",
+        const std::string& freq = "d"
+    ) const;
+};
+
+} // namespace core
+
+#endif // CORE_STRATEGY_H
+
