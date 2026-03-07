@@ -5,7 +5,7 @@ using json = nlohmann::json;
 
 int main()
 {
-    // create JSON pointer
+    // create JSON poiner
     json::json_pointer ptr("/foo/bar/baz");
 
     // write string representation to stream
