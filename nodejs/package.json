@@ -1,21 +1,15 @@
 {
-  "name": "stock_for_cpp",
+  "name": "stock-bot",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "飞书股票分析机器人",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/rockdong/stock_for_cpp.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/rockdong/stock_for_cpp/issues"
-  },
-  "homepage": "https://github.com/rockdong/stock_for_cpp#readme"
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.59.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0"
+  }
 }
