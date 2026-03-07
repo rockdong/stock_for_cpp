@@ -29,16 +29,16 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential cmake libsqlite3-dev
 
-    - name: ⚙️ 配置 CMake
-      run: cmake -S ${{ github.workspace }} -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+    - name: ⚙️ 配置 CMake (使用 cpp 目录)
+      run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
 
     - name: 🏗️ 编译项目
-      run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} -- -j$(nproc)
+      run: cmake --build cpp/build --config ${{ env.BUILD_TYPE }} -- -j$(nproc)
       env:
         BUILD_NUMBER: ${{ github.run_number }}
 
     - name: 🧪 运行测试
-      working-directory: ${{ github.workspace }}/build
+      working-directory: cpp/build
       run: ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
 
     - name: 📤 上传构建产物
@@ -46,7 +46,7 @@ jobs:
       with:
         name: stock_for_cpp-${{ runner.os }}-${{ env.BUILD_TYPE }}
         path: |
-          ${{ github.workspace }}/build/stock_for_cpp
+          cpp/build/stock_for_cpp
 
   docker:
     name: 🐳 构建并推送 Docker 镜像
@@ -64,10 +64,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: stock_for_cpp-${{ runner.os }}-${{ env.BUILD_TYPE }}
-          path: build/
+          path: cpp/build/
 
       - name: 🔑 设置可执行权限
-        run: chmod +x build/stock_for_cpp
+        run: chmod +x cpp/build/stock_for_cpp
 
       - name: 🔧 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
