@@ -225,6 +225,7 @@ add_library(utils_lib STATIC
     utils/StringUtil.cpp
     utils/MathUtil.cpp
     utils/Encryptor.cpp
+    utils/ThreadPool.cpp
 )
 
 target_include_directories(utils_lib PUBLIC

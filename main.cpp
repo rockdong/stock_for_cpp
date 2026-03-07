@@ -1,6 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <thread>
+#include <atomic>
 
 // 版本信息
 #include "version.h"
@@ -19,6 +21,9 @@
 
 // 核心业务
 #include "Core.h"
+
+// 工具类
+#include "ThreadPool.h"
 
 /**
  * @brief 打印版本信息
@@ -207,7 +212,7 @@ void analyzeStock(
 }
 
 /**
- * @brief 执行批量分析
+ * @brief 执行批量分析（多线程版本）
  * @param stockList 股票列表
  * @param dataSource 数据源
  * @param strategyManager 策略管理器
@@ -223,23 +228,34 @@ void performBatchAnalysis(
     LOG_INFO("开始批量分析，共 " + std::to_string(stockList.size()) + " 只股票");
     LOG_INFO("========================================");
     
-    int successCount = 0;
-    int failCount = 0;
+    unsigned int threadCount = std::thread::hardware_concurrency();
+    if (threadCount == 0) threadCount = 4;
+    LOG_INFO("使用 " + std::to_string(threadCount) + " 个线程并发处理");
+    
+    ThreadPool pool(threadCount);
+    
+    std::atomic<int> successCount(0);
+    std::atomic<int> failCount(0);
     
     for (const auto& stock : stockList) {
-        try {
-            analyzeStock(stock, dataSource, strategyManager, analysisResultDao);
-            successCount++;
-        } catch (const std::exception& e) {
-            LOG_ERROR("分析失败: " + stock.ts_code + " - " + std::string(e.what()));
-            failCount++;
-        }
+        pool.enqueue([&]() {
+            try {
+                auto localDataSource = network::DataSourceFactory::createFromConfig();
+                analyzeStock(stock, localDataSource, strategyManager, analysisResultDao);
+                successCount++;
+            } catch (const std::exception& e) {
+                LOG_ERROR("分析失败: " + stock.ts_code + " - " + std::string(e.what()));
+                failCount++;
+            }
+        });
     }
+    
+    pool.wait();
     
     LOG_INFO("========================================");
     LOG_INFO("批量分析完成");
-    LOG_INFO("  成功: " + std::to_string(successCount) + " 只");
-    LOG_INFO("  失败: " + std::to_string(failCount) + " 只");
+    LOG_INFO("  成功: " + std::to_string(successCount.load()) + " 只");
+    LOG_INFO("  失败: " + std::to_string(failCount.load()) + " 只");
     LOG_INFO("========================================");
 }
 
