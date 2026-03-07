@@ -26,10 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _MSC_VER
-#include <ciso646>  // Required to support boolean operator aliases
-#endif
-
+#include <ciso646>  // Required for some compilers to use aliases for boolean operators
 #include <type_traits>
 
 namespace sqlpp

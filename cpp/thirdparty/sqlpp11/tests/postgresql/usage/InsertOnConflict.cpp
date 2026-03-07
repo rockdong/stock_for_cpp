@@ -30,6 +30,7 @@
 #include <sqlpp11/postgresql/postgresql.h>
 #include <sqlpp11/sqlpp11.h>
 
+#include "TabBar.h"
 #include "TabFoo.h"
 #include "make_test_connection.h"
 
@@ -52,7 +53,7 @@ int InsertOnConflict(int, char*[])
                c_day date
              ))");
 
-  // TODO: Need to add serialization tests
+#warning: Need to add serialization tests
   // Test on conflict
   db(sql::insert_into(foo).default_values().on_conflict().do_nothing());
 

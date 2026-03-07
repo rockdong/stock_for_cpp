@@ -26,19 +26,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _MSC_VER
-#include <ciso646>  // Required to support boolean operator aliases
-#endif
-
-#include <limits>
-#include <iostream>
-#include <memory>
-
 #include <sqlpp11/chrono.h>
 #include <sqlpp11/exception.h>
 #include <sqlpp11/mysql/detail/prepared_statement_handle.h>
 #include <sqlpp11/mysql/sqlpp_mysql.h>
 
+#include <iostream>
+#ifdef _MSC_VER
+#include <iso646.h>
+#endif
+#include <memory>
 
 namespace sqlpp
 {
@@ -216,7 +213,7 @@ namespace sqlpp
       void _bind_blob_result(size_t index, const uint8_t** value, size_t* len)
       {
         if (_handle->debug)
-          std::cerr << "MySQL debug: binding blob result " << static_cast<const void*>(*value) << " at index: " << index
+          std::cerr << "MySQL debug: binding text result " << static_cast<const void*>(*value) << " at index: " << index
                     << std::endl;
 
         detail::result_meta_data_t& meta_data{_handle->result_param_meta_data[index]};
@@ -363,7 +360,7 @@ namespace sqlpp
       void _post_bind_time_of_day_result(size_t index, ::std::chrono::microseconds* value, bool* is_null)
       {
         if (_handle->debug)
-          std::cerr << "MySQL debug: post binding time of day result " << static_cast<void*>(value) << " at index: " << index
+          std::cerr << "MySQL debug: post binding date time result " << static_cast<void*>(value) << " at index: " << index
                     << std::endl;
 
         if (not *is_null)

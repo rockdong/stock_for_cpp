@@ -25,6 +25,7 @@
 
 #include "MockDb.h"
 #include "Sample.h"
+#include "is_regular.h"
 #include <algorithm>
 #include <iostream>
 #include <sqlpp11/alias_provider.h>
@@ -61,6 +62,7 @@ void print_row(Row const& row)
 }
 
 SQLPP_ALIAS_PROVIDER(cheese)
+SQLPP_ALIAS_PROVIDER(param1)
 SQLPP_ALIAS_PROVIDER(param2)
 
 int Select(int, char*[])
@@ -193,12 +195,6 @@ int Select(int, char*[])
 
   for (const auto& row :
        db(select(sqlpp::case_when(true).then(sqlpp::null).else_(sqlpp::null).as(t.beta)).from(t).unconditionally()))
-  {
-    std::cerr << row.beta << std::endl;
-  }
-
-  for (const auto& row :
-       db(select(sqlpp::case_when(true).then(5).else_(7).as(t.beta)).from(t).unconditionally()))
   {
     std::cerr << row.beta << std::endl;
   }

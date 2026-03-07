@@ -28,7 +28,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <algorithm>
 #include <iostream>
+#include <sstream>
 
 #include <sqlpp11/compat/make_unique.h>
 #include <sqlpp11/connection.h>
@@ -92,7 +94,7 @@ namespace sqlpp
       context_t(const connection_base& db) : _db(db)
       {
       }
-      context_t(connection_base&&) = delete;
+      context_t(const connection_base&&) = delete;
 
       template <typename T>
       std::ostream& operator<<(T t)
@@ -357,7 +359,7 @@ namespace sqlpp
 
         _context_t context{*this};
         serialize(x, context);
-        return static_cast<size_t>(execute(context.str())->result.affected_rows());
+        return execute(context.str());
       }
 
       template <
