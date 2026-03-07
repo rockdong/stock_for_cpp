@@ -13,8 +13,8 @@ hide:
  
 * Candlestick patterns recognition
 
-* Core written in [C/C++](api.md) with API also available for [Python](wrappers.md) and [R](wrappers.md).
+* Core written in [C/C++](api.md) with API also available for [Python](wrappers.md).
 
 * Open-Source (BSD License). Can be freely integrated in your own open-source or commercial applications.
 
-TA-Lib was released in 2001 and its well-known algorithms are still widely used over 20 years later. The code is stable and have passed the test of time. 
+TA-Lib was release in 2001 for well-known algorithms that are still widely used >20 years later. The code is stable and have passed the test of time. 

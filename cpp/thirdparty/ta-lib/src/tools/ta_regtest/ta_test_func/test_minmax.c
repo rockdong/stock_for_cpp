@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2024, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -248,8 +248,7 @@ static TA_RefTest tableRefTest[] =
   {testSerie6, sizeof(testSerie6)/sizeof(TA_Real)},
   {testSerie7, sizeof(testSerie7)/sizeof(TA_Real)},
   {testSerie8, sizeof(testSerie8)/sizeof(TA_Real)},
-  {testSerie9, sizeof(testSerie9)/sizeof(TA_Real)},
-  {testSerie10, sizeof(testSerie10)/sizeof(TA_Real)}
+  {testSerie9, sizeof(testSerie10)/sizeof(TA_Real)}
 };
 
 #define NB_TEST_REF (sizeof(tableRefTest)/sizeof(TA_RefTest))

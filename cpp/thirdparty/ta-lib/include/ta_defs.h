@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2024, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -130,7 +130,7 @@
 
   #define TA_LIB_API
 
-#elif defined( _JAVA )
+#elif defined( _JAVA ) || defined( _RUST )
 
   #define ENUM_BEGIN(w) public enum w {
   #define ENUM_DEFINE(x,y) y
@@ -156,33 +156,6 @@
 
   #define TA_LIB_API
 
-#elif defined( _RUST )
-
-  #define ENUM_BEGIN(w) enum w {
-  #define ENUM_DEFINE(x,y) y
-  #define ENUM_VALUE(w,x,y) w::y
-  #define ENUM_CASE(w,x,y) y
-  #define ENUM_DECLARATION(w) w
-  #define ENUM_END(w) }
-
-  #define STRUCT_BEGIN(x) struct x {
-  #define STRUCT_END(x) }
-
-  #define VALUE_HANDLE_INT(name)            let mut name: i32
-  #define VALUE_HANDLE_DEREF(name)          (*name)
-  #define VALUE_HANDLE_DEREF_INDEX(name, val) (*name) = (val)
-  #define VALUE_HANDLE_DEREF_TO_ZERO(name)  (*name) = 0
-  #define VALUE_HANDLE_OUT(name)            &mut name
-
-  #define VALUE_HANDLE_GET(name)         name
-  #define VALUE_HANDLE_SET(name,x)       name = x
-
-  #define CONSTANT_DOUBLE(x) const x: f64
-  #define NAMESPACE(x) x::
-  #define UNUSED_VARIABLE(x) let _ = x
-
-  #define TA_LIB_API
-
 #else
 
   #define ENUM_BEGIN(w) typedef enum {
@@ -197,7 +170,6 @@
 
   #define VALUE_HANDLE_INT(name)           int name
   #define VALUE_HANDLE_DEREF(name)         (*name)
-  #define VALUE_HANDLE_DEREF_INDEX(name, val) (*name) = (val)
   #define VALUE_HANDLE_DEREF_TO_ZERO(name) (*name) = 0
   #define VALUE_HANDLE_OUT(name)           &name
 
@@ -220,58 +192,6 @@
     #define TA_LIB_API
   #endif
 #endif
-
-/* additional rust-centric Macro Helpers */
-#if defined(_RUST)
-    #define FOR_EACH_OUTPUT(startVal, endVal, idxVar, outIdxVar) \
-    outIdxVar = 0; \
-    for idxVar in (startVal as usize)..=(endVal as usize) {
-    #define FOR_EACH_OUTPUT_END(outIdxVar) outIdxVar += 1; }
-    #define FOR_COUNTDOWN(period, idxVar) for idxVar in (1..=period).rev() {
-    #define FOR_COUNTDOWN_END }
-
-    #define DECLARE_INT_VAR(name) let mut name: i32;
-    #define DECLARE_INDEX_VAR(name) let mut name: usize;
-    #define DECLARE_DOUBLE_VAR(name) let mut name: f64;
-    
-    /* For loop variables used with FOR_EACH_OUTPUT, use this no-op macro
-     * since FOR_EACH_OUTPUT creates its own loop variable binding */
-    #define DECLARE_LOOP_VAR(name) /* no-op: loop variables handled by FOR_EACH_OUTPUT */
-    
-    /* Rust-specific syntax helpers */
-    #define IF_CONDITION(cond) if cond {
-    #define IF_CONDITION_END }
-    #define ARRAY_ACCESS(arr, idx) arr[idx]
-    #define CAST_TO_USIZE(val) ((val) as usize)
-    #define CAST_TO_I32(val) ((val) as i32)
-    #define CAST_TO_F64(val) ((val) as f64)
-    /* For Rust, always cast to f64 since output arrays are always f64 */
-    #define OUTPUT_F64(val) CAST_TO_F64(val)
-#else
-    #define FOR_EACH_OUTPUT(startVal, endVal, idxVar, outIdxVar) for(idxVar=startVal, outIdxVar=0; idxVar <= endVal; idxVar++, outIdxVar++) {
-    #define FOR_EACH_OUTPUT_END(outIdxVar) }
-
-    #define FOR_COUNTDOWN(period, idxVar) for(idxVar=period; idxVar > 0; idxVar--) {
-    #define FOR_COUNTDOWN_END }
-
-    #define DECLARE_INT_VAR(name) int name;
-    #define DECLARE_INDEX_VAR(name) int name;
-    #define DECLARE_DOUBLE_VAR(name) double name;
-    
-    /* For C, loop variables need normal declaration */
-    #define DECLARE_LOOP_VAR(name) int name;
-    
-    /* C-style syntax helpers (no-ops for C) */
-    #define IF_CONDITION(cond) if (cond) {
-    #define IF_CONDITION_END }
-    #define ARRAY_ACCESS(arr, idx) arr[idx]
-    #define CAST_TO_USIZE(val) (val)
-    #define CAST_TO_I32(val) (val)
-    #define CAST_TO_F64(val) (val)
-    /* For C, no casting needed between float and double in assignment */
-    #define OUTPUT_F64(val) (val)
-#endif
-
 
 /* Abstraction of function calls within the library.
  * Needed because Java/.NET allows overloading, while for C the
@@ -305,7 +225,7 @@
 
 ENUM_BEGIN( RetCode )
     /*      0 */  ENUM_DEFINE( TA_SUCCESS, Success ),            /* No error */
-    /*      1 */  ENUM_DEFINE( TA_LIB_NOT_INITIALIZE, LibNotInitialize ), /* TA_Initialize was not successfully called */
+    /*      1 */  ENUM_DEFINE( TA_LIB_NOT_INITIALIZE, LibNotInitialize ), /* TA_Initialize was not sucessfully called */
     /*      2 */  ENUM_DEFINE( TA_BAD_PARAM, BadParam ), /* A parameter is out of range */
     /*      3 */  ENUM_DEFINE( TA_ALLOC_ERR, AllocErr ), /* Possibly out-of-memory */
     /*      4 */  ENUM_DEFINE( TA_GROUP_NOT_FOUND, GroupNotFound ),

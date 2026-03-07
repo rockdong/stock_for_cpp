@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2024, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -65,7 +65,6 @@
 /* Generated */ #elif defined( _RUST )
 /* Generated */    #include "ta_defs.h"
 /* Generated */    #define TA_INTERNAL_ERROR(Id) (RetCode.InternalError)
-/* Generated */    impl Core {
 /* Generated */ #else
 /* Generated */    #include <string.h>
 /* Generated */    #include <math.h>
@@ -91,10 +90,6 @@
 /* Generated */ public int mamaLookback( double        optInFastLimit, /* From 0.01 to 0.99 */
 /* Generated */                        double        optInSlowLimit )  /* From 0.01 to 0.99 */
 /* Generated */ 
-/* Generated */ #elif defined( _RUST )
-/* Generated */ pub fn mama_lookback(
-optInFastLimit: f64,
-/* Generated */                       optInSlowLimit: f64) -> i32
 /* Generated */ #else
 /* Generated */ TA_LIB_API int TA_MAMA_Lookback( double        optInFastLimit, /* From 0.01 to 0.99 */
 /* Generated */                                           double        optInSlowLimit )  /* From 0.01 to 0.99 */
@@ -106,16 +101,16 @@ optInFastLimit: f64,
 
 /**** START GENCODE SECTION 2 - DO NOT DELETE THIS LINE ****/
 /* Generated */ #ifndef TA_FUNC_NO_RANGE_CHECK
-/* Generated */    if( optInFastLimit == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInFastLimit = 5.000000e-1;
-/* Generated */    } else if( (optInFastLimit < 1.000000e-2) ||/* Generated */  (optInFastLimit > 9.900000e-1) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
-/* Generated */    if( optInSlowLimit == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInSlowLimit = 5.000000e-2;
-/* Generated */    } else if( (optInSlowLimit < 1.000000e-2) ||/* Generated */  (optInSlowLimit > 9.900000e-1) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
+/* Generated */    if( optInFastLimit == TA_REAL_DEFAULT )
+/* Generated */       optInFastLimit = 5.000000e-1;
+/* Generated */    else if( (optInFastLimit < 1.000000e-2) ||/* Generated */  (optInFastLimit > 9.900000e-1) )
+/* Generated */       return -1;
+/* Generated */ 
+/* Generated */    if( optInSlowLimit == TA_REAL_DEFAULT )
+/* Generated */       optInSlowLimit = 5.000000e-2;
+/* Generated */    else if( (optInSlowLimit < 1.000000e-2) ||/* Generated */  (optInSlowLimit > 9.900000e-1) )
+/* Generated */       return -1;
+/* Generated */ 
 /* Generated */ #endif /* TA_FUNC_NO_RANGE_CHECK */
 /**** END GENCODE SECTION 2 - DO NOT DELETE THIS LINE ****/
 
@@ -196,16 +191,6 @@ optInFastLimit: f64,
 /* Generated */                      MInteger     outNBElement,
 /* Generated */                      double        outMAMA[],
 /* Generated */                      double        outFAMA[] )
-/* Generated */ #elif defined( _RUST )
-/* Generated */ pub fn mama(startIdx: usize,
-/* Generated */             endIdx: usize,
-/* Generated */             inReal: &[f64],
-/* Generated */             optInFastLimit: f64,
-/* Generated */             optInSlowLimit: f64,
-/* Generated */             outBegIdx: &mut usize,
-/* Generated */             outNBElement: &mut usize,
-/* Generated */             outMAMA: &mut [f64],
-/* Generated */             outFAMA: &mut [f64]) -> RetCode
 /* Generated */ #else
 /* Generated */ TA_LIB_API TA_RetCode TA_MAMA( int    startIdx,
 /* Generated */                                int    endIdx,
@@ -257,36 +242,24 @@ optInFastLimit: f64,
 /* Generated */ #ifndef TA_FUNC_NO_RANGE_CHECK
 /* Generated */ 
 /* Generated */    /* Validate the requested output range. */
-/* Generated */ #if defined( _RUST )
-/* Generated */    /* Skip negative checks for Rust since startIdx/endIdx are usize (unsigned) */
-/* Generated */    if( endIdx < startIdx ) {
-/* Generated */       return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_END_INDEX,OutOfRangeEndIndex);
-/* Generated */    }
-/* Generated */ #else
-/* Generated */    if( startIdx < 0 ) {
+/* Generated */    if( startIdx < 0 )
 /* Generated */       return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_START_INDEX,OutOfRangeStartIndex);
-/* Generated */    }
-/* Generated */    if( (endIdx < 0) || (endIdx < startIdx)) {
+/* Generated */    if( (endIdx < 0) || (endIdx < startIdx))
 /* Generated */       return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_END_INDEX,OutOfRangeEndIndex);
-/* Generated */    }
-/* Generated */ #endif
 /* Generated */ 
-/* Generated */ #if defined( _RUST )
-/* Generated */ 
-/* Generated */ #else
 /* Generated */    #if !defined(_JAVA)
-/* Generated */    if( !inReal ) { return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam); }
+/* Generated */    if( !inReal ) return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
 /* Generated */    #endif /* !defined(_JAVA)*/
-/* Generated */    if( optInFastLimit == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInFastLimit = 5.000000e-1;
-/* Generated */    } else if( (optInFastLimit < 1.000000e-2) ||/* Generated */  (optInFastLimit > 9.900000e-1) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
-/* Generated */    if( optInSlowLimit == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInSlowLimit = 5.000000e-2;
-/* Generated */    } else if( (optInSlowLimit < 1.000000e-2) ||/* Generated */  (optInSlowLimit > 9.900000e-1) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
+/* Generated */    if( optInFastLimit == TA_REAL_DEFAULT )
+/* Generated */       optInFastLimit = 5.000000e-1;
+/* Generated */    else if( (optInFastLimit < 1.000000e-2) ||/* Generated */  (optInFastLimit > 9.900000e-1) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
+/* Generated */    if( optInSlowLimit == TA_REAL_DEFAULT )
+/* Generated */       optInSlowLimit = 5.000000e-2;
+/* Generated */    else if( (optInSlowLimit < 1.000000e-2) ||/* Generated */  (optInSlowLimit > 9.900000e-1) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
 /* Generated */    #if !defined(_JAVA)
 /* Generated */    if( !outMAMA )
 /* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
@@ -295,7 +268,6 @@ optInFastLimit: f64,
 /* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
 /* Generated */ 
 /* Generated */    #endif /* !defined(_JAVA) */
-/* Generated */ #endif
 /* Generated */ #endif /* TA_FUNC_NO_RANGE_CHECK */
 /* Generated */ 
 /**** END GENCODE SECTION 4 - DO NOT DELETE THIS LINE ****/
@@ -560,16 +532,6 @@ optInFastLimit: f64,
 /* Generated */                      MInteger     outNBElement,
 /* Generated */                      double        outMAMA[],
 /* Generated */                      double        outFAMA[] )
-/* Generated */ #elif defined( _RUST )
-/* Generated */ pub fn mama_s(startIdx: usize,
-/* Generated */               endIdx: usize,
-/* Generated */               inReal: &[f32],
-/* Generated */               optInFastLimit: f32,
-/* Generated */               optInSlowLimit: f32,
-/* Generated */               outBegIdx: &mut usize,
-/* Generated */               outNBElement: &mut usize,
-/* Generated */               outMAMA: &mut [f64],
-/* Generated */               outFAMA: &mut [f64]) -> RetCode
 /* Generated */ #else
 /* Generated */ TA_RetCode TA_S_MAMA( int    startIdx,
 /* Generated */                       int    endIdx,
@@ -603,40 +565,27 @@ optInFastLimit: f64,
 /* Generated */    double rad2Deg;
 /* Generated */    double mama,fama,todayValue,prevPhase;
 /* Generated */  #ifndef TA_FUNC_NO_RANGE_CHECK
-/* Generated */  #if defined( _RUST )
-/* Generated */     if( endIdx < startIdx ) {
-/* Generated */        return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_END_INDEX,OutOfRangeEndIndex);
-/* Generated */     }
-/* Generated */  #else
-/* Generated */     if( startIdx < 0 ) {
+/* Generated */     if( startIdx < 0 )
 /* Generated */        return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_START_INDEX,OutOfRangeStartIndex);
-/* Generated */     }
-/* Generated */     if( (endIdx < 0) || (endIdx < startIdx)) {
+/* Generated */     if( (endIdx < 0) || (endIdx < startIdx))
 /* Generated */        return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_END_INDEX,OutOfRangeEndIndex);
-/* Generated */     }
-/* Generated */  #endif
-/* Generated */  #if defined( _RUST )
-/* Generated */  #else
 /* Generated */     #if !defined(_JAVA)
-/* Generated */     if( !inReal ) { return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam); }
+/* Generated */     if( !inReal ) return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
 /* Generated */     #endif 
-/* Generated */     if( optInFastLimit == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInFastLimit = 5.000000e-1;
-/* Generated */     } else if( (optInFastLimit < 1.000000e-2) ||  (optInFastLimit > 9.900000e-1) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
-/* Generated */     if( optInSlowLimit == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInSlowLimit = 5.000000e-2;
-/* Generated */     } else if( (optInSlowLimit < 1.000000e-2) ||  (optInSlowLimit > 9.900000e-1) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
+/* Generated */     if( optInFastLimit == TA_REAL_DEFAULT )
+/* Generated */        optInFastLimit = 5.000000e-1;
+/* Generated */     else if( (optInFastLimit < 1.000000e-2) ||  (optInFastLimit > 9.900000e-1) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */     if( optInSlowLimit == TA_REAL_DEFAULT )
+/* Generated */        optInSlowLimit = 5.000000e-2;
+/* Generated */     else if( (optInSlowLimit < 1.000000e-2) ||  (optInSlowLimit > 9.900000e-1) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
 /* Generated */     #if !defined(_JAVA)
 /* Generated */     if( !outMAMA )
 /* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
 /* Generated */     if( !outFAMA )
 /* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
 /* Generated */     #endif 
-/* Generated */  #endif
 /* Generated */  #endif 
 /* Generated */    rad2Deg = 180.0 / (4.0 * std_atan(1));
 /* Generated */    lookbackTotal = 32 + TA_GLOBALS_UNSTABLE_PERIOD(TA_FUNC_UNST_MAMA,Mama);
@@ -773,8 +722,6 @@ optInFastLimit: f64,
 /* Generated */ 
 /* Generated */ #if defined( _MANAGED )
 /* Generated */ }}} // Close namespace TicTacTec.TA.Lib
-/* Generated */ #elif defined( _RUST )
-/* Generated */ } // Close impl Core
 /* Generated */ #endif
 /**** END GENCODE SECTION 5 - DO NOT DELETE THIS LINE ****/
 

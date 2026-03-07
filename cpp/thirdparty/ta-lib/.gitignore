@@ -87,6 +87,3 @@ out/
 
 # Never ignore .gitkeep files
 !**/.gitkeep
-
-cmake-build-debug/
-rust/target

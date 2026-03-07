@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2024, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -36,20 +36,7 @@
  *   Any modification will be lost on next execution of gen_code.
  */
 
-// Rust-specific types and enumerations
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RetCode {
-    Success,
-    BadParam,
-    OutOfRangeStartIndex,
-    OutOfRangeEndIndex,
-    AllocErr,
-    InternalError,
-}
-
-// Core struct definition
-pub struct Core {}
-
+pub use self::mult::*
 pub mod mult;
 
 /***************/

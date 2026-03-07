@@ -1,6 +1,5 @@
 import filecmp
 import glob
-import json
 import os
 import re
 import shutil
@@ -81,13 +80,9 @@ def is_wix_installed() -> bool:
         return False
 
 def is_msbuild_installed() -> bool:
-    if sys.platform == "win32":
+    if sys.platform == 'Windows':
         try:
-            vswhere_path = r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
-            if not os.path.exists(vswhere_path):
-                return False                
-
-            result = subprocess.run([vswhere_path, '-latest', '-products', '*', '-requires', 'Microsoft.Component.MSBuild', '-find', 'MSBuild\\**\\Bin\\MSBuild.exe'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(['vswhere', '-latest', '-products', '*', '-requires', 'Microsoft.Component.MSBuild', '-find', 'MSBuild\\**\\Bin\\MSBuild.exe'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             msbuild_path = result.stdout.decode().strip()
             if msbuild_path:
                 subprocess.run([msbuild_path, '-version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -367,45 +362,8 @@ def verify_git_repo_original() -> str:
         print("Error: Could not determine the remote URL of the repository.")
         sys.exit(1)
 
-    print("Warning: some processing were skipped because running from a fork")
+    print("This script performs no operation when run from a fork")
     sys.exit(0)
-
-def get_git_bot_user_name() -> str:
-    return "github-actions[bot]"
-
-def get_git_user_name() -> str:
-    if os.getenv('GITHUB_ACTIONS') == 'true':
-        return get_git_bot_user_name()
-
-    try:
-        result = subprocess.run(['git', 'config', 'user.name'], capture_output=True, text=True, check=True)
-        user_name = result.stdout.strip()
-        if not user_name:
-            user_name = "local"
-        return user_name
-    except subprocess.CalledProcessError as e:
-        return "local"
-
-def is_nightly_github_action() -> bool:
-    if os.getenv('GITHUB_ACTIONS') != 'true':
-        return False
-
-    event_name = os.getenv('GITHUB_EVENT_NAME')
-    if event_name != 'schedule':
-        return False
-
-    event_path = os.getenv('GITHUB_EVENT_PATH')
-    if not event_path or not os.path.exists(event_path):
-        return False
-
-    with open(event_path, 'r') as f:
-        event_data = json.load(f)
-
-    # Check if the event was manually dispatched
-    if event_data.get('action') == 'workflow_dispatch':
-        return False
-
-    return True
 
 def are_generated_files_git_changed(root_dir: str) -> bool:
     # Using git, verify if any of the generated files have changed.

@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2024, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -76,7 +76,6 @@
 /* Generated */ #elif defined( _RUST )
 /* Generated */    #include "ta_defs.h"
 /* Generated */    #define TA_INTERNAL_ERROR(Id) (RetCode.InternalError)
-/* Generated */    impl Core {
 /* Generated */ #else
 /* Generated */    #include <string.h>
 /* Generated */    #include <math.h>
@@ -114,16 +113,6 @@
 /* Generated */                          double        optInAccelerationShort, /* From 0 to TA_REAL_MAX */
 /* Generated */                          double        optInAccelerationMaxShort )  /* From 0 to TA_REAL_MAX */
 /* Generated */ 
-/* Generated */ #elif defined( _RUST )
-/* Generated */ pub fn sarext_lookback(
-optInStartValue: f64,
-/* Generated */                         optInOffsetOnReverse: f64,
-/* Generated */                         optInAccelerationInitLong: f64,
-/* Generated */                         optInAccelerationLong: f64,
-/* Generated */                         optInAccelerationMaxLong: f64,
-/* Generated */                         optInAccelerationInitShort: f64,
-/* Generated */                         optInAccelerationShort: f64,
-/* Generated */                         optInAccelerationMaxShort: f64) -> i32
 /* Generated */ #else
 /* Generated */ TA_LIB_API int TA_SAREXT_Lookback( double        optInStartValue, /* From TA_REAL_MIN to TA_REAL_MAX */
 /* Generated */                                             double        optInOffsetOnReverse, /* From 0 to TA_REAL_MAX */
@@ -141,46 +130,46 @@ optInStartValue: f64,
 
 /**** START GENCODE SECTION 2 - DO NOT DELETE THIS LINE ****/
 /* Generated */ #ifndef TA_FUNC_NO_RANGE_CHECK
-/* Generated */    if( optInStartValue == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInStartValue = 0.000000e+0;
-/* Generated */    } else if( (optInStartValue < -3.000000e+37) ||/* Generated */  (optInStartValue > 3.000000e+37) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
-/* Generated */    if( optInOffsetOnReverse == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInOffsetOnReverse = 0.000000e+0;
-/* Generated */    } else if( (optInOffsetOnReverse < 0.000000e+0) ||/* Generated */  (optInOffsetOnReverse > 3.000000e+37) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
-/* Generated */    if( optInAccelerationInitLong == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationInitLong = 2.000000e-2;
-/* Generated */    } else if( (optInAccelerationInitLong < 0.000000e+0) ||/* Generated */  (optInAccelerationInitLong > 3.000000e+37) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
-/* Generated */    if( optInAccelerationLong == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationLong = 2.000000e-2;
-/* Generated */    } else if( (optInAccelerationLong < 0.000000e+0) ||/* Generated */  (optInAccelerationLong > 3.000000e+37) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
-/* Generated */    if( optInAccelerationMaxLong == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationMaxLong = 2.000000e-1;
-/* Generated */    } else if( (optInAccelerationMaxLong < 0.000000e+0) ||/* Generated */  (optInAccelerationMaxLong > 3.000000e+37) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
-/* Generated */    if( optInAccelerationInitShort == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationInitShort = 2.000000e-2;
-/* Generated */    } else if( (optInAccelerationInitShort < 0.000000e+0) ||/* Generated */  (optInAccelerationInitShort > 3.000000e+37) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
-/* Generated */    if( optInAccelerationShort == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationShort = 2.000000e-2;
-/* Generated */    } else if( (optInAccelerationShort < 0.000000e+0) ||/* Generated */  (optInAccelerationShort > 3.000000e+37) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
-/* Generated */    if( optInAccelerationMaxShort == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationMaxShort = 2.000000e-1;
-/* Generated */    } else if( (optInAccelerationMaxShort < 0.000000e+0) ||/* Generated */  (optInAccelerationMaxShort > 3.000000e+37) ) {
-/* Generated */ 	  return -1;
-/* Generated */ }
+/* Generated */    if( optInStartValue == TA_REAL_DEFAULT )
+/* Generated */       optInStartValue = 0.000000e+0;
+/* Generated */    else if( (optInStartValue < -3.000000e+37) ||/* Generated */  (optInStartValue > 3.000000e+37) )
+/* Generated */       return -1;
+/* Generated */ 
+/* Generated */    if( optInOffsetOnReverse == TA_REAL_DEFAULT )
+/* Generated */       optInOffsetOnReverse = 0.000000e+0;
+/* Generated */    else if( (optInOffsetOnReverse < 0.000000e+0) ||/* Generated */  (optInOffsetOnReverse > 3.000000e+37) )
+/* Generated */       return -1;
+/* Generated */ 
+/* Generated */    if( optInAccelerationInitLong == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationInitLong = 2.000000e-2;
+/* Generated */    else if( (optInAccelerationInitLong < 0.000000e+0) ||/* Generated */  (optInAccelerationInitLong > 3.000000e+37) )
+/* Generated */       return -1;
+/* Generated */ 
+/* Generated */    if( optInAccelerationLong == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationLong = 2.000000e-2;
+/* Generated */    else if( (optInAccelerationLong < 0.000000e+0) ||/* Generated */  (optInAccelerationLong > 3.000000e+37) )
+/* Generated */       return -1;
+/* Generated */ 
+/* Generated */    if( optInAccelerationMaxLong == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationMaxLong = 2.000000e-1;
+/* Generated */    else if( (optInAccelerationMaxLong < 0.000000e+0) ||/* Generated */  (optInAccelerationMaxLong > 3.000000e+37) )
+/* Generated */       return -1;
+/* Generated */ 
+/* Generated */    if( optInAccelerationInitShort == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationInitShort = 2.000000e-2;
+/* Generated */    else if( (optInAccelerationInitShort < 0.000000e+0) ||/* Generated */  (optInAccelerationInitShort > 3.000000e+37) )
+/* Generated */       return -1;
+/* Generated */ 
+/* Generated */    if( optInAccelerationShort == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationShort = 2.000000e-2;
+/* Generated */    else if( (optInAccelerationShort < 0.000000e+0) ||/* Generated */  (optInAccelerationShort > 3.000000e+37) )
+/* Generated */       return -1;
+/* Generated */ 
+/* Generated */    if( optInAccelerationMaxShort == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationMaxShort = 2.000000e-1;
+/* Generated */    else if( (optInAccelerationMaxShort < 0.000000e+0) ||/* Generated */  (optInAccelerationMaxShort > 3.000000e+37) )
+/* Generated */       return -1;
+/* Generated */ 
 /* Generated */ #endif /* TA_FUNC_NO_RANGE_CHECK */
 /**** END GENCODE SECTION 2 - DO NOT DELETE THIS LINE ****/
 
@@ -285,20 +274,6 @@ optInStartValue: f64,
 /* Generated */                        MInteger     outBegIdx,
 /* Generated */                        MInteger     outNBElement,
 /* Generated */                        double        outReal[] )
-/* Generated */ #elif defined( _RUST )
-/* Generated */ pub fn sarext(startIdx: usize,
-/* Generated */               endIdx: usize,
-/* Generated */               /* Generated */               optInStartValue: f64,
-/* Generated */               optInOffsetOnReverse: f64,
-/* Generated */               optInAccelerationInitLong: f64,
-/* Generated */               optInAccelerationLong: f64,
-/* Generated */               optInAccelerationMaxLong: f64,
-/* Generated */               optInAccelerationInitShort: f64,
-/* Generated */               optInAccelerationShort: f64,
-/* Generated */               optInAccelerationMaxShort: f64,
-/* Generated */               outBegIdx: &mut usize,
-/* Generated */               outNBElement: &mut usize,
-/* Generated */               outReal: &mut [f64]) -> RetCode
 /* Generated */ #else
 /* Generated */ TA_LIB_API TA_RetCode TA_SAREXT( int    startIdx,
 /* Generated */                                  int    endIdx,
@@ -335,75 +310,62 @@ optInStartValue: f64,
 /* Generated */ #ifndef TA_FUNC_NO_RANGE_CHECK
 /* Generated */ 
 /* Generated */    /* Validate the requested output range. */
-/* Generated */ #if defined( _RUST )
-/* Generated */    /* Skip negative checks for Rust since startIdx/endIdx are usize (unsigned) */
-/* Generated */    if( endIdx < startIdx ) {
-/* Generated */       return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_END_INDEX,OutOfRangeEndIndex);
-/* Generated */    }
-/* Generated */ #else
-/* Generated */    if( startIdx < 0 ) {
+/* Generated */    if( startIdx < 0 )
 /* Generated */       return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_START_INDEX,OutOfRangeStartIndex);
-/* Generated */    }
-/* Generated */    if( (endIdx < 0) || (endIdx < startIdx)) {
+/* Generated */    if( (endIdx < 0) || (endIdx < startIdx))
 /* Generated */       return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_END_INDEX,OutOfRangeEndIndex);
-/* Generated */    }
-/* Generated */ #endif
 /* Generated */ 
-/* Generated */ #if defined( _RUST )
-/* Generated */ 
-/* Generated */ #else
 /* Generated */    #if !defined(_JAVA)
 /* Generated */    /* Verify required price component. */
-/* Generated */    if(!inHigh||!inLow){
+/* Generated */    if(!inHigh||!inLow)
 /* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
+/* Generated */ 
 /* Generated */    #endif /* !defined(_JAVA)*/
-/* Generated */    if( optInStartValue == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInStartValue = 0.000000e+0;
-/* Generated */    } else if( (optInStartValue < -3.000000e+37) ||/* Generated */  (optInStartValue > 3.000000e+37) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
-/* Generated */    if( optInOffsetOnReverse == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInOffsetOnReverse = 0.000000e+0;
-/* Generated */    } else if( (optInOffsetOnReverse < 0.000000e+0) ||/* Generated */  (optInOffsetOnReverse > 3.000000e+37) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
-/* Generated */    if( optInAccelerationInitLong == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationInitLong = 2.000000e-2;
-/* Generated */    } else if( (optInAccelerationInitLong < 0.000000e+0) ||/* Generated */  (optInAccelerationInitLong > 3.000000e+37) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
-/* Generated */    if( optInAccelerationLong == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationLong = 2.000000e-2;
-/* Generated */    } else if( (optInAccelerationLong < 0.000000e+0) ||/* Generated */  (optInAccelerationLong > 3.000000e+37) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
-/* Generated */    if( optInAccelerationMaxLong == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationMaxLong = 2.000000e-1;
-/* Generated */    } else if( (optInAccelerationMaxLong < 0.000000e+0) ||/* Generated */  (optInAccelerationMaxLong > 3.000000e+37) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
-/* Generated */    if( optInAccelerationInitShort == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationInitShort = 2.000000e-2;
-/* Generated */    } else if( (optInAccelerationInitShort < 0.000000e+0) ||/* Generated */  (optInAccelerationInitShort > 3.000000e+37) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
-/* Generated */    if( optInAccelerationShort == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationShort = 2.000000e-2;
-/* Generated */    } else if( (optInAccelerationShort < 0.000000e+0) ||/* Generated */  (optInAccelerationShort > 3.000000e+37) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
-/* Generated */    if( optInAccelerationMaxShort == TA_REAL_DEFAULT ) {
-/* Generated */ 	  optInAccelerationMaxShort = 2.000000e-1;
-/* Generated */    } else if( (optInAccelerationMaxShort < 0.000000e+0) ||/* Generated */  (optInAccelerationMaxShort > 3.000000e+37) ) {
-/* Generated */ 	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */ }
+/* Generated */    if( optInStartValue == TA_REAL_DEFAULT )
+/* Generated */       optInStartValue = 0.000000e+0;
+/* Generated */    else if( (optInStartValue < -3.000000e+37) ||/* Generated */  (optInStartValue > 3.000000e+37) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
+/* Generated */    if( optInOffsetOnReverse == TA_REAL_DEFAULT )
+/* Generated */       optInOffsetOnReverse = 0.000000e+0;
+/* Generated */    else if( (optInOffsetOnReverse < 0.000000e+0) ||/* Generated */  (optInOffsetOnReverse > 3.000000e+37) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
+/* Generated */    if( optInAccelerationInitLong == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationInitLong = 2.000000e-2;
+/* Generated */    else if( (optInAccelerationInitLong < 0.000000e+0) ||/* Generated */  (optInAccelerationInitLong > 3.000000e+37) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
+/* Generated */    if( optInAccelerationLong == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationLong = 2.000000e-2;
+/* Generated */    else if( (optInAccelerationLong < 0.000000e+0) ||/* Generated */  (optInAccelerationLong > 3.000000e+37) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
+/* Generated */    if( optInAccelerationMaxLong == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationMaxLong = 2.000000e-1;
+/* Generated */    else if( (optInAccelerationMaxLong < 0.000000e+0) ||/* Generated */  (optInAccelerationMaxLong > 3.000000e+37) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
+/* Generated */    if( optInAccelerationInitShort == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationInitShort = 2.000000e-2;
+/* Generated */    else if( (optInAccelerationInitShort < 0.000000e+0) ||/* Generated */  (optInAccelerationInitShort > 3.000000e+37) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
+/* Generated */    if( optInAccelerationShort == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationShort = 2.000000e-2;
+/* Generated */    else if( (optInAccelerationShort < 0.000000e+0) ||/* Generated */  (optInAccelerationShort > 3.000000e+37) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
+/* Generated */    if( optInAccelerationMaxShort == TA_REAL_DEFAULT )
+/* Generated */       optInAccelerationMaxShort = 2.000000e-1;
+/* Generated */    else if( (optInAccelerationMaxShort < 0.000000e+0) ||/* Generated */  (optInAccelerationMaxShort > 3.000000e+37) )
+/* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */ 
 /* Generated */    #if !defined(_JAVA)
 /* Generated */    if( !outReal )
 /* Generated */       return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
 /* Generated */ 
 /* Generated */    #endif /* !defined(_JAVA) */
-/* Generated */ #endif
 /* Generated */ #endif /* TA_FUNC_NO_RANGE_CHECK */
 /* Generated */ 
 /**** END GENCODE SECTION 4 - DO NOT DELETE THIS LINE ****/
@@ -794,20 +756,6 @@ optInStartValue: f64,
 /* Generated */                        MInteger     outBegIdx,
 /* Generated */                        MInteger     outNBElement,
 /* Generated */                        double        outReal[] )
-/* Generated */ #elif defined( _RUST )
-/* Generated */ pub fn sarext_s(startIdx: usize,
-/* Generated */                 endIdx: usize,
-/* Generated */                 /* Generated */                 optInStartValue: f32,
-/* Generated */                 optInOffsetOnReverse: f32,
-/* Generated */                 optInAccelerationInitLong: f32,
-/* Generated */                 optInAccelerationLong: f32,
-/* Generated */                 optInAccelerationMaxLong: f32,
-/* Generated */                 optInAccelerationInitShort: f32,
-/* Generated */                 optInAccelerationShort: f32,
-/* Generated */                 optInAccelerationMaxShort: f32,
-/* Generated */                 outBegIdx: &mut usize,
-/* Generated */                 outNBElement: &mut usize,
-/* Generated */                 outReal: &mut [f64]) -> RetCode
 /* Generated */ #else
 /* Generated */ TA_RetCode TA_S_SAREXT( int    startIdx,
 /* Generated */                         int    endIdx,
@@ -834,70 +782,50 @@ optInStartValue: f64,
 /* Generated */    double afLong, afShort, ep, sar;
 /* Generated */    ARRAY_LOCAL(ep_temp,1);
 /* Generated */  #ifndef TA_FUNC_NO_RANGE_CHECK
-/* Generated */  #if defined( _RUST )
-/* Generated */     if( endIdx < startIdx ) {
-/* Generated */        return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_END_INDEX,OutOfRangeEndIndex);
-/* Generated */     }
-/* Generated */  #else
-/* Generated */     if( startIdx < 0 ) {
+/* Generated */     if( startIdx < 0 )
 /* Generated */        return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_START_INDEX,OutOfRangeStartIndex);
-/* Generated */     }
-/* Generated */     if( (endIdx < 0) || (endIdx < startIdx)) {
+/* Generated */     if( (endIdx < 0) || (endIdx < startIdx))
 /* Generated */        return ENUM_VALUE(RetCode,TA_OUT_OF_RANGE_END_INDEX,OutOfRangeEndIndex);
-/* Generated */     }
-/* Generated */  #endif
-/* Generated */  #if defined( _RUST )
-/* Generated */  #else
 /* Generated */     #if !defined(_JAVA)
-/* Generated */     if(!inHigh||!inLow){
+/* Generated */     if(!inHigh||!inLow)
 /* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
 /* Generated */     #endif 
-/* Generated */     if( optInStartValue == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInStartValue = 0.000000e+0;
-/* Generated */     } else if( (optInStartValue < -3.000000e+37) ||  (optInStartValue > 3.000000e+37) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
-/* Generated */     if( optInOffsetOnReverse == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInOffsetOnReverse = 0.000000e+0;
-/* Generated */     } else if( (optInOffsetOnReverse < 0.000000e+0) ||  (optInOffsetOnReverse > 3.000000e+37) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
-/* Generated */     if( optInAccelerationInitLong == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInAccelerationInitLong = 2.000000e-2;
-/* Generated */     } else if( (optInAccelerationInitLong < 0.000000e+0) ||  (optInAccelerationInitLong > 3.000000e+37) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
-/* Generated */     if( optInAccelerationLong == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInAccelerationLong = 2.000000e-2;
-/* Generated */     } else if( (optInAccelerationLong < 0.000000e+0) ||  (optInAccelerationLong > 3.000000e+37) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
-/* Generated */     if( optInAccelerationMaxLong == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInAccelerationMaxLong = 2.000000e-1;
-/* Generated */     } else if( (optInAccelerationMaxLong < 0.000000e+0) ||  (optInAccelerationMaxLong > 3.000000e+37) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
-/* Generated */     if( optInAccelerationInitShort == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInAccelerationInitShort = 2.000000e-2;
-/* Generated */     } else if( (optInAccelerationInitShort < 0.000000e+0) ||  (optInAccelerationInitShort > 3.000000e+37) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
-/* Generated */     if( optInAccelerationShort == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInAccelerationShort = 2.000000e-2;
-/* Generated */     } else if( (optInAccelerationShort < 0.000000e+0) ||  (optInAccelerationShort > 3.000000e+37) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
-/* Generated */     if( optInAccelerationMaxShort == TA_REAL_DEFAULT ) {
-/* Generated */  	  optInAccelerationMaxShort = 2.000000e-1;
-/* Generated */     } else if( (optInAccelerationMaxShort < 0.000000e+0) ||  (optInAccelerationMaxShort > 3.000000e+37) ) {
-/* Generated */  	  return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
-/* Generated */  }
+/* Generated */     if( optInStartValue == TA_REAL_DEFAULT )
+/* Generated */        optInStartValue = 0.000000e+0;
+/* Generated */     else if( (optInStartValue < -3.000000e+37) ||  (optInStartValue > 3.000000e+37) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */     if( optInOffsetOnReverse == TA_REAL_DEFAULT )
+/* Generated */        optInOffsetOnReverse = 0.000000e+0;
+/* Generated */     else if( (optInOffsetOnReverse < 0.000000e+0) ||  (optInOffsetOnReverse > 3.000000e+37) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */     if( optInAccelerationInitLong == TA_REAL_DEFAULT )
+/* Generated */        optInAccelerationInitLong = 2.000000e-2;
+/* Generated */     else if( (optInAccelerationInitLong < 0.000000e+0) ||  (optInAccelerationInitLong > 3.000000e+37) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */     if( optInAccelerationLong == TA_REAL_DEFAULT )
+/* Generated */        optInAccelerationLong = 2.000000e-2;
+/* Generated */     else if( (optInAccelerationLong < 0.000000e+0) ||  (optInAccelerationLong > 3.000000e+37) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */     if( optInAccelerationMaxLong == TA_REAL_DEFAULT )
+/* Generated */        optInAccelerationMaxLong = 2.000000e-1;
+/* Generated */     else if( (optInAccelerationMaxLong < 0.000000e+0) ||  (optInAccelerationMaxLong > 3.000000e+37) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */     if( optInAccelerationInitShort == TA_REAL_DEFAULT )
+/* Generated */        optInAccelerationInitShort = 2.000000e-2;
+/* Generated */     else if( (optInAccelerationInitShort < 0.000000e+0) ||  (optInAccelerationInitShort > 3.000000e+37) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */     if( optInAccelerationShort == TA_REAL_DEFAULT )
+/* Generated */        optInAccelerationShort = 2.000000e-2;
+/* Generated */     else if( (optInAccelerationShort < 0.000000e+0) ||  (optInAccelerationShort > 3.000000e+37) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+/* Generated */     if( optInAccelerationMaxShort == TA_REAL_DEFAULT )
+/* Generated */        optInAccelerationMaxShort = 2.000000e-1;
+/* Generated */     else if( (optInAccelerationMaxShort < 0.000000e+0) ||  (optInAccelerationMaxShort > 3.000000e+37) )
+/* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
 /* Generated */     #if !defined(_JAVA)
 /* Generated */     if( !outReal )
 /* Generated */        return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
 /* Generated */     #endif 
-/* Generated */  #endif
 /* Generated */  #endif 
 /* Generated */    if( startIdx < 1 )
 /* Generated */       startIdx = 1;
@@ -1070,8 +998,6 @@ optInStartValue: f64,
 /* Generated */ 
 /* Generated */ #if defined( _MANAGED )
 /* Generated */ }}} // Close namespace TicTacTec.TA.Lib
-/* Generated */ #elif defined( _RUST )
-/* Generated */ } // Close impl Core
 /* Generated */ #endif
 /**** END GENCODE SECTION 5 - DO NOT DELETE THIS LINE ****/
 

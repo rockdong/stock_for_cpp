@@ -279,71 +279,6 @@ def set_version_string_spec_in(root_dir: str, new_version:str):
         print(f"Error: ta_ver string not found in {filepath}")
         sys.exit(1)
 
-def get_version_string_cargo(root_dir: str) -> str:
-    """
-    Parse the file rust/Cargo.toml to get the version string. Example:
-      version = "0.6.4"
-    """
-    cargo_file_path = path_join(root_dir, "rust", "Cargo.toml")
-
-    if not os.path.exists(cargo_file_path):
-        print(f"Error: Cargo.toml not found at {cargo_file_path}")
-        sys.exit(1)
-
-    version_pattern = re.compile(r'version\s*=\s*"(\d+\.\d+\.\d+)"')
-
-    try:
-        with open(cargo_file_path, 'r') as cargo_file:
-            for line in cargo_file:
-                match = version_pattern.search(line)
-                if match:
-                    return match.group(1)
-
-        print(f"Error: Version not found in {cargo_file_path}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error reading Cargo.toml file: {e}")
-        sys.exit(1)
-
-def set_version_string_cargo(root_dir: str, new_version: str):
-    """
-    Update the version in rust/Cargo.toml.
-    """
-    cargo_file_path = path_join(root_dir, "rust", "Cargo.toml")
-
-    if not os.path.exists(cargo_file_path):
-        print(f"Warning: Cargo.toml not found at {cargo_file_path}")
-        return  # No action if file doesn't exist
-
-    current_version = get_version_string_cargo(root_dir)
-
-    if current_version == new_version:
-        return  # No changes needed. The version is already up to date.
-
-    # Read the Cargo.toml file
-    with open(cargo_file_path, 'r') as cargo_file:
-        lines = cargo_file.readlines()
-
-    # Update the version information in the lines
-    version_pattern = re.compile(r'version\s*=\s*"(\d+\.\d+\.\d+)"')
-    updated = False
-
-    for i, line in enumerate(lines):
-        match = version_pattern.search(line)
-        if match:
-            lines[i] = re.sub(version_pattern, f'version = "{new_version}"', line)
-            updated = True
-            break
-
-    # Check if version was found and updated
-    if not updated:
-        print(f"Warning: Version line not found in {cargo_file_path}")
-        return
-
-    # Write the updated lines back to the Cargo.toml file
-    with open(cargo_file_path, 'w') as cargo_file:
-        cargo_file.writelines(lines)
-
 def compare_version(version1: str, version2: str) -> int:
     """
     Compare two version strings.
@@ -370,11 +305,7 @@ def compare_version(version1: str, version2: str) -> int:
 
 def sync_versions(root_dir: str) -> Tuple[bool,str]:
     """
-    Synchronize the version between:
-          src/ta_common/ta_version.c
-          rust/Cargo.toml
-          CMakeLists.txt (root of repos)
-          VERSION file (root of repos)
+    Synchronize the version between ta_version.c, CMakeLists.txt and the root VERSION file.
 
     The versions are first read from all. The highest version is selected.
 
@@ -388,7 +319,6 @@ def sync_versions(root_dir: str) -> Tuple[bool,str]:
     version_c = get_version_string_source_code(root_dir)
     version_cmake = get_version_string_cmake(root_dir)
     version_spec_in = get_version_string_spec_in(root_dir)
-    version_cargo = get_version_string_cargo(root_dir)
 
     # Identify the highest version among all sources.
     # Put the highest in the variable highest_version
@@ -399,8 +329,6 @@ def sync_versions(root_dir: str) -> Tuple[bool,str]:
         highest_version = version_c
     if compare_version(highest_version, version_spec_in) < 0:
         highest_version = version_spec_in
-    if compare_version(highest_version, version_cargo) < 0:
-        highest_version = version_cargo
 
     # Update files with a lower version.
     is_updated = False
@@ -426,12 +354,6 @@ def sync_versions(root_dir: str) -> Tuple[bool,str]:
     if compare_result > 0:
         print(f"Updating ta-lib.spec.in to [{highest_version}]")
         set_version_string_spec_in(root_dir, highest_version)
-        is_updated = True
-
-    compare_result: int = compare_version(highest_version, version_cargo)
-    if compare_result > 0:
-        print(f"Updating Cargo.toml to [{highest_version}]")
-        set_version_string_cargo(root_dir, highest_version)
         is_updated = True
 
     return is_updated, version_c

@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2024, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -123,7 +123,7 @@ typedef struct TA_StringTable
  *        }
  *
  * Would display:
- *        "Error 1(TA_LIB_NOT_INITIALIZE): TA_Initialize was not successfully called"
+ *        "Error 1(TA_LIB_NOT_INITIALIZE): TA_Initialize was not sucessfully called"
  */
 typedef struct TA_RetCodeInfo
 {
@@ -151,7 +151,7 @@ TA_LIB_API TA_RetCode TA_Shutdown( void );
  * This value is updated whenever a make, cmake or any source files
  * modification should trig a repackaging of TA-Lib.
  */
-#define TA_LIB_SOURCES_DIGEST 88d3c1dc9a2155583937711acc44db2e
+#define TA_LIB_SOURCES_DIGEST f56bc6c0c0d72f1ee648897220e3ec3f
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2024, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -39,64 +39,63 @@
  *  in ta-lib\src\ta_func
  */
 
-// Import types from parent module
-use super::{Core, RetCode};
-
-// Allow non-snake-case names to maintain TA-Lib API compatibility
-#[allow(non_snake_case)]
-// allow unused variables and dead code due to gen code weirdness
-#[allow(unused_variables)]
-#[allow(dead_code)]
-impl Core {
-    pub fn mult_lookback() -> i32 {
-        return 0;
-    }
-    pub fn mult(
-        startIdx: usize,
-        endIdx: usize,
-        inReal0: &[f64],
-        inReal1: &[f64],
-        outBegIdx: &mut usize,
-        outNBElement: &mut usize,
-        outReal: &mut [f64],
-    ) -> RetCode {
-        let mut outIdx: usize;
-        if endIdx < startIdx {
-            return RetCode::OutOfRangeEndIndex;
-        }
-        outIdx = 0;
-        for i in (startIdx as usize)..=(endIdx as usize) {
-            outReal[outIdx] = (inReal0[i] * inReal1[i]) as f64;
-            outIdx += 1;
-        }
-        (*outNBElement) = outIdx;
-        (*outBegIdx) = startIdx;
-        return RetCode::Success;
-    }
-    pub fn mult_s(
-        startIdx: usize,
-        endIdx: usize,
-        inReal0: &[f32],
-        inReal1: &[f32],
-        outBegIdx: &mut usize,
-        outNBElement: &mut usize,
-        outReal: &mut [f64],
-    ) -> RetCode {
-        let mut outIdx: usize;
-        if endIdx < startIdx {
-            return RetCode::OutOfRangeEndIndex;
-        }
-        outIdx = 0;
-        for i in (startIdx as usize)..=(endIdx as usize) {
-            outReal[outIdx] = (inReal0[i] * inReal1[i]) as f64;
-            outIdx += 1;
-        }
-        (*outNBElement) = outIdx;
-        (*outBegIdx) = startIdx;
-        return RetCode::Success;
-    }
+  int TA_MULT_Lookback( void )
+{
+   return 0;
 }
-/* Generated */
+  TA_RetCode TA_MULT( int startIdx,
+ int endIdx,
+ const double inReal0[],
+ const double inReal1[],
+ int *outBegIdx,
+ int *outNBElement,
+ double outReal[] )
+{
+   int outIdx;
+   int i;
+ if( startIdx < 0 )
+ return  RetCode.OutOfRangeStartIndex ;
+ if( (endIdx < 0) || (endIdx < startIdx))
+ return  RetCode.OutOfRangeEndIndex ;
+ if( !inReal0 ) return  RetCode.BadParam ;
+ if( !inReal1 ) return  RetCode.BadParam ;
+ if( !outReal )
+ return  RetCode.BadParam ;
+   for( i=startIdx, outIdx=0; i <= endIdx; i++, outIdx++ )
+   {
+      outReal[outIdx] = inReal0[i]*inReal1[i];
+   }
+   outNBElement.value  = outIdx;
+   outBegIdx.value  = startIdx;
+   return  RetCode.Success ;
+}
+ TA_RetCode TA_S_MULT( int startIdx,
+ int endIdx,
+ const float inReal0[],
+ const float inReal1[],
+ int *outBegIdx,
+ int *outNBElement,
+ double outReal[] )
+ {
+ int outIdx;
+ int i;
+ if( startIdx < 0 )
+ return  RetCode.OutOfRangeStartIndex ;
+ if( (endIdx < 0) || (endIdx < startIdx))
+ return  RetCode.OutOfRangeEndIndex ;
+ if( !inReal0 ) return  RetCode.BadParam ;
+ if( !inReal1 ) return  RetCode.BadParam ;
+ if( !outReal )
+ return  RetCode.BadParam ;
+ for( i=startIdx, outIdx=0; i <= endIdx; i++, outIdx++ )
+ {
+ outReal[outIdx] = inReal0[i]*inReal1[i];
+ }
+ outNBElement.value  = outIdx;
+ outBegIdx.value  = startIdx;
+ return  RetCode.Success ;
+ }
+/* Generated */ 
 
 /***************/
 /* End of File */

@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2024, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -50,7 +50,7 @@ typedef struct
 
 static TA_InternalRetCodeInfo retCodeInfoTable[] = {
          {(TA_RetCode)0,"TA_SUCCESS","No error"},
-         {(TA_RetCode)1,"TA_LIB_NOT_INITIALIZE","TA_Initialize was not successfully called"},
+         {(TA_RetCode)1,"TA_LIB_NOT_INITIALIZE","TA_Initialize was not sucessfully called"},
          {(TA_RetCode)2,"TA_BAD_PARAM","A parameter is out of range"},
          {(TA_RetCode)3,"TA_ALLOC_ERR","Possibly out-of-memory"},
          {(TA_RetCode)4,"TA_GROUP_NOT_FOUND","No Info"},

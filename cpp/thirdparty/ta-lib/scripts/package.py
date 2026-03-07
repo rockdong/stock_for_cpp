@@ -31,7 +31,7 @@
 #   See README-DEVS.md for all the release steps.
 
 import argparse
-import copy
+import filecmp
 from multiprocessing.context import _force_start_method
 import os
 import shlex
@@ -40,11 +40,13 @@ import sys
 import glob
 import platform
 import shutil
+import tempfile
+import zipfile
+import zlib
 
-from utilities.package_digest import PackageDigest
 from utilities.windows import call_vcvarsall
 from utilities.versions import sync_sources_digest, sync_versions
-from utilities.common import are_generated_files_git_changed, compare_dir, copy_file_list, create_temp_dir, get_git_bot_user_name, get_git_user_name, get_src_generated_files, is_arm64_toolchain_installed, is_cmake_installed, is_debian_based, is_dotnet_installed, is_i386_toolchain_installed, is_msbuild_installed, is_nightly_github_action, is_redhat_based, is_rpmbuild_installed, is_ubuntu, is_dotnet_installed, is_wix_installed, is_x86_64_toolchain_installed, run_command, run_command_term, verify_git_repo, run_command_sudo
+from utilities.common import are_generated_files_git_changed, compare_dir, copy_file_list, create_temp_dir, get_src_generated_files, is_arm64_toolchain_installed, is_cmake_installed, is_debian_based, is_dotnet_installed, is_i386_toolchain_installed, is_redhat_based, is_rpmbuild_installed, is_ubuntu, is_dotnet_installed, is_wix_installed, is_x86_64_toolchain_installed, run_command, run_command_term, verify_git_repo, run_command_sudo
 from utilities.files import compare_msi_files, compare_tar_gz_files, compare_zip_files, create_rtf_from_txt, create_zip_file, compare_deb_files, force_delete, force_delete_glob, path_join
 
 def delete_other_versions(target_dir: str, file_pattern: str, new_version: str ):
@@ -139,24 +141,12 @@ def find_asset_with_ext(target_dir, version: str, extension: str) -> str:
 
     return os.path.basename(filepath)
 
-def package_windows_zip(root_dir: str, asset_file_name: str, version: str, sources_digest: str, builder_id: str) -> dict:
-    result: dict = {"build_valid": False}
+def package_windows_zip(root_dir: str, version: str, platform: str) -> dict:
+    result: dict = {"success": False}
+
+    file_name_prefix = f'ta-lib-{version}-windows-{platform}'
+    asset_file_name = f'{file_name_prefix}.zip'
     result["asset_file_name"] = asset_file_name
-
-    # Validate the asset_file_name
-    if not asset_file_name.endswith('.zip'):
-        print(f"Error: Invalid asset_file_name {asset_file_name}. Expected a .zip file.")
-        return
-    if version not in asset_file_name:
-        print(f"Error: Invalid asset_file_name {asset_file_name}. Expected version {version}.")
-        return
-
-    file_name_prefix = asset_file_name[:-4]
-
-    # Check dependencies.
-    if not is_msbuild_installed():
-        print("Error: MSBuild not found. It is required to build the package.")
-        sys.exit(1)
 
     # Clean-up
     dist_dir = path_join(root_dir, 'dist')
@@ -166,16 +156,6 @@ def package_windows_zip(root_dir: str, asset_file_name: str, version: str, sourc
     delete_other_versions(temp_dir,"ta-lib-*.zip",version)
 
     force_delete_glob(temp_dir, "ta-lib-*")
-
-    # Delete previous package digest files.
-    digests_dir = os.path.join(dist_dir, 'digests')
-    delete_other_versions(digests_dir, "*.digest", version)
-
-    if is_build_skipping_allowed(root_dir, asset_file_name, version, sources_digest, builder_id):
-        result["build_valid"] = True
-        result["existed"] = True
-        result["copied"] = False
-        return result
 
     # Build the libraries
     build_dir = do_cmake_reconfigure(root_dir, '-G Ninja -DBUILD_DEV_TOOLS=OFF -DCMAKE_BUILD_TYPE=Release')
@@ -226,8 +206,7 @@ def package_windows_zip(root_dir: str, asset_file_name: str, version: str, sourc
         print(f"Error creating zip file: {e}")
         return
 
-    # TODO Add some real "end-user installation" testing. Now just pretend is is OK...
-    result["dist_test_pass"] = True
+    # TODO Add testing of the temporary package here.
 
     # Temporary zip is verified OK, so copy it into dist, but only if its content is different.
     os.makedirs(dist_dir, exist_ok=True)
@@ -239,35 +218,13 @@ def package_windows_zip(root_dir: str, asset_file_name: str, version: str, sourc
         shutil.copy(package_temp_file, dist_file)
         package_copied = True
 
-    result["build_valid"] = True
+    result["success"] = True
     result["existed"] = package_existed
     result["copied"] = package_copied
     return result
 
-def package_windows_msi(root_dir: str, asset_file_name: str, version: str, sources_digest: str, builder_id: str, force_build: bool) -> dict:
-    result: dict = {"build_valid": False}
-    result["asset_file_name"] = asset_file_name
-
-    # Validate the asset_file_name
-    if not asset_file_name.endswith('.msi'):
-        print(f"Error: Invalid asset_file_name {asset_file_name}. Expected a .msi file.")
-        return
-    if version not in asset_file_name:
-        print(f"Error: Invalid asset_file_name {asset_file_name}. Expected version {version}.")
-        return
-
-    # Check dependencies.
-    if not is_msbuild_installed():
-        print("Error: MSBuild not found. It is required to build the package.")
-        sys.exit(1)
-
-    if not is_dotnet_installed():
-       print("Error: .NET Framework not found. It is required to build the MSI.")
-       return result
-
-    if not is_wix_installed():
-        print("Error: WiX Toolset not found. It is required to build the MSI.")
-        return result
+def package_windows_msi(root_dir: str, version: str, platform: str, force: bool) -> dict:
+    result: dict = {"success": False}
 
     # Clean-up
     dist_dir = path_join(root_dir, 'dist')
@@ -278,52 +235,44 @@ def package_windows_msi(root_dir: str, asset_file_name: str, version: str, sourc
 
     force_delete_glob(temp_dir, "ta-lib-*")
 
-    # Delete previous package digest files.
-    digests_dir = os.path.join(dist_dir, 'digests')
-    delete_other_versions(digests_dir, "*.digest", version)
-
-    if not force_build and is_build_skipping_allowed(root_dir, asset_file_name, version, sources_digest, builder_id):
-        result["build_valid"] = True
-        result["existed"] = True
-        result["copied"] = False
-        return result
-
     # MSI supports only .rtf for license, so generate it into root_dir.
     license_txt = path_join(root_dir,"LICENSE")
     license_rtf = path_join(root_dir,"LICENSE.rtf")
     create_rtf_from_txt(license_txt,license_rtf)
 
+    if not is_dotnet_installed():
+       print("Error: .NET Framework not found. It is required to build the MSI.")
+       return result
+
+    if not is_wix_installed():
+        print("Error: WiX Toolset not found. It is required to build the MSI.")
+        return result
+
     build_dir = do_cmake_reconfigure(root_dir, '-G Ninja -DCPACK_GENERATOR=WIX -DBUILD_DEV_TOOLS=OFF -DCMAKE_BUILD_TYPE=Release')
     do_cmake_build(build_dir) # Build the libraries
     do_cpack_build(build_dir) # Create the .msi
 
-    built_asset_file_name = find_asset_with_ext(build_dir, version, "msi")
-    if built_asset_file_name != asset_file_name:
-        print(f"Error: Expected file name {asset_file_name}, but got {built_asset_file_name}")
-        return result
-
-    # TODO Add some real "end-user installation" testing. Now just pretend is is OK...
-    result["dist_test_pass"] = True
-
-    # Temporary msi is verified OK, so copy it into dist, but only if its content is different.
+    asset_file_name = find_asset_with_ext(build_dir, version, "msi")
     temp_dist_file = path_join(build_dir, asset_file_name)
+
     dist_dir = path_join(root_dir, 'dist')
     dist_file = path_join(dist_dir, asset_file_name)
     package_existed = os.path.exists(dist_file)
     package_copied = False
-    if force_build or not package_existed or not compare_msi_files(temp_dist_file, dist_file):
+    if force or not package_existed or not compare_msi_files(temp_dist_file, dist_file):
         os.makedirs(dist_dir, exist_ok=True)
         if os.path.exists(dist_file):
             os.remove(dist_file)
         os.rename(temp_dist_file, dist_file)
         package_copied = True
 
-    result["build_valid"] = True
+    result["success"] = True
+    result["asset_file_name"] = asset_file_name
     result["existed"] = package_existed
     result["copied"] = package_copied
     return result
 
-def package_deb(root_dir: str, asset_file_name: str, version: str, sources_digest: str, builder_id: str, sudo_pwd: str, toolchain: str, force_build: bool) -> dict:
+def package_deb(root_dir: str, version: str, sudo_pwd: str, toolchain: str, force_overwrite: bool) -> dict:
     # Create .deb packaging to be installed with apt or dpkg (Debian-based systems).
     #
     # TA-Lib will install under '/usr/lib' and '/usr/include/ta-lib'.
@@ -331,8 +280,7 @@ def package_deb(root_dir: str, asset_file_name: str, version: str, sources_diges
     # The asset is created/updated into the 'dist' directory only when it
     # pass some tests.
     #
-    result: dict = {"build_valid": False}
-    result["asset_file_name"] = asset_file_name
+    result: dict = {"success": False}
 
     # Check dependencies.
     if not is_debian_based():
@@ -351,16 +299,6 @@ def package_deb(root_dir: str, asset_file_name: str, version: str, sources_diges
     # Clean-up
     dist_dir = path_join(root_dir, 'dist')
     delete_other_versions(dist_dir,"*.deb",version)
-
-    # Delete previous package digest files.
-    digests_dir = os.path.join(dist_dir, 'digests')
-    delete_other_versions(digests_dir, "*.digest", version)
-
-    if not force_build and is_build_skipping_allowed(root_dir, asset_file_name, version, sources_digest, builder_id):
-        result["build_valid"] = True
-        result["existed"] = True
-        result["copied"] = False
-        return result
 
     # Build the libraries
     configure_options = '-DCPACK_GENERATOR=DEB -DBUILD_DEV_TOOLS=OFF'
@@ -381,97 +319,61 @@ def package_deb(root_dir: str, asset_file_name: str, version: str, sources_diges
         print(f"Error: Expected one .deb file, found {len(deb_files)}")
         return result
 
-    # Sanity check that it matches the expected asset_file_name.
+    # Check that the single .deb file has the version as substring
     deb_file = deb_files[0]
-    built_file_name = os.path.basename(deb_file)
-    if built_file_name != asset_file_name:
-        print(f"Error: Expected file name [{asset_file_name}] but got [{built_file_name}]")
+    if version not in deb_file:
+        print(f"Error: Expected version {version} in {deb_file}")
         return result
 
-    # Sanity check that the expected asset exists.
-    test_file_path = os.path.join(build_dir, asset_file_name)
-    if not os.path.exists(test_file_path):
-        print(f"Error: {test_file_path} not found.")
+    asset_file_name = os.path.basename(deb_file)
+
+    # Sanity check that asset_file_name is correct.
+    test_file_name = os.path.join(build_dir, asset_file_name)
+    if not os.path.exists(test_file_name):
+        print(f"Error: {test_file_name} not found.")
         return result
 
-    # TODO Add some real "end-user installation" testing. Now just pretend is is OK...
-    result["dist_test_pass"] = True
+    # TODO Add here some "end-user installation" testing.
 
     # Copy the .deb file into dist, but only if it is binary different
     # The creation date will be ignored.
     dist_file = os.path.join(dist_dir, asset_file_name)
     package_existed = os.path.exists(dist_file)
     package_copied = False
-    if force_build or not package_existed or not compare_deb_files(deb_file, dist_file):
+    if force_overwrite or not package_existed or not compare_deb_files(deb_file, dist_file):
         os.makedirs(dist_dir, exist_ok=True)
         os.rename(deb_file, dist_file)
         package_copied = True
 
-    result["build_valid"] = True
+    result["success"] = True
+    result["asset_file_name"] = asset_file_name
     result["existed"] = package_existed
     result["copied"] = package_copied
     return result
 
 def package_rpm(root_dir: str, version: str, sudo_pwd: str) -> dict:
-    result: dict = {"build_valid": False}
+    result: dict = {"success": False}
     # Not implemented yet
     return result
 
-
-def is_build_skipping_allowed(root_dir: str, asset_file_name: str, version: str, sources_digest: str, builder_id: str) -> bool:
-    # Check if possible to skip the rebuild and tests.
-    #
-    # Only allowed when the package digest confirms the binaries have
-    # not changed AND all enabled tests already pass for it.
-    dist_dir = os.path.join(root_dir, 'dist')
-
-    # Check if the digest file exists.
-    digests_dir = os.path.join(dist_dir, 'digests')
-    digest_file = os.path.join(digests_dir, f"{asset_file_name}.digest")
-    if not os.path.exists(digest_file):
-        print(f"Info: Digest file not found {digest_file}.")
-        return False
-
-    try:
-        pdigest = PackageDigest.read_or_create(root_dir, asset_file_name, sources_digest, builder_id )
-        if pdigest.built_success and pdigest.sources_digest == sources_digest:
-            # Double-check that the dist/ binaries still matches the MD5.
-            local_asset_md5 = pdigest.calculate_md5()
-            if local_asset_md5 == "Disabled":
-                print("Error: MD5 unexpectadly disabled for digest file.")
-                sys.exit(1)
-            if local_asset_md5 == pdigest.package_md5 and pdigest.are_all_tests_passed():
-
-                if os.getenv('GITHUB_ACTIONS') == 'true':
-                    if is_nightly_github_action():
-                      print(f"Info: {asset_file_name} will be rebuild for scheduled github action")
-                      return False
-
-                    if pdigest.builder_id != get_git_bot_user_name():
-                      print(f"Info: {asset_file_name} from {pdigest.builder_id} will be rebuild by {get_git_bot_user_name()}")
-                      return False
-
-                print(f"Info: Allow skipping of already built and tested {asset_file_name}")
-                return True
-    except Exception as e:
-        print(f"Warning: Could not read digest file for {asset_file_name}: {e}")
-
-    return False
-
-
-def package_src_tar_gz(root_dir: str, asset_file_name: str, version: str, sources_digest: str, builder_id: str, sudo_pwd: str) -> dict:
+def package_src_tar_gz(root_dir: str, version: str, sudo_pwd: str) -> dict:
     # The src.tar.gz is for users wanting to build from source with autotools (./configure).
     #
-    # The asset is created/updated into the 'dist' directory only as needed and passing
-    # some basic tests.
+    # The asset is created/updated into the 'dist' directory only when it
+    # pass some tests.
     #
-    result: dict = {"processed": True, "build_valid": False}
+    result: dict = {"success": False}
+
+    asset_file_name = f"ta-lib-{version}-src.tar.gz"
     result["asset_file_name"] = asset_file_name
 
     dist_dir = os.path.join(root_dir, 'dist')
 
     # Delete previous dist packaging
-    delete_other_versions(dist_dir, "*-src.tar.gz", version)
+    glob_all_packages = os.path.join(dist_dir, '*-src.tar.gz')
+    for file in glob.glob(glob_all_packages):
+        if not file.endswith(asset_file_name):
+            force_delete(file)
 
     temp_dir = os.path.join(root_dir, 'temp')
     package_temp_file_prefix = f"ta-lib-{version}"
@@ -483,16 +385,7 @@ def package_src_tar_gz(root_dir: str, asset_file_name: str, version: str, source
     force_delete(package_temp_file_dest, sudo_pwd)
     force_delete(package_temp_dir, sudo_pwd)
 
-    # Delete previous package digest files.
-    digests_dir = os.path.join(dist_dir, 'digests')
-    delete_other_versions(digests_dir, "*.digest", version)
-
-    if is_build_skipping_allowed(root_dir, asset_file_name, version, sources_digest, builder_id):
-        result["build_valid"] = True
-        result["existed"] = True
-        result["copied"] = False
-        return result
-
+    # Always autoreconf before re-packaging
     try:
         subprocess.run(['autoreconf', '-fi'], check=True)
     except subprocess.CalledProcessError as e:
@@ -546,12 +439,9 @@ def package_src_tar_gz(root_dir: str, asset_file_name: str, version: str, source
     force_delete(package_temp_file_src, sudo_pwd)
     force_delete(package_temp_file_dest, sudo_pwd)
 
-    result["build_valid"] = True
+    result["success"] = True
     result["existed"] = package_existed
     result["copied"] = package_copied
-    # Tests were done by test_autotool_src()
-    result["ta_regtest_pass"] = True
-    result["dist_test_pass"] = True
     return result
 
 def test_autotool_src(configure_dir: str, sudo_pwd: str) -> bool:
@@ -626,141 +516,11 @@ def test_autotool_src(configure_dir: str, sudo_pwd: str) -> bool:
 
     return True
 
-def update_package_digest(root_dir: str, results: dict, sources_digest: str, builder_id: str):
-    # Update the digest file with the results of the packaging.
-    #
-    # The digest is used by the CI to skip unecessary costly steps
-    # AND validate that all steps were done prior to release.
-    #
-    # The digest file is a JSON file:
-    #    {
-    #      ....
-    #      "sources_digest": "some_digest_value",
-    #      "package_md5": "some_md5_value",
-    #      "built_success": "True".
-    #      "gen_code_pass": "Disabled",
-    #      "ta_regtest_pass": "True",
-    #      "dist_test_pass": "False"
-    #    }
-    #
-    # The digest files are created in dists/digests directory.
-    #
-    if not results.get("processed",False):
-        return # NOOP
-
-    asset_file_name = results.get("asset_file_name","")
-    if asset_file_name == "":
-        print("Error: asset_file_name not found in results.") # Likely a bug.
-        sys.exit(1)
-
-    pdigest = PackageDigest.read_or_create(root_dir, asset_file_name, sources_digest, builder_id)
-
-    # Make a copy of the digest to detect changes.
-    pdigest_copy = copy.deepcopy(pdigest)
-    fatal_error = False
-    current_md5 = "Disabled"
-
-    if pdigest_copy.built_success == "False" or results.get("build_valid",False) == False:
-        # If the previous digest or current results indicates the build was not successful, then
-        # all the new tests results should be re-initialized to Unknown.
-        pdigest.clear_tests()
-
-    # A results[] key exist for a test only if the test was executed.
-    # When a test is not executed, then the corresponding digest field should not be touched here.
-    # (logic in other places will force "Uknown" state when, say, the build was not successful)
-    if pdigest.gen_code_pass != "Disabled":
-        if "gen_code_pass" in results:
-            pdigest.gen_code_pass = "True" if results["gen_code_pass"] else "False"
-
-    if pdigest.ta_regtest_pass != "Disabled":
-        if "ta_regtest_pass" in results:
-            pdigest.ta_regtest_pass = "True" if results["ta_regtest_pass"] else "False"
-
-    if pdigest.dist_test_pass != "Disabled":
-        if "dist_test_pass" in results:
-            pdigest.dist_test_pass = "True" if results["dist_test_pass"] else "False"
-
-    if pdigest.package_md5 != "Disabled":
-        asset_file_path = path_join(root_dir, "dist", asset_file_name)
-        if not os.path.exists(asset_file_path):
-            # The package was processed but dist does not exists!
-            print(f"Error: {asset_file_name} not found in dist.")
-            fatal_error = True
-        else:
-            # The dist package file exists.
-            current_md5 = pdigest.calculate_md5()
-
-            if results.get("build_valid",False):
-                pdigest.built_success = "True"
-
-                if pdigest.package_md5 == "Unknown":
-                    # It is a new package digest file, so just update it.
-                    pdigest.package_md5 = current_md5
-
-                if current_md5 != pdigest.package_md5 or pdigest.sources_digest != sources_digest:
-                    if not results.get("copied",False):
-                        # The package is different, but not successfully copied? Likely a bug.
-                        print(f"Error: {asset_file_name} unexpectadly not copied to dist.")
-                        fatal_error = True
-                    else:
-                        # The package was built and different than before...
-                        print("Success: ", asset_file_name, "digest updating.")
-                        pdigest.package_md5 = current_md5
-                        pdigest.sources_digest = sources_digest
-            else:
-                # The package was not successfully rebuilt.
-                print(f"Error: {asset_file_name} not successfully build.")
-                fatal_error = True
-
-
-    # If a github action, then reflect that the bot user did process that digest.
-    # The behavior is different for local devs for which we prefer to minimize rebuilds...
-    git_user_name = get_git_user_name()
-    if os.getenv('GITHUB_ACTIONS') == 'true':
-        pdigest.builder_id = git_user_name
-
-    # Double check with some simple rules:
-    #   - tests should never be "pass" if the build was not successful.
-    #   - If a digest says the build was successful, then the md5 and sources_digest should always match.
-    if not results.get("build_valid",False):
-        if pdigest.dist_test_pass == "True":
-            print(f"Warning: {asset_file_name} digest says dist test pass, but build was not successful.")
-            pdigest.dist_test_pass = "Unknown"
-
-        if pdigest.gen_code_pass == "True":
-            print(f"Warning: {asset_file_name} digest says gen code pass, but build was not successful.")
-            pdigest.gen_code_pass = "Unknown"
-
-        if pdigest.ta_regtest_pass == "True":
-            print(f"Warning: {asset_file_name} digest says ta regtest pass, but build was not successful.")
-            pdigest.ta_regtest_pass = "Unknown"
-
-    if pdigest.built_success == "True":
-        if pdigest.sources_digest != sources_digest:
-            print(f"Error: {asset_file_name} digest says built was successful, but sources_digest different!")
-            fatal_error = True
-
-        if pdigest.package_md5 != current_md5:
-            print(f"Error: {asset_file_name} digest says built was successful, but md5 different!")
-            fatal_error = True
-
-    if fatal_error:
-        pdigest.clear_tests()
-
-    if pdigest != pdigest_copy:
-        # Writing a change, and keep track of the user that made it.
-        pdigest.builder_id = git_user_name
-        print(f"Info: {asset_file_name} digest file updated by {git_user_name}")
-        pdigest.write()
-
-    if fatal_error:
-        sys.exit(1)
-
 def display_package_results(results: dict):
     # Display the results returned by most packaging functions.
-    asset_built = results.get("processed", False)
-    asset_built_success = results.get("build_valid", False)
-    asset_file_name = results.get("asset_file_name", "Unknown")
+    asset_built = results.get("built", False)
+    asset_built_success = results.get("success", False)
+    asset_file_name = results.get("asset_file_name", "unknown")
     asset_copied = results.get("copied", False)
     asset_existed = results.get("existed", False)
     if asset_built:
@@ -775,83 +535,39 @@ def display_package_results(results: dict):
         else:
             print(f"No changes for dist/{asset_file_name}")
     else:
-        print(f"Skipped {asset_file_name} build (not supported on this platform)")
+        print(f"{asset_file_name} build skipped (not supported on this platform)")
 
-def package_all_linux(root_dir: str, version: str, sources_digest: str, builder_id: str, sudo_pwd: str):
+def package_all_linux(root_dir: str, version: str, sudo_pwd: str):
     os.chdir(root_dir)
 
-    # For consistency, the dist/ta-lib-*-src.tar.gz are created only on Ubuntu,
-    # but should be usable on other Linux distributions.
+    # The dist/ta-lib-*-src.tar.gz are created only on Ubuntu
+    # but are tested with other Linux distributions.
     src_tar_gz_results = {
-        "build_valid": False,
-        "processed": False,
-        "asset_file_name": f"ta-lib-{version}-src.tar.gz"
+        "success": False,
+        "built": False,
+        "asset_file_name": "src.tar.gz", # Default, will change.
     }
 
-    force_build = False
+    # The .tar.gz file is better at detecting if the *content* is different.
+    # If any changes are detected, it will force the creation and overwrite
+    # of all the other packages.
+    force_overwrite = False
+
     if is_ubuntu():
-        asset_file_name = src_tar_gz_results["asset_file_name"]
-        results = package_src_tar_gz(root_dir, asset_file_name, version, sources_digest, builder_id, sudo_pwd)
+        results = package_src_tar_gz(root_dir, version, sudo_pwd)
         src_tar_gz_results.update(results)
-        src_tar_gz_results["processed"] = True
-        if not src_tar_gz_results.get("build_valid",False):
-            print(f'Error: Packaging dist/{asset_file_name} failed.')
+        src_tar_gz_results["built"] = True
+        if not src_tar_gz_results["success"]:
+            print(f'Error: Packaging dist/{src_tar_gz_results["asset_file_name"]} failed.')
             sys.exit(1)
-        if src_tar_gz_results.get("copied", False):
-            # The .tar.gz file is good at detecting if the *content* is different.
-            # If any changes are detected, it will force the build
-            # of all other packages.
-            #
-            # This is not necessary, just a nice-to-have "safety net".
-            force_build = True
-
-    # When supported by host, build DEB using CMakeLists.txt (CPack)
-    deb_results_arm64 = {
-        "build_valid": False,
-        "processed": False,
-        "asset_file_name": f"ta-lib_{version}_arm64.deb"
-    }
-    deb_results_amd64 = {
-        "build_valid": False,
-        "processed": False,
-        "asset_file_name": f"ta-lib_{version}_amd64.deb"
-    }
-    deb_results_i386 = {
-        "build_valid": False,
-        "processed": False,
-        "asset_file_name": f"ta-lib_{version}_i386.deb"
-    }
-    if is_debian_based():
-        if is_arm64_toolchain_installed():
-            asset_file_name = deb_results_arm64["asset_file_name"]
-            results = package_deb(root_dir, asset_file_name, version, sources_digest, builder_id, sudo_pwd, "toolchain-linux-arm64.cmake", force_build)
-            deb_results_arm64.update(results)
-            deb_results_arm64["processed"] = True
-            if not deb_results_arm64.get("build_valid",False):
-                print(f'Error: Packaging dist/{asset_file_name} failed.')
-                sys.exit(1)
-        if is_x86_64_toolchain_installed():
-            asset_file_name = deb_results_amd64["asset_file_name"]
-            results = package_deb(root_dir, asset_file_name, version, sources_digest, builder_id, sudo_pwd, "toolchain-linux-x86_64.cmake", force_build)
-            deb_results_amd64.update(results)
-            deb_results_amd64["processed"] = True
-            if not deb_results_amd64.get("build_valid",False):
-                print(f'Error: Packaging dist/{asset_file_name} failed.')
-                sys.exit(1)
-        if is_i386_toolchain_installed():
-            asset_file_name = deb_results_i386["asset_file_name"]
-            results = package_deb(root_dir, asset_file_name, version, sources_digest, builder_id, sudo_pwd, "toolchain-linux-i386.cmake", force_build)
-            deb_results_i386.update(results)
-            deb_results_i386["processed"] = True
-            if not deb_results_i386.get("build_valid",False):
-                print(f'Error: Packaging dist/{asset_file_name} failed.')
-                sys.exit(1)
+        if src_tar_gz_results["copied"]:
+            force_overwrite = True
 
     # When supported by host, build RPM using CMakeLists.txt (CPack)
     rpm_results = {
-        "build_valid": False,
-        "processed": False,
-        "asset_file_name": "RPM", # Default, will change.
+        "success": False,
+        "built": False,
+        "asset_file_name": ".rpm", # Default, will change.
     }
     if is_redhat_based():
         if not is_rpmbuild_installed():
@@ -859,38 +575,63 @@ def package_all_linux(root_dir: str, version: str, sources_digest: str, builder_
             sys.exit(1)
         results = package_rpm(root_dir, version, sudo_pwd)
         rpm_results.update(results)
-        rpm_results["processed"] = True
-        if not rpm_results.get("build_valid",False):
+        rpm_results["built"] = True
+        if not rpm_results["success"]:
             print(f'Error: Packaging dist/{rpm_results["asset_file_name"]} failed.')
             sys.exit(1)
 
-
-    # Reflect with digest files the operations that were
-    # successfully completed with the current source code.
-    #
-    # This is used by CI to sometimes skip costly steps AND validate
-    # that all steps were done prior to release.
-    update_package_digest(root_dir, src_tar_gz_results, sources_digest, builder_id)
-
-    update_package_digest(root_dir, deb_results_arm64, sources_digest, builder_id)
-    update_package_digest(root_dir, deb_results_amd64, sources_digest, builder_id)
-    update_package_digest(root_dir, deb_results_i386, sources_digest, builder_id)
-
-    # update_package_digest(root_dir, rpm_results, sources_digest, builder_id)
+    # When supported by host, build DEB using CMakeLists.txt (CPack)
+    deb_results_arm64 = {
+        "success": False,
+        "built": False,
+        "asset_file_name": "arm64.deb", # Default, will change.
+    }
+    deb_results_amd64 = {
+        "success": False,
+        "built": False,
+        "asset_file_name": "amd64.deb", # Default, will change.
+    }
+    deb_results_i386 = {
+        "success": False,
+        "built": False,
+        "asset_file_name": "i386.deb", # Default, will change.
+    }
+    if is_debian_based():
+        if is_arm64_toolchain_installed():
+            results = package_deb(root_dir, version, sudo_pwd, "toolchain-linux-arm64.cmake", force_overwrite)
+            deb_results_arm64.update(results)
+            deb_results_arm64["built"] = True
+            if not deb_results_arm64["success"]:
+                print(f'Error: Packaging dist/{deb_results_arm64["asset_file_name"]} failed.')
+                sys.exit(1)
+        if is_x86_64_toolchain_installed():
+            results = package_deb(root_dir, version, sudo_pwd, "toolchain-linux-x86_64.cmake", force_overwrite)
+            deb_results_amd64.update(results)
+            deb_results_amd64["built"] = True
+            if not deb_results_amd64["success"]:
+                print(f'Error: Packaging dist/{deb_results_amd64["asset_file_name"]} failed.')
+                sys.exit(1)
+        if is_i386_toolchain_installed():
+            results = package_deb(root_dir, version, sudo_pwd, "toolchain-linux-i386.cmake", force_overwrite)
+            deb_results_i386.update(results)
+            deb_results_i386["built"] = True
+            if not deb_results_i386["success"]:
+                print(f'Error: Packaging dist/{deb_results_i386["asset_file_name"]} failed.')
+                sys.exit(1)
 
     # A summary of everything that was done
     print(f"\n***********")
     print(f"* Summary *")
     print(f"***********")
     display_package_results(src_tar_gz_results)
+    display_package_results(rpm_results)
     display_package_results(deb_results_arm64)
     display_package_results(deb_results_amd64)
     display_package_results(deb_results_i386)
-    display_package_results(rpm_results)
 
     print(f"\nPackaging completed successfully.")
 
-def package_windows_platform(root_dir: str, version: str, sources_digest: str, builder_id: str, platform: str) -> dict:
+def package_windows_platform(root_dir: str, version: str, platform: str) -> dict:
 
     vcvarsall_args = []
     if platform == "x86_64":
@@ -902,35 +643,32 @@ def package_windows_platform(root_dir: str, version: str, sources_digest: str, b
     elif platform == "arm_32":
         vcvarsall_args = ["amd64_arm"]
 
-    zip_asset_file_name = f'ta-lib-{version}-windows-{platform}.zip'
-    msi_asset_file_name = f'ta-lib-{version}-windows-{platform}.msi'
-
     call_vcvarsall(root_dir, vcvarsall_args)
     results = {
         "zip_results": {
-            "build_valid": False,
-            "processed": False,
-            "asset_file_name": zip_asset_file_name,
+            "success": False,
+            "built": False,
+            "asset_file_name": f"{platform}.zip", # Default, will change.
         },
         "msi_results": {
-            "build_valid": False,
-            "processed": False,
-            "asset_file_name": msi_asset_file_name,
+            "success": False,
+            "built": False,
+            "asset_file_name": f"{platform}.msi", # Default, will change.
         }
-    }
-    zip_results = package_windows_zip(root_dir, zip_asset_file_name, version, sources_digest, builder_id)
+    }    
+    zip_results = package_windows_zip(root_dir, version, platform)
     results["zip_results"].update(zip_results)
-    results["zip_results"]["processed"] = True
-    if not results["zip_results"]["build_valid"]:
-        print(f'Error: Packaging dist/{zip_asset_file_name} failed')
+    results["zip_results"]["built"] = True    
+    if not results["zip_results"]["success"]:
+        print(f'Error: Packaging dist/{results["zip_results"]["asset_file_name"]} failed')
         sys.exit(1)
 
     # The zip file is better at detecting if the *content* is different.
-    # If any changes are detected, it will force the build
+    # If any changes are detected, it will force the creation and overwrite
     # of the .msi file in dist.
-    force_build = False
-    if results["zip_results"]["processed"] and results["zip_results"]["copied"]:
-        force_build = True
+    force_msi_overwrite = False
+    if results["zip_results"]["built"] and results["zip_results"]["copied"]:
+        force_msi_overwrite = True
 
     # For now, skip the .msi file creation if wix is not installed.
 
@@ -938,27 +676,22 @@ def package_windows_platform(root_dir: str, version: str, sources_digest: str, b
     if not is_wix_installed():
         print("Warning: WiX Toolset not found. MSI packaging skipped.")
     else:
-        msi_results = package_windows_msi(root_dir, msi_asset_file_name, version, sources_digest, builder_id, force_build)
+        msi_results = package_windows_msi(root_dir, version, platform, force_msi_overwrite)
         results["msi_results"].update(msi_results)
-        results["msi_results"]["processed"] = True
-        if not results["msi_results"]["build_valid"]:
-            print(f'Error: Packaging dist/{msi_asset_file_name} failed')
+        results["msi_results"]["built"] = True
+        if not results["msi_results"]["success"]:
+            print(f'Error: Packaging dist/{results["msi_results"]["asset_file_name"]} failed')
             sys.exit(1)
 
     return results
 
-def package_all_windows(root_dir: str, version: str, sources_digest: str, builder_id: str):
-    results_x86_64 = package_windows_platform(root_dir, version, sources_digest, builder_id, "x86_64")
-    results_x86_32 = package_windows_platform(root_dir, version, sources_digest, builder_id, "x86_32")
+def package_all_windows(root_dir: str, version: str):
+    results_x86_64 = package_windows_platform(root_dir, version, "x86_64")
+    results_x86_32 = package_windows_platform(root_dir, version, "x86_32")
 
     # TODO: More testing needed for ARM platforms.
     #results_arm_64 = package_windows_platform(root_dir, version, "arm_64")
     #results_arm_32 = package_windows_platform(root_dir, version, "arm_32")
-
-    update_package_digest(root_dir, results_x86_64["zip_results"], sources_digest, builder_id)
-    update_package_digest(root_dir, results_x86_64["msi_results"], sources_digest, builder_id)
-    update_package_digest(root_dir, results_x86_32["zip_results"], sources_digest, builder_id)
-    update_package_digest(root_dir, results_x86_32["msi_results"], sources_digest, builder_id)
 
     print(f"\n***********")
     print(f"* Summary *")
@@ -982,18 +715,14 @@ if __name__ == "__main__":
     sudo_pwd = args.pwd
     root_dir = verify_git_repo()
     is_updated, version = sync_versions(root_dir)
-    is_updated, sources_digest = sync_sources_digest(root_dir)
+    is_updated, digest = sync_sources_digest(root_dir)
     host_platform = sys.platform
-
-    # The builder_id is the git user name.
-    builder_id = get_git_user_name()
-
     if host_platform == "linux":
-        package_all_linux(root_dir, version, sources_digest, builder_id, sudo_pwd)
+        package_all_linux(root_dir,version,sudo_pwd)
     elif host_platform == "win32":
         arch = platform.architecture()[0]
         if arch == '64bit':
-            package_all_windows(root_dir, version, sources_digest, builder_id)
+            package_all_windows(root_dir, version)
         else:
             print( f"Unsupported [{arch}]. Only 64-bits windows supported for TA-Lib development.")
     else:
