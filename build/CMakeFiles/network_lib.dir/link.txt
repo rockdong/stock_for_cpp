@@ -1,2 +1,0 @@
-/usr/bin/ar qc libnetwork_lib.a CMakeFiles/network_lib.dir/network/http/HttpClient.cpp.o CMakeFiles/network_lib.dir/network/http/TushareClient.cpp.o CMakeFiles/network_lib.dir/network/TushareDataSource.cpp.o CMakeFiles/network_lib.dir/network/DataSourceFactory.cpp.o
-/usr/bin/ranlib libnetwork_lib.a

@@ -1,2 +1,0 @@
-/usr/bin/ar qc liblog_lib.a CMakeFiles/log_lib.dir/log/LogConfig.cpp.o CMakeFiles/log_lib.dir/log/LoggerFactory.cpp.o CMakeFiles/log_lib.dir/log/LoggerManager.cpp.o CMakeFiles/log_lib.dir/log/SpdlogLogger.cpp.o
-/usr/bin/ranlib liblog_lib.a
