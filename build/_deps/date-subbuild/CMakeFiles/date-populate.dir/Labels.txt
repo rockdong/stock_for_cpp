@@ -1,0 +1,14 @@
+# Target labels
+ date-populate
+# Source files and their labels
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/CMakeFiles/date-populate
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/CMakeFiles/date-populate.rule
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/CMakeFiles/date-populate-complete.rule
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/date-populate-prefix/src/date-populate-stamp/date-populate-build.rule
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/date-populate-prefix/src/date-populate-stamp/date-populate-configure.rule
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/date-populate-prefix/src/date-populate-stamp/date-populate-download.rule
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/date-populate-prefix/src/date-populate-stamp/date-populate-install.rule
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/date-populate-prefix/src/date-populate-stamp/date-populate-mkdir.rule
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/date-populate-prefix/src/date-populate-stamp/date-populate-patch.rule
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/date-populate-prefix/src/date-populate-stamp/date-populate-test.rule
+/Users/kirito/Documents/projects/stock_for_cpp/build/_deps/date-subbuild/date-populate-prefix/src/date-populate-stamp/date-populate-update.rule

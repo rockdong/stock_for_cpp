@@ -1,0 +1,2 @@
+/usr/bin/ar qc libutils_lib.a CMakeFiles/utils_lib.dir/utils/TimeUtil.cpp.o CMakeFiles/utils_lib.dir/utils/StringUtil.cpp.o CMakeFiles/utils_lib.dir/utils/MathUtil.cpp.o CMakeFiles/utils_lib.dir/utils/Encryptor.cpp.o CMakeFiles/utils_lib.dir/utils/ThreadPool.cpp.o
+/usr/bin/ranlib libutils_lib.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdata_lib.a CMakeFiles/data_lib.dir/data/Data.cpp.o CMakeFiles/data_lib.dir/data/database/Connection.cpp.o CMakeFiles/data_lib.dir/data/database/StockDAO.cpp.o CMakeFiles/data_lib.dir/data/database/PriceDAO.cpp.o CMakeFiles/data_lib.dir/data/database/AnalysisResultDAO.cpp.o CMakeFiles/data_lib.dir/data/cache/MemoryCache.cpp.o CMakeFiles/data_lib.dir/data/file/CSVReader.cpp.o CMakeFiles/data_lib.dir/data/file/CSVWriter.cpp.o
+/usr/bin/ranlib libdata_lib.a
