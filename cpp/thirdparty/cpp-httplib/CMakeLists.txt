@@ -2,14 +2,19 @@
 	Build options:
 	* Standard BUILD_SHARED_LIBS is supported and sets HTTPLIB_SHARED default value.
 	* HTTPLIB_USE_OPENSSL_IF_AVAILABLE (default on)
+	* HTTPLIB_USE_WOLFSSL_IF_AVAILABLE (default off)
+	* HTTPLIB_USE_MBEDTLS_IF_AVAILABLE (default off)
 	* HTTPLIB_USE_ZLIB_IF_AVAILABLE (default on)
 	* HTTPLIB_USE_BROTLI_IF_AVAILABLE (default on)
 	* HTTPLIB_USE_ZSTD_IF_AVAILABLE (default on)
+	* HTTPLIB_BUILD_MODULES (default off)
 	* HTTPLIB_REQUIRE_OPENSSL (default off)
+	* HTTPLIB_REQUIRE_WOLFSSL (default off)
+	* HTTPLIB_REQUIRE_MBEDTLS (default off)
 	* HTTPLIB_REQUIRE_ZLIB (default off)
 	* HTTPLIB_REQUIRE_BROTLI (default off)
 	* HTTPLIB_REQUIRE_ZSTD (default off)
-	* HTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN (default on)
+	* HTTPLIB_DISABLE_MACOSX_AUTOMATIC_ROOT_CERTIFICATES (default off)
 	* HTTPLIB_USE_NON_BLOCKING_GETADDRINFO (default on)
 	* HTTPLIB_COMPILE (default off)
 	* HTTPLIB_INSTALL (default on)
@@ -20,7 +25,7 @@
 
 	-------------------------------------------------------------------------------
 
-	After installation with Cmake, a find_package(httplib COMPONENTS OpenSSL ZLIB Brotli zstd) is available.
+	After installation with Cmake, a find_package(httplib COMPONENTS OpenSSL wolfssl MbedTLS ZLIB Brotli zstd) is available.
 	This creates a httplib::httplib target (if found and if listed components are supported).
 	It can be linked like so:
 
@@ -47,10 +52,12 @@
 	These variables are available after you run find_package(httplib)
 	* HTTPLIB_HEADER_PATH - this is the full path to the installed header (e.g. /usr/include/httplib.h).
 	* HTTPLIB_IS_USING_OPENSSL - a bool for if OpenSSL support is enabled.
+	* HTTPLIB_IS_USING_WOLFSSL - a bool for if wolfSSL support is enabled.
+	* HTTPLIB_IS_USING_MBEDTLS - a bool for if MbedTLS support is enabled.
 	* HTTPLIB_IS_USING_ZLIB - a bool for if ZLIB support is enabled.
 	* HTTPLIB_IS_USING_BROTLI - a bool for if Brotli support is enabled.
 	* HTTPLIB_IS_USING_ZSTD - a bool for if ZSTD support is enabled.
-	* HTTPLIB_IS_USING_CERTS_FROM_MACOSX_KEYCHAIN - a bool for if support of loading system certs from the Apple Keychain is enabled.
+	* HTTPLIB_IS_USING_MACOSX_AUTOMATIC_ROOT_CERTIFICATES - a bool for if support of loading system certs from the Apple Keychain is enabled.
 	* HTTPLIB_IS_USING_NON_BLOCKING_GETADDRINFO - a bool for if nonblocking getaddrinfo is enabled.
 	* HTTPLIB_IS_COMPILED - a bool for if the library is compiled, or otherwise header-only.
 	* HTTPLIB_INCLUDE_DIR - the root path to httplib's header (e.g. /usr/include).
@@ -94,10 +101,14 @@ set(_HTTPLIB_OPENSSL_MIN_VER "3.0.0")
 option(HTTPLIB_NO_EXCEPTIONS "Disable the use of C++ exceptions" OFF)
 # Allow for a build to require OpenSSL to pass, instead of just being optional
 option(HTTPLIB_REQUIRE_OPENSSL "Requires OpenSSL to be found & linked, or fails build." OFF)
+option(HTTPLIB_REQUIRE_WOLFSSL "Requires wolfSSL to be found & linked, or fails build." OFF)
+option(HTTPLIB_REQUIRE_MBEDTLS "Requires MbedTLS to be found & linked, or fails build." OFF)
 option(HTTPLIB_REQUIRE_ZLIB "Requires ZLIB to be found & linked, or fails build." OFF)
 # Allow for a build to casually enable OpenSSL/ZLIB support, but silently continue if not found.
 # Make these options so their automatic use can be specifically disabled (as needed)
 option(HTTPLIB_USE_OPENSSL_IF_AVAILABLE "Uses OpenSSL (if available) to enable HTTPS support." ON)
+option(HTTPLIB_USE_WOLFSSL_IF_AVAILABLE "Uses wolfSSL (if available) to enable HTTPS support." OFF)
+option(HTTPLIB_USE_MBEDTLS_IF_AVAILABLE "Uses MbedTLS (if available) to enable HTTPS support." OFF)
 option(HTTPLIB_USE_ZLIB_IF_AVAILABLE "Uses ZLIB (if available) to enable Zlib compression support." ON)
 # Lets you compile the program as a regular library instead of header-only
 option(HTTPLIB_COMPILE "If ON, uses a Python script to split the header into a compilable header & source file (requires Python v3)." OFF)
@@ -106,10 +117,36 @@ option(HTTPLIB_INSTALL "Enables the installation target" ON)
 option(HTTPLIB_TEST "Enables testing and builds tests" OFF)
 option(HTTPLIB_REQUIRE_BROTLI "Requires Brotli to be found & linked, or fails build." OFF)
 option(HTTPLIB_USE_BROTLI_IF_AVAILABLE "Uses Brotli (if available) to enable Brotli decompression support." ON)
-option(HTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN "Enable feature to load system certs from the Apple Keychain." ON)
+option(HTTPLIB_DISABLE_MACOSX_AUTOMATIC_ROOT_CERTIFICATES "Disable loading system certs from the Apple Keychain on macOS." OFF)
 option(HTTPLIB_USE_NON_BLOCKING_GETADDRINFO "Enables the non-blocking alternatives for getaddrinfo." ON)
 option(HTTPLIB_REQUIRE_ZSTD "Requires ZSTD to be found & linked, or fails build." OFF)
 option(HTTPLIB_USE_ZSTD_IF_AVAILABLE "Uses ZSTD (if available) to enable zstd support." ON)
+# C++20 modules support requires CMake 3.28 or later
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.28")
+	option(HTTPLIB_BUILD_MODULES "Build httplib modules (requires HTTPLIB_COMPILE to be ON)." OFF)
+else()
+	set(HTTPLIB_BUILD_MODULES OFF CACHE INTERNAL "Build httplib modules disabled (requires CMake 3.28+)" FORCE)
+	if(DEFINED CACHE{HTTPLIB_BUILD_MODULES} AND HTTPLIB_BUILD_MODULES)
+		message(WARNING "HTTPLIB_BUILD_MODULES requires CMake 3.28 or later. Current version is ${CMAKE_VERSION}. Modules support has been disabled.")
+	endif()
+endif()
+
+# Incompatibility between TLS libraries
+set(TLS_LIBRARIES_USED_TMP 0)
+
+foreach(tls_library OPENSSL WOLFSSL MBEDTLS)
+	set(TLS_REQUIRED ${HTTPLIB_REQUIRE_${tls_library}})
+	set(TLS_IF_AVAILABLE ${HTTPLIB_USE_${tls_library}_IF_AVAILABLE})
+
+	if(TLS_REQUIRED OR TLS_IF_AVAILABLE)
+		math(EXPR TLS_LIBRARIES_USED_TMP "${TLS_LIBRARIES_USED_TMP} + 1")
+	endif()
+endforeach()
+
+if(TLS_LIBRARIES_USED_TMP GREATER 1)
+	message(FATAL_ERROR "TLS libraries are mutually exclusive.")
+endif()
+
 # Defaults to static library but respects standard BUILD_SHARED_LIBS if set
 include(CMakeDependentOption)
 cmake_dependent_option(HTTPLIB_SHARED "Build the library as a shared library instead of static. Has no effect if using header-only."
@@ -129,7 +166,7 @@ endif()
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 	if(CMAKE_SYSTEM_VERSION)
 		if(${CMAKE_SYSTEM_VERSION} VERSION_LESS "10.0.0")
-			message(SEND_ERROR "Windows ${CMAKE_SYSTEM_VERSION} or lower is not supported. Please use Windows 10 or later.")
+			message(WARNING "Windows ${CMAKE_SYSTEM_VERSION} or lower is not supported. Please use Windows 10 or later.")
 		endif()
 	else()
 		set(CMAKE_SYSTEM_VERSION "10.0.19041.0")
@@ -142,7 +179,10 @@ endif()
 
 # Set some variables that are used in-tree and while building based on our options
 set(HTTPLIB_IS_COMPILED ${HTTPLIB_COMPILE})
-set(HTTPLIB_IS_USING_CERTS_FROM_MACOSX_KEYCHAIN ${HTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN})
+set(HTTPLIB_IS_USING_MACOSX_AUTOMATIC_ROOT_CERTIFICATES TRUE)
+if(HTTPLIB_DISABLE_MACOSX_AUTOMATIC_ROOT_CERTIFICATES)
+	set(HTTPLIB_IS_USING_MACOSX_AUTOMATIC_ROOT_CERTIFICATES FALSE)
+endif()
 set(HTTPLIB_IS_USING_NON_BLOCKING_GETADDRINFO ${HTTPLIB_USE_NON_BLOCKING_GETADDRINFO})
 
 # Threads needed for <thread> on some systems, and for <pthread.h> on Linux
@@ -161,6 +201,22 @@ elseif(HTTPLIB_USE_OPENSSL_IF_AVAILABLE)
 	else()
 		set(HTTPLIB_IS_USING_OPENSSL FALSE)
 	endif()
+endif()
+
+if(HTTPLIB_REQUIRE_WOLFSSL)
+	find_package(wolfssl REQUIRED)
+	set(HTTPLIB_IS_USING_WOLFSSL TRUE)
+elseif(HTTPLIB_USE_WOLFSSL_IF_AVAILABLE)
+	find_package(wolfssl QUIET)
+	set(HTTPLIB_IS_USING_WOLFSSL ${wolfssl_FOUND})
+endif()
+
+if(HTTPLIB_REQUIRE_MBEDTLS)
+	find_package(MbedTLS REQUIRED)
+	set(HTTPLIB_IS_USING_MBEDTLS TRUE)
+elseif(HTTPLIB_USE_MBEDTLS_IF_AVAILABLE)
+	find_package(MbedTLS QUIET)
+	set(HTTPLIB_IS_USING_MBEDTLS ${MbedTLS_FOUND})
 endif()
 
 if(HTTPLIB_REQUIRE_ZLIB)
@@ -240,6 +296,22 @@ if(HTTPLIB_COMPILE)
 		message(FATAL_ERROR "Failed when trying to split cpp-httplib with the Python script.\n${_httplib_split_error}")
 	endif()
 
+	# If building modules, also generate the module file
+	if(HTTPLIB_BUILD_MODULES)
+		# Put the generate_module script into the build dir
+		configure_file(generate_module.py "${CMAKE_CURRENT_BINARY_DIR}/generate_module.py"
+			COPYONLY
+		)
+		# Generate the module file
+		execute_process(COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_BINARY_DIR}/generate_module.py"
+			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+			ERROR_VARIABLE _httplib_module_error
+		)
+		if(_httplib_module_error)
+			message(FATAL_ERROR "Failed when trying to generate cpp-httplib module with the Python script.\n${_httplib_module_error}")
+		endif()
+	endif()
+
 	# split.py puts output in "out"
 	set(_httplib_build_includedir "${CMAKE_CURRENT_BINARY_DIR}/out")
 	add_library(${PROJECT_NAME} ${HTTPLIB_LIB_TYPE} "${_httplib_build_includedir}/httplib.cc")
@@ -248,6 +320,13 @@ if(HTTPLIB_COMPILE)
 			$<BUILD_INTERFACE:${_httplib_build_includedir}/httplib.h>
 			$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/httplib.h>
 	)
+	
+	# Add C++20 module support if requested
+	# Include from separate file to prevent parse errors on older CMake versions
+	if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.28")
+		include(cmake/modules.cmake)
+	endif()
+	
 	set_target_properties(${PROJECT_NAME}
 		PROPERTIES
 			VERSION ${${PROJECT_NAME}_VERSION}
@@ -264,8 +343,12 @@ endif()
 # Only useful if building in-tree, versus using it from an installation.
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-# Require C++11
-target_compile_features(${PROJECT_NAME} ${_INTERFACE_OR_PUBLIC} cxx_std_11)
+# Require C++11, or C++20 if modules are enabled
+if(HTTPLIB_BUILD_MODULES)
+	target_compile_features(${PROJECT_NAME} ${_INTERFACE_OR_PUBLIC} cxx_std_20)
+else()
+	target_compile_features(${PROJECT_NAME} ${_INTERFACE_OR_PUBLIC} cxx_std_11)
+endif()
 
 target_include_directories(${PROJECT_NAME} SYSTEM ${_INTERFACE_OR_PUBLIC}
 	$<BUILD_INTERFACE:${_httplib_build_includedir}>
@@ -279,7 +362,7 @@ target_link_libraries(${PROJECT_NAME} ${_INTERFACE_OR_PUBLIC}
 		$<$<PLATFORM_ID:Windows>:ws2_32>
 		$<$<PLATFORM_ID:Windows>:crypt32>
 		# Needed for API from MacOS Security framework
-		"$<$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>,$<BOOL:${HTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN}>>:-framework CFNetwork -framework CoreFoundation -framework Security>"
+		"$<$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>,$<BOOL:${HTTPLIB_IS_USING_MACOSX_AUTOMATIC_ROOT_CERTIFICATES}>>:-framework CFNetwork -framework CoreFoundation -framework Security>"
 		# Needed for non-blocking getaddrinfo on MacOS
 		"$<$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${HTTPLIB_USE_NON_BLOCKING_GETADDRINFO}>>:-framework CFNetwork -framework CoreFoundation>"
 		# Can't put multiple targets in a single generator expression or it bugs out.
@@ -290,6 +373,8 @@ target_link_libraries(${PROJECT_NAME} ${_INTERFACE_OR_PUBLIC}
 		$<$<BOOL:${HTTPLIB_IS_USING_ZSTD}>:zstd::libzstd>
 		$<$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>:OpenSSL::SSL>
 		$<$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>:OpenSSL::Crypto>
+		$<$<BOOL:${HTTPLIB_IS_USING_WOLFSSL}>:wolfssl::wolfssl>
+		$<$<BOOL:${HTTPLIB_IS_USING_MBEDTLS}>:MbedTLS::mbedtls>
 )
 
 # Set the definitions to enable optional features
@@ -299,7 +384,9 @@ target_compile_definitions(${PROJECT_NAME} ${_INTERFACE_OR_PUBLIC}
 	$<$<BOOL:${HTTPLIB_IS_USING_ZLIB}>:CPPHTTPLIB_ZLIB_SUPPORT>
 	$<$<BOOL:${HTTPLIB_IS_USING_ZSTD}>:CPPHTTPLIB_ZSTD_SUPPORT>
 	$<$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>:CPPHTTPLIB_OPENSSL_SUPPORT>
-	$<$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${HTTPLIB_IS_USING_OPENSSL}>,$<BOOL:${HTTPLIB_IS_USING_CERTS_FROM_MACOSX_KEYCHAIN}>>:CPPHTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN>
+	$<$<BOOL:${HTTPLIB_IS_USING_WOLFSSL}>:CPPHTTPLIB_WOLFSSL_SUPPORT>
+	$<$<BOOL:${HTTPLIB_IS_USING_MBEDTLS}>:CPPHTTPLIB_MBEDTLS_SUPPORT>
+	$<$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${HTTPLIB_DISABLE_MACOSX_AUTOMATIC_ROOT_CERTIFICATES}>>:CPPHTTPLIB_DISABLE_MACOSX_AUTOMATIC_ROOT_CERTIFICATES>
 	$<$<BOOL:${HTTPLIB_USE_NON_BLOCKING_GETADDRINFO}>:CPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO>
 )
 
@@ -337,7 +424,11 @@ if(HTTPLIB_INSTALL)
 	# Creates the export httplibTargets.cmake
 	# This is strictly what holds compilation requirements
 	# and linkage information (doesn't find deps though).
-	install(TARGETS ${PROJECT_NAME} EXPORT httplibTargets)
+	if(HTTPLIB_BUILD_MODULES)
+		install(TARGETS ${PROJECT_NAME} EXPORT httplibTargets FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/httplib/modules CXX_MODULES_BMI DESTINATION ${CMAKE_INSTALL_LIBDIR}/httplib/modules)
+	else()
+		install(TARGETS ${PROJECT_NAME} EXPORT httplibTargets)
+	endif()
 
 	install(FILES "${_httplib_build_includedir}/httplib.h" TYPE INCLUDE)
 
@@ -364,6 +455,10 @@ if(HTTPLIB_INSTALL)
 	install(FILES "LICENSE" DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}")
 
 	include(CPack)
+endif()
+
+if(HTTPLIB_BUILD_MODULES AND NOT HTTPLIB_COMPILE)
+	message(FATAL_ERROR "HTTPLIB_BUILD_MODULES requires HTTPLIB_COMPILE to be ON.")
 endif()
 
 if(HTTPLIB_TEST)

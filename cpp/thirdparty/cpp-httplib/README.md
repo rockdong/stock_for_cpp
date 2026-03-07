@@ -1,19 +1,26 @@
-cpp-httplib
-===========
+# cpp-httplib
 
 [![](https://github.com/yhirose/cpp-httplib/workflows/test/badge.svg)](https://github.com/yhirose/cpp-httplib/actions)
 
-A C++11 single-file header-only cross platform HTTP/HTTPS library.
+A C++11 single-file header-only cross platform HTTP/HTTPS library.<br>
+It's extremely easy to set up. Just include the **[httplib.h](https://raw.githubusercontent.com/yhirose/cpp-httplib/refs/heads/master/httplib.h)** file in your code!
 
-It's extremely easy to set up. Just include the **httplib.h** file in your code!
+**Learn more in the [official documentation](https://yhirose.github.io/cpp-httplib/)**.
 
 > [!IMPORTANT]
 > This library uses 'blocking' socket I/O. If you are looking for a library with 'non-blocking' socket I/O, this is not the one that you want.
 
-Simple examples
----------------
+## Main Features
 
-#### Server (Multi-threaded)
+- HTTP Server/Client
+- SSL/TLS support (OpenSSL, MbedTLS, wolfSSL)
+- [Stream API](README-stream.md)
+- [Server-Sent Events](README-sse.md)
+- [WebSocket](README-websocket.md)
+
+## Simple examples
+
+### Server
 
 ```c++
 #define CPPHTTPLIB_OPENSSL_SUPPORT
@@ -32,7 +39,7 @@ svr.Get("/hi", [](const httplib::Request &, httplib::Response &res) {
 svr.listen("0.0.0.0", 8080);
 ```
 
-#### Client
+### Client
 
 ```c++
 #define CPPHTTPLIB_OPENSSL_SUPPORT
@@ -50,19 +57,34 @@ if (auto res = cli.Get("/hi")) {
 }
 ```
 
-SSL Support
------------
+## SSL/TLS Support
 
-SSL support is available with `CPPHTTPLIB_OPENSSL_SUPPORT`. `libssl` and `libcrypto` should be linked.
+cpp-httplib supports multiple TLS backends through an abstraction layer:
+
+| Backend | Define | Libraries |
+| :------ | :----- | :-------- |
+| OpenSSL | `CPPHTTPLIB_OPENSSL_SUPPORT` | `libssl`, `libcrypto` |
+| Mbed TLS | `CPPHTTPLIB_MBEDTLS_SUPPORT` | `libmbedtls`, `libmbedx509`, `libmbedcrypto` |
+| wolfSSL | `CPPHTTPLIB_WOLFSSL_SUPPORT` | `libwolfssl` |
 
 > [!NOTE]
-> cpp-httplib currently supports only version 3.0 or later. Please see [this page](https://www.openssl.org/policies/releasestrat.html) to get more information.
+> OpenSSL 3.0 or later is required. Please see [this page](https://www.openssl.org/policies/releasestrat.html) for more information.
+
+> [!NOTE]
+> Mbed TLS 2.x and 3.x are supported. The library automatically detects the version and uses the appropriate API.
+
+> [!NOTE]
+> wolfSSL must be built with OpenSSL compatibility layer enabled (`--enable-opensslall`). wolfSSL 5.x is supported.
+
+> [!NOTE]
+> **Mbed TLS / wolfSSL limitation:** `get_ca_certs()` and `get_ca_names()` only reflect CA certificates loaded via `load_ca_cert_store()` or `load_ca_cert_store(pem, size)`. Certificates loaded through `set_ca_cert_path()` or system certificates (`load_system_certs`) are not enumerable with these backends.
 
 > [!TIP]
-> For macOS: cpp-httplib now can use system certs with `CPPHTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN`. `CoreFoundation` and `Security` should be linked with `-framework`.
+> For macOS: cpp-httplib automatically loads system certs from the Keychain when a TLS backend is enabled. `CoreFoundation` and `Security` must be linked with `-framework`. To disable this, define `CPPHTTPLIB_DISABLE_MACOSX_AUTOMATIC_ROOT_CERTIFICATES`.
 
 ```c++
-#define CPPHTTPLIB_OPENSSL_SUPPORT
+// Use either OpenSSL, Mbed TLS, or wolfSSL
+#define CPPHTTPLIB_OPENSSL_SUPPORT   // or CPPHTTPLIB_MBEDTLS_SUPPORT or CPPHTTPLIB_WOLFSSL_SUPPORT
 #include "path/to/httplib.h"
 
 // Server
@@ -83,15 +105,15 @@ cli.enable_server_certificate_verification(false);
 cli.enable_server_hostname_verification(false);
 ```
 
-> [!NOTE]
-> When using SSL, it seems impossible to avoid SIGPIPE in all cases, since on some operating systems, SIGPIPE can only be suppressed on a per-message basis, but there is no way to make the OpenSSL library do so for its internal communications. If your program needs to avoid being terminated on SIGPIPE, the only fully general way might be to set up a signal handler for SIGPIPE to handle or ignore it yourself.
-
 ### SSL Error Handling
 
-When SSL operations fail, cpp-httplib provides detailed error information through two separate error fields:
+When SSL operations fail, cpp-httplib provides detailed error information through `ssl_error()` and `ssl_backend_error()`:
+
+- `ssl_error()` - Returns the TLS-level error code (e.g., `SSL_ERROR_SSL` for OpenSSL)
+- `ssl_backend_error()` - Returns the backend-specific error code (e.g., `ERR_get_error()` for OpenSSL/wolfSSL, return value for Mbed TLS)
 
 ```c++
-#define CPPHTTPLIB_OPENSSL_SUPPORT
+#define CPPHTTPLIB_OPENSSL_SUPPORT  // or CPPHTTPLIB_MBEDTLS_SUPPORT or CPPHTTPLIB_WOLFSSL_SUPPORT
 #include "path/to/httplib.h"
 
 httplib::Client cli("https://example.com");
@@ -108,18 +130,18 @@ if (!res) {
       break;
 
     case httplib::Error::SSLLoadingCerts:
-      std::cout << "SSL cert loading failed, OpenSSL error: "
-                << std::hex << res.ssl_openssl_error() << std::endl;
+      std::cout << "SSL cert loading failed, backend error: "
+                << std::hex << res.ssl_backend_error() << std::endl;
       break;
 
     case httplib::Error::SSLServerVerification:
-      std::cout << "SSL verification failed, X509 error: "
-                << res.ssl_openssl_error() << std::endl;
+      std::cout << "SSL verification failed, verify error: "
+                << res.ssl_backend_error() << std::endl;
       break;
 
     case httplib::Error::SSLServerHostnameVerification:
-      std::cout << "SSL hostname verification failed, X509 error: "
-                << res.ssl_openssl_error() << std::endl;
+      std::cout << "SSL hostname verification failed, verify error: "
+                << res.ssl_backend_error() << std::endl;
       break;
 
     default:
@@ -128,8 +150,75 @@ if (!res) {
 }
 ```
 
-Server
-------
+### Custom Certificate Verification
+
+You can set a custom verification callback using `tls::VerifyCallback`:
+
+```c++
+httplib::Client cli("https://example.com");
+
+cli.set_server_certificate_verifier(
+    [](const httplib::tls::VerifyContext &ctx) -> bool {
+      std::cout << "Subject CN: " << ctx.subject_cn() << std::endl;
+      std::cout << "Issuer: " << ctx.issuer_name() << std::endl;
+      std::cout << "Depth: " << ctx.depth << std::endl;
+      std::cout << "Pre-verified: " << ctx.preverify_ok << std::endl;
+
+      // Inspect SANs (Subject Alternative Names)
+      for (const auto &san : ctx.sans()) {
+        std::cout << "SAN: " << san.value << std::endl;
+      }
+
+      // Return true to accept, false to reject
+      return ctx.preverify_ok;
+    });
+```
+
+### Peer Certificate Inspection
+
+On the server side, you can inspect the client's peer certificate from a request handler:
+
+```c++
+httplib::SSLServer svr("./cert.pem", "./key.pem",
+                       "./client-ca-cert.pem");
+
+svr.Get("/", [](const httplib::Request &req, httplib::Response &res) {
+  auto cert = req.peer_cert();
+  if (cert) {
+    std::cout << "Client CN: " << cert.subject_cn() << std::endl;
+    std::cout << "Serial: " << cert.serial() << std::endl;
+  }
+
+  auto sni = req.sni();
+  std::cout << "SNI: " << sni << std::endl;
+});
+```
+
+### Windows Certificate Verification
+
+On Windows, cpp-httplib automatically performs additional certificate verification using the Windows certificate store via CryptoAPI (`CertGetCertificateChain` / `CertVerifyCertificateChainPolicy`). This works with all TLS backends (OpenSSL, Mbed TLS, and wolfSSL), providing:
+
+- Real-time certificate validation integrated with Windows Update
+- Certificate revocation checking
+- SSL/TLS policy verification using the system certificate store (ROOT and CA)
+
+This feature is enabled by default and can be controlled at runtime:
+
+```c++
+// Disable Windows certificate verification (use only OpenSSL/Mbed TLS/wolfSSL verification)
+cli.enable_windows_certificate_verification(false);
+```
+
+To disable this feature at compile time, define:
+
+```c++
+#define CPPHTTPLIB_DISABLE_WINDOWS_AUTOMATIC_ROOT_CERTIFICATES_UPDATE
+```
+
+> [!NOTE]
+> When using SSL, it seems impossible to avoid SIGPIPE in all cases, since on some operating systems, SIGPIPE can only be suppressed on a per-message basis, but there is no way to make the OpenSSL library do so for its internal communications. If your program needs to avoid being terminated on SIGPIPE, the only fully general way might be to set up a signal handler for SIGPIPE to handle or ignore it yourself.
+
+## Server
 
 ```c++
 #include <httplib.h>
@@ -380,6 +469,34 @@ svr.set_pre_request_handler([](const auto& req, auto& res) {
 });
 ```
 
+### Response user data
+
+`res.user_data` is a `std::map<std::string, httplib::any>` that lets pre-routing or pre-request handlers pass arbitrary data to route handlers.
+
+```cpp
+struct AuthContext {
+  std::string user_id;
+  std::string role;
+};
+
+svr.set_pre_routing_handler([](const auto& req, auto& res) {
+  auto token = req.get_header_value("Authorization");
+  res.user_data["auth"] = AuthContext{decode_token(token)};
+  return Server::HandlerResponse::Unhandled;
+});
+
+svr.Get("/me", [](const auto& /*req*/, auto& res) {
+  auto* ctx = httplib::any_cast<AuthContext>(&res.user_data["auth"]);
+  if (!ctx) {
+    res.status = StatusCode::Unauthorized_401;
+    return;
+  }
+  res.set_content("Hello " + ctx->user_id, "text/plain");
+});
+```
+
+`httplib::any` mirrors the C++17 `std::any` API. On C++17 and later it is an alias for `std::any`; on C++11/14 a compatible implementation is provided.
+
 ### Form data handling
 
 #### URL-encoded form data ('application/x-www-form-urlencoded')
@@ -420,8 +537,17 @@ svr.Post("/multipart", [&](const Request& req, Response& res) {
       std::cout << "Header: " << header.first << " = " << header.second << std::endl;
     }
 
+    // IMPORTANT: file.filename is an untrusted value from the client.
+    // Always extract only the basename to prevent path traversal attacks.
+    auto safe_name = std::filesystem::path(file.filename).filename();
+    if (safe_name.empty() || safe_name == "." || safe_name == "..") {
+      res.status = StatusCode::BadRequest_400;
+      res.set_content("Invalid filename", "text/plain");
+      return;
+    }
+
     // Save to disk
-    std::ofstream ofs(file.filename, std::ios::binary);
+    std::ofstream ofs(upload_dir / safe_name, std::ios::binary);
     ofs << file.content;
   }
 
@@ -634,20 +760,24 @@ Please see [Server example](https://github.com/yhirose/cpp-httplib/blob/master/e
 
 ### Default thread pool support
 
-`ThreadPool` is used as the **default** task queue, with a default thread count of 8 or `std::thread::hardware_concurrency() - 1`, whichever is greater. You can change it with `CPPHTTPLIB_THREAD_POOL_COUNT`.
+`ThreadPool` is used as the **default** task queue, with dynamic scaling support. By default, it maintains a base thread count of 8 or `std::thread::hardware_concurrency() - 1` (whichever is greater), and can scale up to 4x that count under load. You can change these with `CPPHTTPLIB_THREAD_POOL_COUNT` and `CPPHTTPLIB_THREAD_POOL_MAX_COUNT`.
 
-If you want to set the thread count at runtime, there is no convenient way... But here is how.
+When all threads are busy and a new task arrives, a temporary thread is spawned (up to the maximum). When a dynamic thread finishes its task and the queue is empty, or after an idle timeout, it exits automatically. The idle timeout defaults to 3 seconds, configurable via `CPPHTTPLIB_THREAD_POOL_IDLE_TIMEOUT`.
+
+If you want to set the thread counts at runtime:
 
 ```cpp
-svr.new_task_queue = [] { return new ThreadPool(12); };
+svr.new_task_queue = [] { return new ThreadPool(/*base_threads=*/8, /*max_threads=*/64); };
 ```
+
+#### Max queued requests
 
 You can also provide an optional parameter to limit the maximum number
 of pending requests, i.e. requests `accept()`ed by the listener but
 still waiting to be serviced by worker threads.
 
 ```cpp
-svr.new_task_queue = [] { return new ThreadPool(/*num_threads=*/12, /*max_queued_requests=*/18); };
+svr.new_task_queue = [] { return new ThreadPool(/*base_threads=*/12, /*max_threads=*/0, /*max_queued_requests=*/18); };
 ```
 
 Default limit is 0 (unlimited). Once the limit is reached, the listener
@@ -683,8 +813,7 @@ svr.new_task_queue = [] {
 };
 ```
 
-Client
-------
+## Client
 
 ```c++
 #include <httplib.h>
@@ -813,11 +942,15 @@ httplib::Headers headers = {
 };
 auto res = cli.Get("/hi", headers);
 ```
+
 or
+
 ```c++
 auto res = cli.Get("/hi", {{"Hello", "World!"}});
 ```
+
 or
+
 ```c++
 cli.set_default_headers({
   { "Hello", "World!" }
@@ -866,6 +999,26 @@ httplib::UploadFormDataItems items = {
 auto res = cli.Post("/multipart", items);
 ```
 
+To upload files from disk without loading them entirely into memory, use `make_file_provider`. The file is sent with chunked transfer encoding.
+
+```cpp
+httplib::FormDataProviderItems providers = {
+  httplib::make_file_provider("file1", "/path/to/large.bin", "large.bin", "application/octet-stream"),
+  httplib::make_file_provider("avatar", "/path/to/photo.jpg", "photo.jpg", "image/jpeg"),
+};
+
+auto res = cli.Post("/upload", {}, {}, providers);
+```
+
+### POST with a file body
+
+To POST a file as a raw binary body with `Content-Length`, use `make_file_body`.
+
+```cpp
+auto [size, provider] = httplib::make_file_body("/path/to/data.bin");
+auto res = cli.Post("/upload", size, provider, "application/octet-stream");
+```
+
 ### PUT
 
 ```c++
@@ -900,6 +1053,12 @@ cli.set_write_timeout(5, 0); // 5 seconds
 
 // This method works the same as curl's `--max-time` option
 cli.set_max_timeout(5000); // 5 seconds
+```
+
+### Set maximum payload length for reading a response body
+
+```c++
+cli.set_payload_max_length(1024 * 1024 * 512); // 512MB
 ```
 
 ### Receive content with a content receiver
@@ -1102,18 +1261,21 @@ httplib::Server svr;
 svr.listen("127.0.0.1", 8080);
 ```
 
-Compression
------------
+## Payload Limit
+
+The maximum payload body size is limited to 100MB by default for both server and client. You can change it with `set_payload_max_length()` or by defining `CPPHTTPLIB_PAYLOAD_MAX_LENGTH` at compile time. Setting it to `0` disables the limit entirely.
+
+## Compression
 
 The server can apply compression to the following MIME type contents:
 
-  * all text types except text/event-stream
-  * image/svg+xml
-  * application/javascript
-  * application/json
-  * application/xml
-  * application/protobuf
-  * application/xhtml+xml
+- all text types except text/event-stream
+- image/svg+xml
+- application/javascript
+- application/json
+- application/xml
+- application/protobuf
+- application/xhtml+xml
 
 ### Zlib Support
 
@@ -1206,8 +1368,7 @@ std::string decoded_component = httplib::decode_uri_component(encoded_component)
 
 Use `encode_uri()` for full URLs and `encode_uri_component()` for individual query parameters or path segments.
 
-Stream API
-----------
+## Stream API
 
 Process large responses without loading everything into memory.
 
@@ -1234,8 +1395,7 @@ All HTTP methods are supported: `stream::Get`, `Post`, `Put`, `Patch`, `Delete`,
 
 See [README-stream.md](README-stream.md) for more details.
 
-SSE Client
-----------
+## SSE Client
 
 ```cpp
 #include <httplib.h>
@@ -1256,8 +1416,47 @@ int main() {
 
 See [README-sse.md](README-sse.md) for more details.
 
-Split httplib.h into .h and .cc
--------------------------------
+## WebSocket
+
+```cpp
+// Server
+httplib::Server svr;
+
+svr.WebSocket("/ws", [](const httplib::Request &req, httplib::ws::WebSocket &ws) {
+    httplib::ws::Message msg;
+    while (ws.read(msg)) {
+        if (msg.is_text()) {
+            ws.send("Echo: " + msg.data);
+        }
+    }
+});
+
+svr.listen("localhost", 8080);
+```
+
+```cpp
+// Client
+httplib::ws::WebSocketClient ws("ws://localhost:8080/ws");
+
+if (ws.connect()) {
+    ws.send("Hello, WebSocket!");
+
+    std::string msg;
+    if (ws.read(msg)) {
+        std::cout << "Received: " << msg << std::endl;
+    }
+
+    ws.close();
+}
+```
+
+SSL is also supported via `wss://` scheme (e.g. `WebSocketClient("wss://example.com/ws")`). Subprotocol negotiation (`Sec-WebSocket-Protocol`) is supported via `SubProtocolSelector` callback.
+
+> **Note:** WebSocket connections occupy a thread for their entire lifetime. If you plan to handle many simultaneous WebSocket connections, consider using a dynamic thread pool: `svr.new_task_queue = [] { return new ThreadPool(8, 64); };`
+
+See [README-websocket.md](README-websocket.md) for more details.
+
+## Split httplib.h into .h and .cc
 
 ```console
 $ ./split.py -h
@@ -1275,8 +1474,7 @@ $ ./split.py
 Wrote out/httplib.h and out/httplib.cc
 ```
 
-Dockerfile for Static HTTP Server
----------------------------------
+## Dockerfile for Static HTTP Server
 
 Dockerfile for static HTTP server is available. Port number of this HTTP server is 80, and it serves static files from `/html` directory in the container.
 
@@ -1347,12 +1545,10 @@ Include `httplib.h` before `Windows.h` or include `Windows.h` by defining `WIN32
 > [!NOTE]
 > Windows 8 or lower, Visual Studio 2015 or lower, and Cygwin and MSYS2 including MinGW are neither supported nor tested.
 
-License
--------
+## License
 
 MIT license (© 2026 Yuji Hirose)
 
-Special Thanks To
------------------
+## Special Thanks To
 
 [These folks](https://github.com/yhirose/cpp-httplib/graphs/contributors) made great contributions to polish this library to totally another level from a simple toy!

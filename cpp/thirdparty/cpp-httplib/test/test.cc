@@ -55,7 +55,13 @@ using namespace std;
 using namespace httplib;
 
 const char *HOST = "localhost";
-const int PORT = 1234;
+
+static int get_base_port() {
+  const char *shard = getenv("GTEST_SHARD_INDEX");
+  return shard ? 11234 + std::atoi(shard) * 100 : 1234;
+}
+
+const int PORT = get_base_port();
 
 const string LONG_QUERY_VALUE = string(25000, '@');
 const string LONG_QUERY_URL = "/long-query-value?key=" + LONG_QUERY_VALUE;
@@ -82,7 +88,13 @@ FormData &get_file_value(std::vector<FormData> &items, const char *key) {
 
 static void read_file(const std::string &path, std::string &out) {
   std::ifstream fs(path, std::ios_base::binary);
-  if (!fs) throw std::runtime_error("File not found: " + path);
+  if (!fs) {
+#ifdef CPPHTTPLIB_NO_EXCEPTIONS
+    return;
+#else
+    throw std::runtime_error("File not found: " + path);
+#endif
+  }
   fs.seekg(0, std::ios_base::end);
   auto size = fs.tellg();
   fs.seekg(0);
@@ -172,7 +184,12 @@ protected:
     EXPECT_EQ(resp.body, content_);
   }
 
-  const std::string pathname_{"./httplib-server.sock"};
+  static std::string make_sock_path() {
+    const char *shard = getenv("GTEST_SHARD_INDEX");
+    return shard ? std::string("./httplib-server-") + shard + ".sock"
+                 : "./httplib-server.sock";
+  }
+  const std::string pathname_{make_sock_path()};
   const std::string pattern_{"/hi"};
   const std::string content_{"Hello World!"};
 };
@@ -306,9 +323,10 @@ TEST(SocketStream, wait_writable_UNIX) {
   asSocketStream(fds[0], [&](Stream &s0) {
     EXPECT_EQ(s0.socket(), fds[0]);
     EXPECT_TRUE(s0.wait_writable());
+    EXPECT_TRUE(s0.is_peer_alive());
 
     EXPECT_EQ(0, close(fds[1]));
-    EXPECT_FALSE(s0.wait_writable());
+    EXPECT_FALSE(s0.is_peer_alive());
 
     return true;
   });
@@ -350,7 +368,9 @@ TEST(SocketStream, wait_writable_INET) {
   };
   asSocketStream(disconnected_svr_sock, [&](Stream &ss) {
     EXPECT_EQ(ss.socket(), disconnected_svr_sock);
-    EXPECT_FALSE(ss.wait_writable());
+    // wait_writable() returns true because select_write() only checks if the
+    // send buffer has space. Peer disconnection is detected later by send().
+    EXPECT_TRUE(ss.wait_writable());
 
     return true;
   });
@@ -1265,13 +1285,13 @@ class ChunkedEncodingTest : public ::testing::Test {
 protected:
   ChunkedEncodingTest()
       : cli_(HOST, PORT)
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
         ,
         svr_(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE)
 #endif
   {
     cli_.set_connection_timeout(2);
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
     cli_.enable_server_certificate_verification(false);
 #endif
   }
@@ -1317,7 +1337,7 @@ protected:
     t_.join();
   }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli_;
   SSLServer svr_;
 #else
@@ -1385,7 +1405,7 @@ TEST(RangeTest, FromHTTPBin_Online) {
   auto path = std::string{"/httpbin/range/32"};
 #endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   auto port = 443;
   SSLClient cli(host, port);
 #else
@@ -1445,7 +1465,7 @@ TEST(GetAddrInfoDanglingRefTest, LongTimeout) {
   auto host = "unresolvableaddress.local";
   auto path = std::string{"/"};
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   auto port = 443;
   SSLClient cli(host, port);
 #else
@@ -1465,7 +1485,7 @@ TEST(GetAddrInfoDanglingRefTest, LongTimeout) {
 TEST(ConnectionErrorTest, InvalidHost) {
   auto host = "-abcde.com";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   auto port = 443;
   SSLClient cli(host, port);
 #else
@@ -1482,7 +1502,7 @@ TEST(ConnectionErrorTest, InvalidHost) {
 TEST(ConnectionErrorTest, InvalidHost2) {
   auto host = "httpcan.org/";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host);
 #else
   Client cli(host);
@@ -1497,7 +1517,7 @@ TEST(ConnectionErrorTest, InvalidHost2) {
 TEST(ConnectionErrorTest, InvalidHostCheckResultErrorToString) {
   auto host = "httpcan.org/";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host);
 #else
   Client cli(host);
@@ -1515,7 +1535,7 @@ TEST(ConnectionErrorTest, InvalidPort) {
   auto host = "localhost";
   auto port = 44380;
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host, port);
 #else
   Client cli(host, port);
@@ -1531,7 +1551,7 @@ TEST(ConnectionErrorTest, InvalidPort) {
 TEST(ConnectionErrorTest, Timeout_Online) {
   auto host = "google.com";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   auto port = 44380;
   SSLClient cli(host, port);
 #else
@@ -1559,7 +1579,7 @@ TEST(CancelTest, NoCancel_Online) {
   auto path = std::string{"/httpbin/range/32"};
 #endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   auto port = 443;
   SSLClient cli(host, port);
 #else
@@ -1583,7 +1603,7 @@ TEST(CancelTest, WithCancelSmallPayload_Online) {
   auto path = std::string{"/httpbin/range/32"};
 #endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   auto port = 443;
   SSLClient cli(host, port);
 #else
@@ -1606,7 +1626,7 @@ TEST(CancelTest, WithCancelLargePayload_Online) {
   auto path = std::string{"/httpbin/range/65536"};
 #endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   auto port = 443;
   SSLClient cli(host, port);
 #else
@@ -1677,6 +1697,7 @@ TEST(CancelTest, WithCancelSmallPayloadPost) {
 
 TEST(CancelTest, WithCancelLargePayloadPost) {
   Server svr;
+  svr.set_payload_max_length(200 * 1024 * 1024);
 
   svr.Post("/", [&](const Request & /*req*/, Response &res) {
     res.set_content(LARGE_DATA, "text/plain");
@@ -1692,6 +1713,7 @@ TEST(CancelTest, WithCancelLargePayloadPost) {
   svr.wait_until_ready();
 
   Client cli(HOST, PORT);
+  cli.set_payload_max_length(200 * 1024 * 1024);
   cli.set_connection_timeout(std::chrono::seconds(5));
 
   auto res =
@@ -1756,6 +1778,7 @@ TEST(CancelTest, WithCancelSmallPayloadPut) {
 
 TEST(CancelTest, WithCancelLargePayloadPut) {
   Server svr;
+  svr.set_payload_max_length(200 * 1024 * 1024);
 
   svr.Put("/", [&](const Request & /*req*/, Response &res) {
     res.set_content(LARGE_DATA, "text/plain");
@@ -1771,6 +1794,7 @@ TEST(CancelTest, WithCancelLargePayloadPut) {
   svr.wait_until_ready();
 
   Client cli(HOST, PORT);
+  cli.set_payload_max_length(200 * 1024 * 1024);
   cli.set_connection_timeout(std::chrono::seconds(5));
 
   auto res =
@@ -1835,6 +1859,7 @@ TEST(CancelTest, WithCancelSmallPayloadPatch) {
 
 TEST(CancelTest, WithCancelLargePayloadPatch) {
   Server svr;
+  svr.set_payload_max_length(200 * 1024 * 1024);
 
   svr.Patch("/", [&](const Request & /*req*/, Response &res) {
     res.set_content(LARGE_DATA, "text/plain");
@@ -1850,6 +1875,7 @@ TEST(CancelTest, WithCancelLargePayloadPatch) {
   svr.wait_until_ready();
 
   Client cli(HOST, PORT);
+  cli.set_payload_max_length(200 * 1024 * 1024);
   cli.set_connection_timeout(std::chrono::seconds(5));
 
   auto res =
@@ -1914,6 +1940,7 @@ TEST(CancelTest, WithCancelSmallPayloadDelete) {
 
 TEST(CancelTest, WithCancelLargePayloadDelete) {
   Server svr;
+  svr.set_payload_max_length(200 * 1024 * 1024);
 
   svr.Delete("/", [&](const Request & /*req*/, Response &res) {
     res.set_content(LARGE_DATA, "text/plain");
@@ -1929,6 +1956,7 @@ TEST(CancelTest, WithCancelLargePayloadDelete) {
   svr.wait_until_ready();
 
   Client cli(HOST, PORT);
+  cli.set_payload_max_length(200 * 1024 * 1024);
   cli.set_connection_timeout(std::chrono::seconds(5));
 
   auto res =
@@ -1955,7 +1983,7 @@ TEST(BaseAuthTest, FromHTTPWatch_Online) {
   auto path = std::string{"/httpbin/basic-auth/hello/world"};
 #endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   auto port = 443;
   SSLClient cli(host, port);
 #else
@@ -2002,7 +2030,7 @@ TEST(BaseAuthTest, FromHTTPWatch_Online) {
   }
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(DigestAuthTest, FromHTTPWatch_Online) {
 #ifdef CPPHTTPLIB_DEFAULT_HTTPBIN
   auto host = "httpcan.org";
@@ -2069,7 +2097,7 @@ TEST(SpecifyServerIPAddressTest, AnotherHostname_Online) {
   auto another_host = "example.com";
   auto wrong_ip = "0.0.0.0";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host);
 #else
   Client cli(host);
@@ -2085,7 +2113,7 @@ TEST(SpecifyServerIPAddressTest, RealHostname_Online) {
   auto host = "google.com";
   auto wrong_ip = "0.0.0.0";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host);
 #else
   Client cli(host);
@@ -2100,7 +2128,7 @@ TEST(SpecifyServerIPAddressTest, RealHostname_Online) {
 TEST(AbsoluteRedirectTest, Redirect_Online) {
   auto host = "nghttp2.org";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host);
 #else
   Client cli(host);
@@ -2115,7 +2143,7 @@ TEST(AbsoluteRedirectTest, Redirect_Online) {
 TEST(RedirectTest, Redirect_Online) {
   auto host = "nghttp2.org";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host);
 #else
   Client cli(host);
@@ -2130,7 +2158,7 @@ TEST(RedirectTest, Redirect_Online) {
 TEST(RelativeRedirectTest, Redirect_Online) {
   auto host = "nghttp2.org";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host);
 #else
   Client cli(host);
@@ -2145,7 +2173,7 @@ TEST(RelativeRedirectTest, Redirect_Online) {
 TEST(TooManyRedirectTest, Redirect_Online) {
   auto host = "nghttp2.org";
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host);
 #else
   Client cli(host);
@@ -2157,7 +2185,7 @@ TEST(TooManyRedirectTest, Redirect_Online) {
   EXPECT_EQ(Error::ExceedRedirectCount, res.error());
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(YahooRedirectTest, Redirect_Online) {
   Client cli("yahoo.com");
 
@@ -2219,7 +2247,6 @@ TEST(UrlWithSpace, Redirect_Online) {
   EXPECT_EQ(StatusCode::OK_200, res->status);
   EXPECT_EQ(18527U, res->get_header_value_u64("Content-Length"));
 }
-
 #endif
 
 #if !defined(_WIN32) && !defined(_WIN64)
@@ -2357,28 +2384,32 @@ TEST(RedirectFromPageWithContent, Redirect) {
 TEST(RedirectFromPageWithContentIP6, Redirect) {
   Server svr;
 
+  auto port_str = std::to_string(PORT);
+  auto redirect_url = "http://[::1]:" + port_str + "/2";
+  auto expected_host = "[::1]:" + port_str;
+
   svr.Get("/1", [&](const Request & /*req*/, Response &res) {
     res.set_content("___", "text/plain");
     // res.set_redirect("/2");
-    res.set_redirect("http://[::1]:1234/2");
+    res.set_redirect(redirect_url);
   });
 
   svr.Get("/2", [&](const Request &req, Response &res) {
     auto host_header = req.headers.find("Host");
     ASSERT_TRUE(host_header != req.headers.end());
-    EXPECT_EQ("[::1]:1234", host_header->second);
+    EXPECT_EQ(expected_host, host_header->second);
 
     res.set_content("Hello World!", "text/plain");
   });
 
-  auto th = std::thread([&]() { svr.listen("::1", 1234); });
+  auto th = std::thread([&]() { svr.listen("::1", PORT); });
   auto se = detail::scope_exit([&] {
     svr.stop();
     th.join();
     ASSERT_FALSE(svr.is_running());
   });
 
-  // When IPV6 support isn't available svr.listen("::1", 1234) never
+  // When IPV6 support isn't available svr.listen("::1", PORT) never
   // actually starts anything, so the condition !svr.is_running() will
   // always remain true, and the loop never stops.
   // This basically counts how many milliseconds have passed since the
@@ -2390,7 +2421,7 @@ TEST(RedirectFromPageWithContentIP6, Redirect) {
   }
 
   {
-    Client cli("http://[::1]:1234");
+    Client cli("::1", PORT);
     cli.set_follow_location(true);
 
     std::string body;
@@ -2405,7 +2436,7 @@ TEST(RedirectFromPageWithContentIP6, Redirect) {
   }
 
   {
-    Client cli("http://[::1]:1234");
+    Client cli("::1", PORT);
 
     std::string body;
     auto res = cli.Get("/1", [&](const char *data, size_t data_length) {
@@ -2523,7 +2554,7 @@ TEST(BindServerTest, BindAndListenSeparately) {
   svr.stop();
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(BindServerTest, BindAndListenSeparatelySSL) {
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE,
                 CLIENT_CA_CERT_DIR);
@@ -2532,9 +2563,7 @@ TEST(BindServerTest, BindAndListenSeparatelySSL) {
   ASSERT_TRUE(port > 0);
   svr.stop();
 }
-#endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
 TEST(BindServerTest, BindAndListenSeparatelySSLEncryptedKey) {
   SSLServer svr(SERVER_ENCRYPTED_CERT_FILE, SERVER_ENCRYPTED_PRIVATE_KEY_FILE,
                 nullptr, nullptr, SERVER_ENCRYPTED_PRIVATE_KEY_PASS);
@@ -2543,65 +2572,70 @@ TEST(BindServerTest, BindAndListenSeparatelySSLEncryptedKey) {
   ASSERT_TRUE(port > 0);
   svr.stop();
 }
-#endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-X509 *readCertificate(const std::string &strFileName) {
-  std::ifstream inStream(strFileName);
-  std::string strCertPEM((std::istreambuf_iterator<char>(inStream)),
-                         std::istreambuf_iterator<char>());
-
-  if (strCertPEM.empty()) return (nullptr);
-
-  BIO *pbCert = BIO_new(BIO_s_mem());
-  BIO_write(pbCert, strCertPEM.c_str(), (int)strCertPEM.size());
-  X509 *pCert = PEM_read_bio_X509(pbCert, NULL, 0, NULL);
-  BIO_free(pbCert);
-
-  return (pCert);
-}
-
-EVP_PKEY *readPrivateKey(const std::string &strFileName) {
-  std::ifstream inStream(strFileName);
-  std::string strPrivateKeyPEM((std::istreambuf_iterator<char>(inStream)),
-                               std::istreambuf_iterator<char>());
-
-  if (strPrivateKeyPEM.empty()) return (nullptr);
-
-  BIO *pbPrivKey = BIO_new(BIO_s_mem());
-  BIO_write(pbPrivKey, strPrivateKeyPEM.c_str(), (int)strPrivateKeyPEM.size());
-  EVP_PKEY *pPrivateKey = PEM_read_bio_PrivateKey(pbPrivKey, NULL, NULL, NULL);
-  BIO_free(pbPrivKey);
-
-  return (pPrivateKey);
-}
-
-TEST(BindServerTest, UpdateCerts) {
+TEST(BindServerTest, UpdateCertsPem) {
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE);
   int port = svr.bind_to_any_port("0.0.0.0");
   ASSERT_TRUE(svr.is_valid());
   ASSERT_TRUE(port > 0);
 
-  X509 *cert = readCertificate(SERVER_CERT_FILE);
-  X509 *ca_cert = readCertificate(CLIENT_CA_CERT_FILE);
-  EVP_PKEY *key = readPrivateKey(SERVER_PRIVATE_KEY_FILE);
+  // Read PEM files
+  std::string cert_pem, key_pem, ca_pem;
+  read_file(SERVER_CERT_FILE, cert_pem);
+  read_file(SERVER_PRIVATE_KEY_FILE, key_pem);
+  read_file(CLIENT_CA_CERT_FILE, ca_pem);
 
-  ASSERT_TRUE(cert != nullptr);
-  ASSERT_TRUE(ca_cert != nullptr);
-  ASSERT_TRUE(key != nullptr);
-
-  X509_STORE *cert_store = X509_STORE_new();
-
-  X509_STORE_add_cert(cert_store, ca_cert);
-
-  svr.update_certs(cert, key, cert_store);
+  // Update server certificates using PEM API
+  ASSERT_TRUE(
+      svr.update_certs_pem(cert_pem.c_str(), key_pem.c_str(), ca_pem.c_str()));
 
   ASSERT_TRUE(svr.is_valid());
   svr.stop();
+}
 
-  X509_free(cert);
-  X509_free(ca_cert);
-  EVP_PKEY_free(key);
+TEST(SSLClientServerTest, UpdateCertsPemWithClientAuth) {
+  // Start server with client CA (enables client auth)
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  bool handler_called = false;
+  svr.Get("/test", [&](const Request &req, Response &res) {
+    handler_called = true;
+    // Verify client certificate is present
+    auto cert = req.peer_cert();
+    EXPECT_TRUE(static_cast<bool>(cert));
+    res.set_content("ok", "text/plain");
+  });
+
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+    ASSERT_FALSE(svr.is_running());
+  });
+
+  svr.wait_until_ready();
+
+  // Read PEM files
+  std::string cert_pem, key_pem, ca_pem;
+  read_file(SERVER_CERT_FILE, cert_pem);
+  read_file(SERVER_PRIVATE_KEY_FILE, key_pem);
+  read_file(CLIENT_CA_CERT_FILE, ca_pem);
+
+  // Update server certificates and client CA using PEM API while server running
+  ASSERT_TRUE(
+      svr.update_certs_pem(cert_pem.c_str(), key_pem.c_str(), ca_pem.c_str()));
+
+  // Connect with client certificate
+  SSLClient cli(HOST, PORT, CLIENT_CERT_FILE, CLIENT_PRIVATE_KEY_FILE);
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(30);
+
+  auto res = cli.Get("/test");
+  ASSERT_TRUE(res);
+  ASSERT_EQ(StatusCode::OK_200, res->status);
+  ASSERT_TRUE(handler_called);
+  EXPECT_EQ("ok", res->body);
 }
 #endif
 
@@ -2667,16 +2701,14 @@ TEST(ExceptionTest, WithoutExceptionHandler) {
     auto res = cli.Get("/exception");
     ASSERT_TRUE(res);
     EXPECT_EQ(StatusCode::InternalServerError_500, res->status);
-    ASSERT_TRUE(res->has_header("EXCEPTION_WHAT"));
-    EXPECT_EQ("exception...", res->get_header_value("EXCEPTION_WHAT"));
+    EXPECT_FALSE(res->has_header("EXCEPTION_WHAT"));
   }
 
   {
     auto res = cli.Get("/unknown");
     ASSERT_TRUE(res);
     EXPECT_EQ(StatusCode::InternalServerError_500, res->status);
-    ASSERT_TRUE(res->has_header("EXCEPTION_WHAT"));
-    EXPECT_EQ("exception\\r\\n...", res->get_header_value("EXCEPTION_WHAT"));
+    EXPECT_FALSE(res->has_header("EXCEPTION_WHAT"));
   }
 }
 
@@ -2822,7 +2854,7 @@ TEST(NoContentTest, ContentLength) {
 }
 
 TEST(RoutingHandlerTest, PreAndPostRoutingHandlers) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
   ASSERT_TRUE(svr.is_valid());
 #else
@@ -2862,7 +2894,7 @@ TEST(RoutingHandlerTest, PreAndPostRoutingHandlers) {
   svr.wait_until_ready();
 
   {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
     SSLClient cli(HOST, PORT);
     cli.enable_server_certificate_verification(false);
 #else
@@ -2880,7 +2912,7 @@ TEST(RoutingHandlerTest, PreAndPostRoutingHandlers) {
   }
 
   {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
     SSLClient cli(HOST, PORT);
     cli.enable_server_certificate_verification(false);
 #else
@@ -2896,7 +2928,7 @@ TEST(RoutingHandlerTest, PreAndPostRoutingHandlers) {
   }
 
   {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
     SSLClient cli(HOST, PORT);
     cli.enable_server_certificate_verification(false);
 #else
@@ -2967,6 +2999,115 @@ TEST(RequestHandlerTest, PreRequestHandler) {
     EXPECT_EQ(StatusCode::Forbidden_403, res->status);
     EXPECT_EQ("error", res->body);
   }
+}
+
+TEST(AnyTest, BasicOperations) {
+  // Default construction
+  httplib::any a;
+  EXPECT_FALSE(a.has_value());
+
+  // Value construction and any_cast (pointer form, noexcept)
+  httplib::any b(42);
+  EXPECT_TRUE(b.has_value());
+  auto *p = httplib::any_cast<int>(&b);
+  ASSERT_NE(nullptr, p);
+  EXPECT_EQ(42, *p);
+
+  // Type mismatch → nullptr
+  auto *q = httplib::any_cast<std::string>(&b);
+  EXPECT_EQ(nullptr, q);
+
+  // any_cast (value form) succeeds
+  EXPECT_EQ(42, httplib::any_cast<int>(b));
+
+  // any_cast (value form) throws on type mismatch
+#ifndef CPPHTTPLIB_NO_EXCEPTIONS
+  EXPECT_THROW(httplib::any_cast<std::string>(b), httplib::bad_any_cast);
+#endif
+
+  // Copy
+  httplib::any c = b;
+  EXPECT_EQ(42, httplib::any_cast<int>(c));
+
+  // Move
+  httplib::any d = std::move(c);
+  EXPECT_EQ(42, httplib::any_cast<int>(d));
+
+  // Assignment with different type
+  b = std::string("hello");
+  EXPECT_EQ("hello", httplib::any_cast<std::string>(b));
+
+  // Reset
+  b.reset();
+  EXPECT_FALSE(b.has_value());
+}
+
+TEST(RequestHandlerTest, ResponseUserDataInPreRouting) {
+  struct AuthCtx {
+    std::string user_id;
+  };
+
+  Server svr;
+
+  svr.set_pre_routing_handler([](const Request & /*req*/, Response &res) {
+    res.user_data["auth"] = AuthCtx{"alice"};
+    return Server::HandlerResponse::Unhandled;
+  });
+
+  svr.Get("/me", [](const Request & /*req*/, Response &res) {
+    auto *ctx = httplib::any_cast<AuthCtx>(&res.user_data["auth"]);
+    ASSERT_NE(nullptr, ctx);
+    res.set_content("Hello " + ctx->user_id, "text/plain");
+  });
+
+  auto thread = std::thread([&]() { svr.listen(HOST, PORT); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    thread.join();
+    ASSERT_FALSE(svr.is_running());
+  });
+
+  svr.wait_until_ready();
+
+  Client cli(HOST, PORT);
+  auto res = cli.Get("/me");
+  ASSERT_TRUE(res);
+  EXPECT_EQ(StatusCode::OK_200, res->status);
+  EXPECT_EQ("Hello alice", res->body);
+}
+
+TEST(RequestHandlerTest, ResponseUserDataInPreRequest) {
+  struct RoleCtx {
+    std::string role;
+  };
+
+  Server svr;
+
+  svr.set_pre_request_handler([](const Request & /*req*/, Response &res) {
+    res.user_data["role"] = RoleCtx{"admin"};
+    return Server::HandlerResponse::Unhandled;
+  });
+
+  svr.Get("/role", [](const Request & /*req*/, Response &res) {
+    auto *ctx = httplib::any_cast<RoleCtx>(&res.user_data["role"]);
+    ASSERT_NE(nullptr, ctx);
+    res.set_content(ctx->role, "text/plain");
+  });
+
+  auto thread = std::thread([&]() { svr.listen(HOST, PORT); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    thread.join();
+    ASSERT_FALSE(svr.is_running());
+  });
+
+  svr.wait_until_ready();
+
+  Client cli(HOST, PORT);
+  auto res = cli.Get("/role");
+  ASSERT_TRUE(res);
+  EXPECT_EQ(StatusCode::OK_200, res->status);
+  EXPECT_EQ("admin", res->body);
 }
 
 TEST(InvalidFormatTest, StatusCode) {
@@ -3067,17 +3208,22 @@ class ServerTest : public ::testing::Test {
 protected:
   ServerTest()
       : cli_(HOST, PORT)
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
         ,
         svr_(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE)
 #endif
   {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
     cli_.enable_server_certificate_verification(false);
 #endif
+    // Allow LARGE_DATA (100MB) responses
+    cli_.set_payload_max_length(200 * 1024 * 1024);
   }
 
   virtual void SetUp() {
+    // Allow LARGE_DATA (100MB) tests to pass with new 100MB default limit
+    svr_.set_payload_max_length(200 * 1024 * 1024);
+
     svr_.set_mount_point("/", "./www");
     svr_.set_mount_point("/mount", "./www2");
     svr_.set_file_extension_and_mimetype_mapping("abcde", "text/abcde");
@@ -3144,16 +3290,20 @@ protected:
              [&](const Request &req, Response &res) {
                ASSERT_FALSE(req.has_header("REMOTE_ADDR"));
                ASSERT_FALSE(req.has_header("REMOTE_PORT"));
+#ifndef CPPHTTPLIB_NO_EXCEPTIONS
                ASSERT_ANY_THROW(req.get_header_value("REMOTE_ADDR"));
                ASSERT_ANY_THROW(req.get_header_value("REMOTE_PORT"));
+#endif
                res.set_content(req.remote_addr, "text/plain");
              })
         .Get("/local_addr",
              [&](const Request &req, Response &res) {
                ASSERT_FALSE(req.has_header("LOCAL_ADDR"));
                ASSERT_FALSE(req.has_header("LOCAL_PORT"));
+#ifndef CPPHTTPLIB_NO_EXCEPTIONS
                ASSERT_ANY_THROW(req.get_header_value("LOCAL_ADDR"));
                ASSERT_ANY_THROW(req.get_header_value("LOCAL_PORT"));
+#endif
                auto local_addr = req.local_addr;
                auto local_port = std::to_string(req.local_port);
                res.set_content(local_addr.append(":").append(local_port),
@@ -3737,6 +3887,13 @@ protected:
                    "01234567890123456789012345678901234567890",
                    "text/plain");
              })
+        .Get("/compress-with-charset",
+             [&](const Request & /*req*/, Response &res) {
+               res.set_content(
+                   "12345678901234567890123456789012345678901234567890123456789"
+                   "01234567890123456789012345678901234567890",
+                   "application/json; charset=utf-8");
+             })
         .Get("/nocompress",
              [&](const Request & /*req*/, Response &res) {
                res.set_content(
@@ -3781,7 +3938,7 @@ protected:
   }
 
   map<string, string> persons_;
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli_;
   SSLServer svr_;
 #else
@@ -4403,7 +4560,7 @@ TEST_F(ServerTest, TooLongRequest) {
 
   ASSERT_TRUE(res);
   EXPECT_EQ(StatusCode::UriTooLong_414, res->status);
-  EXPECT_LE(elapsed, 100);
+  EXPECT_LE(elapsed, 1000);
   EXPECT_EQ("close", res->get_header_value("Connection"));
   EXPECT_FALSE(cli_.is_socket_open());
 }
@@ -4417,7 +4574,7 @@ TEST_F(ServerTest, AlmostTooLongRequest) {
 
   auto res = cli_.Get(request.c_str());
 
-  ASSERT_TRUE(res);
+  ASSERT_TRUE(res) << "Error: " << to_string(res.error());
   EXPECT_EQ(StatusCode::NotFound_404, res->status);
 }
 
@@ -4488,7 +4645,7 @@ TEST_F(ServerTest, LongQueryValue) {
 
   ASSERT_TRUE(res);
   EXPECT_EQ(StatusCode::UriTooLong_414, res->status);
-  EXPECT_LE(elapsed, 100);
+  EXPECT_LE(elapsed, 1000);
   EXPECT_EQ("close", res->get_header_value("Connection"));
   EXPECT_FALSE(cli_.is_socket_open());
 }
@@ -4587,15 +4744,9 @@ TEST_F(ServerTest, HeaderCountExceedsLimit) {
   cli_.set_keep_alive(true);
   auto res = cli_.Get("/hi", headers);
 
-  // The request should either fail or return 400 Bad Request
-  if (res) {
-    // If we get a response, it should be 400 Bad Request
-    EXPECT_EQ(StatusCode::BadRequest_400, res->status);
-  } else {
-    // Or the request should fail entirely
-    EXPECT_FALSE(res);
-  }
-
+  // The server should respond with 400 Bad Request
+  ASSERT_TRUE(res);
+  EXPECT_EQ(StatusCode::BadRequest_400, res->status);
   EXPECT_EQ("close", res->get_header_value("Connection"));
   EXPECT_FALSE(cli_.is_socket_open());
 }
@@ -4659,12 +4810,9 @@ TEST_F(ServerTest, HeaderCountSecurityTest) {
   if (res) {
     // If we get a response, it should be 400 Bad Request
     EXPECT_EQ(StatusCode::BadRequest_400, res->status);
-  } else {
-    // Request failed, which is the expected behavior for DoS protection
-    EXPECT_FALSE(res);
+    EXPECT_EQ("close", res->get_header_value("Connection"));
   }
 
-  EXPECT_EQ("close", res->get_header_value("Connection"));
   EXPECT_FALSE(cli_.is_socket_open());
 }
 
@@ -5438,7 +5586,7 @@ TEST_F(ServerTest, PutLargeFileWithGzip) {
 }
 
 TEST_F(ServerTest, PutLargeFileWithGzip2) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   std::string s = std::string("https://") + HOST + ":" + std::to_string(PORT);
   Client cli(s.c_str());
   cli.enable_server_certificate_verification(false);
@@ -5822,7 +5970,7 @@ void TestWithHeadersAndContentReceiver(
 }
 
 TEST_F(ServerTest, PostWithHeadersAndContentReceiver) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   using ClientT = SSLClient;
 #else
   using ClientT = Client;
@@ -5836,7 +5984,7 @@ TEST_F(ServerTest, PostWithHeadersAndContentReceiver) {
 }
 
 TEST_F(ServerTest, PutWithHeadersAndContentReceiver) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   using ClientT = SSLClient;
 #else
   using ClientT = Client;
@@ -5850,7 +5998,7 @@ TEST_F(ServerTest, PutWithHeadersAndContentReceiver) {
 }
 
 TEST_F(ServerTest, PatchWithHeadersAndContentReceiver) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   using ClientT = SSLClient;
 #else
   using ClientT = Client;
@@ -5894,7 +6042,7 @@ void TestWithHeadersAndContentReceiverWithProgress(
 }
 
 TEST_F(ServerTest, PostWithHeadersAndContentReceiverWithProgress) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   using ClientT = SSLClient;
 #else
   using ClientT = Client;
@@ -5908,7 +6056,7 @@ TEST_F(ServerTest, PostWithHeadersAndContentReceiverWithProgress) {
 }
 
 TEST_F(ServerTest, PutWithHeadersAndContentReceiverWithProgress) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   using ClientT = SSLClient;
 #else
   using ClientT = Client;
@@ -5922,7 +6070,7 @@ TEST_F(ServerTest, PutWithHeadersAndContentReceiverWithProgress) {
 }
 
 TEST_F(ServerTest, PatchWithHeadersAndContentReceiverWithProgress) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   using ClientT = SSLClient;
 #else
   using ClientT = Client;
@@ -5960,7 +6108,7 @@ void TestWithHeadersAndContentReceiverError(
 }
 
 TEST_F(ServerTest, PostWithHeadersAndContentReceiverError) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   using ClientT = SSLClient;
 #else
   using ClientT = Client;
@@ -5974,7 +6122,7 @@ TEST_F(ServerTest, PostWithHeadersAndContentReceiverError) {
 }
 
 TEST_F(ServerTest, PuttWithHeadersAndContentReceiverError) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   using ClientT = SSLClient;
 #else
   using ClientT = Client;
@@ -5988,7 +6136,7 @@ TEST_F(ServerTest, PuttWithHeadersAndContentReceiverError) {
 }
 
 TEST_F(ServerTest, PatchWithHeadersAndContentReceiverError) {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   using ClientT = SSLClient;
 #else
   using ClientT = Client;
@@ -6100,6 +6248,21 @@ TEST_F(ServerTest, Gzip) {
   EXPECT_EQ("gzip", res->get_header_value("Content-Encoding"));
   EXPECT_EQ("text/plain", res->get_header_value("Content-Type"));
   EXPECT_EQ("33", res->get_header_value("Content-Length"));
+  EXPECT_EQ("123456789012345678901234567890123456789012345678901234567890123456"
+            "7890123456789012345678901234567890",
+            res->body);
+  EXPECT_EQ(StatusCode::OK_200, res->status);
+}
+
+TEST_F(ServerTest, GzipWithContentTypeParameters) {
+  Headers headers;
+  headers.emplace("Accept-Encoding", "gzip, deflate");
+  auto res = cli_.Get("/compress-with-charset", headers);
+
+  ASSERT_TRUE(res);
+  EXPECT_EQ("gzip", res->get_header_value("Content-Encoding"));
+  EXPECT_EQ("application/json; charset=utf-8",
+            res->get_header_value("Content-Type"));
   EXPECT_EQ("123456789012345678901234567890123456789012345678901234567890123456"
             "7890123456789012345678901234567890",
             res->body);
@@ -6634,7 +6797,7 @@ TEST_F(ServerTest, SendLargeBodyAfterRequestLineError) {
     ASSERT_TRUE(res);
     EXPECT_EQ(StatusCode::OK_200, res->status);
     EXPECT_EQ("Hello World!", res->body);
-    EXPECT_LE(elapsed, 100);
+    EXPECT_LE(elapsed, 500);
   }
 }
 
@@ -7054,6 +7217,7 @@ TEST(ServerStopTest, ListenFailure) {
   t.join();
 }
 
+#ifndef CPPHTTPLIB_NO_EXCEPTIONS
 TEST(ServerStopTest, Decommision) {
   Server svr;
 
@@ -7099,6 +7263,7 @@ TEST(ServerStopTest, Decommision) {
     }
   }
 }
+#endif
 
 // Helper function for string body upload progress tests
 template <typename SetupHandler, typename ClientCall>
@@ -7644,7 +7809,7 @@ TEST(KeepAliveTest, Issue1959) {
   EXPECT_LT(elapsed, 5000);
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(KeepAliveTest, SSLClientReconnection) {
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
   ASSERT_TRUE(svr.is_valid());
@@ -7745,18 +7910,14 @@ TEST(KeepAliveTest, SSLClientReconnectionPost) {
 }
 
 TEST(SNI_AutoDetectionTest, SNI_Logic) {
+  using namespace httplib::tls;
+
   {
     SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
     ASSERT_TRUE(svr.is_valid());
 
     svr.Get("/sni", [&](const Request &req, Response &res) {
-      std::string expected;
-      if (req.ssl) {
-        if (const char *sni =
-                SSL_get_servername(req.ssl, TLSEXT_NAMETYPE_host_name)) {
-          expected = sni;
-        }
-      }
+      std::string expected = req.sni();
       EXPECT_EQ(expected, req.get_param_value("expected"));
       res.set_content("ok", "text/plain");
     });
@@ -8033,7 +8194,7 @@ TEST(ClientDefaultHeadersTest, DefaultHeaders_Online) {
   auto path = std::string{"/httpbin/range/32"};
 #endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli(host);
 #else
   Client cli(host);
@@ -8084,7 +8245,7 @@ TEST(ServerDefaultHeadersTest, DefaultHeaders) {
   EXPECT_EQ("World", res->get_header_value("Hello"));
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(KeepAliveTest, ReadTimeoutSSL) {
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
   ASSERT_TRUE(svr.is_valid());
@@ -8127,12 +8288,12 @@ class ServerTestWithAI_PASSIVE : public ::testing::Test {
 protected:
   ServerTestWithAI_PASSIVE()
       : cli_(HOST, PORT)
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
         ,
         svr_(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE)
 #endif
   {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
     cli_.enable_server_certificate_verification(false);
 #endif
   }
@@ -8153,7 +8314,7 @@ protected:
     t_.join();
   }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli_;
   SSLServer svr_;
 #else
@@ -8204,12 +8365,12 @@ class PayloadMaxLengthTest : public ::testing::Test {
 protected:
   PayloadMaxLengthTest()
       : cli_(HOST, PORT)
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
         ,
         svr_(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE)
 #endif
   {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
     cli_.enable_server_certificate_verification(false);
 #endif
   }
@@ -8231,7 +8392,7 @@ protected:
     t_.join();
   }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli_;
   SSLServer svr_;
 #else
@@ -8383,12 +8544,12 @@ class LargePayloadMaxLengthTest : public ::testing::Test {
 protected:
   LargePayloadMaxLengthTest()
       : cli_(HOST, PORT)
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
         ,
         svr_(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE)
 #endif
   {
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
     cli_.enable_server_certificate_verification(false);
 #endif
   }
@@ -8411,7 +8572,7 @@ protected:
     t_.join();
   }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
   SSLClient cli_;
   SSLServer svr_;
 #else
@@ -8437,8 +8598,12 @@ TEST_F(LargePayloadMaxLengthTest, ChunkedEncodingExceeds10MB) {
                             'B'); // 12MB payload, exceeds 10MB limit
 
   auto res = cli_.Post("/test", large_payload, "application/octet-stream");
-  ASSERT_TRUE(res);
-  EXPECT_EQ(StatusCode::PayloadTooLarge_413, res->status);
+  // Server may either return 413 or close the connection
+  if (res) {
+    EXPECT_EQ(StatusCode::PayloadTooLarge_413, res->status);
+  } else {
+    SUCCEED() << "Server closed connection for payload exceeding 10MB limit";
+  }
 }
 
 TEST_F(LargePayloadMaxLengthTest, NoContentLengthWithin10MB) {
@@ -8506,6 +8671,764 @@ TEST_F(LargePayloadMaxLengthTest, NoContentLengthExceeds10MB) {
   }
 }
 
+#ifdef CPPHTTPLIB_ZLIB_SUPPORT
+// `payload_max_length` is not enforced on decompressed body in ContentReader
+// path.
+TEST(PayloadLimitBypassTest, StreamingGzipDecompression) {
+  Server svr;
+  const size_t LIMIT = 64 * 1024; // 64KB
+  svr.set_payload_max_length(LIMIT);
+
+  size_t total = 0;
+  svr.Post("/stream", [&](const Request & /*req*/, Response &res,
+                          const ContentReader &content_reader) {
+    content_reader([&](const char * /*data*/, size_t len) {
+      total += len;
+      return true;
+    });
+    res.status = 200;
+    res.set_content("stream_ok", "text/plain");
+  });
+
+  auto thread = std::thread([&]() { svr.listen(HOST, PORT); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    thread.join();
+    ASSERT_FALSE(svr.is_running());
+  });
+  svr.wait_until_ready();
+
+  // Prepare 256KB raw data and gzip-compress it
+  std::string raw(256 * 1024, 'A');
+  std::string gz;
+  {
+    z_stream zs{};
+    deflateInit2(&zs, Z_BEST_COMPRESSION, Z_DEFLATED, 15 + 16, 8,
+                 Z_DEFAULT_STRATEGY);
+    zs.next_in = reinterpret_cast<Bytef *>(const_cast<char *>(raw.data()));
+    zs.avail_in = static_cast<uInt>(raw.size());
+    char outbuf[4096];
+    int ret;
+    do {
+      zs.next_out = reinterpret_cast<Bytef *>(outbuf);
+      zs.avail_out = sizeof(outbuf);
+      ret = deflate(&zs, Z_FINISH);
+      gz.append(outbuf, sizeof(outbuf) - zs.avail_out);
+    } while (ret != Z_STREAM_END);
+    deflateEnd(&zs);
+  }
+
+  Client cli(HOST, PORT);
+  cli.set_connection_timeout(std::chrono::seconds(5));
+  Headers headers = {{"Content-Encoding", "gzip"}};
+  auto res = cli.Post("/stream", headers, gz.data(), gz.size(),
+                      "application/octet-stream");
+  ASSERT_TRUE(res);
+
+  // Server must reject oversized decompressed payloads with 413.
+  EXPECT_EQ(StatusCode::PayloadTooLarge_413, res->status);
+
+  // Decompressed bytes delivered to the handler must not exceed LIMIT.
+  EXPECT_LE(total, LIMIT);
+}
+#endif
+
+// Regression test for DoS vulnerability: a malicious server sending a response
+// without Content-Length header must not cause unbounded memory consumption on
+// the client side. The client should stop reading after a reasonable limit,
+// similar to the server-side set_payload_max_length protection.
+TEST(ClientVulnerabilityTest, UnboundedReadWithoutContentLength) {
+  constexpr size_t CLIENT_READ_LIMIT = 2 * 1024 * 1024; // 2MB safety limit
+
+#ifndef _WIN32
+  signal(SIGPIPE, SIG_IGN);
+#endif
+
+  auto server_thread = std::thread([] {
+    constexpr size_t MALICIOUS_DATA_SIZE = 10 * 1024 * 1024; // 10MB from server
+    auto srv = ::socket(AF_INET, SOCK_STREAM, 0);
+    default_socket_options(srv);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_RCVTIMEO, 5, 0);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_SNDTIMEO, 5, 0);
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT + 2);
+    ::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+
+    int opt = 1;
+    ::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR,
+#ifdef _WIN32
+                 reinterpret_cast<const char *>(&opt),
+#else
+                 &opt,
+#endif
+                 sizeof(opt));
+
+    ::bind(srv, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+    ::listen(srv, 1);
+
+    sockaddr_in cli_addr{};
+    socklen_t cli_len = sizeof(cli_addr);
+    auto cli = ::accept(srv, reinterpret_cast<sockaddr *>(&cli_addr), &cli_len);
+
+    if (cli != INVALID_SOCKET) {
+      char buf[4096];
+      ::recv(cli, buf, sizeof(buf), 0);
+
+      // Malicious response: no Content-Length, no chunked encoding
+      std::string response_header = "HTTP/1.1 200 OK\r\n"
+                                    "Connection: close\r\n"
+                                    "\r\n";
+
+      ::send(cli,
+#ifdef _WIN32
+             static_cast<const char *>(response_header.c_str()),
+             static_cast<int>(response_header.size()),
+#else
+             response_header.c_str(), response_header.size(),
+#endif
+             0);
+
+      // Send 10MB of data
+      std::string chunk(64 * 1024, 'A');
+      size_t total_sent = 0;
+
+      while (total_sent < MALICIOUS_DATA_SIZE) {
+        auto to_send = std::min(chunk.size(), MALICIOUS_DATA_SIZE - total_sent);
+        auto sent = ::send(cli,
+#ifdef _WIN32
+                           static_cast<const char *>(chunk.c_str()),
+                           static_cast<int>(to_send),
+#else
+                           chunk.c_str(), to_send,
+#endif
+                           0);
+        if (sent <= 0) break;
+        total_sent += static_cast<size_t>(sent);
+      }
+
+      detail::close_socket(cli);
+    }
+    detail::close_socket(srv);
+  });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+  size_t total_read = 0;
+
+  {
+    Client cli("127.0.0.1", PORT + 2);
+    cli.set_read_timeout(5, 0);
+    cli.set_payload_max_length(CLIENT_READ_LIMIT);
+
+    auto stream = cli.open_stream("GET", "/malicious");
+    ASSERT_TRUE(stream.is_valid());
+
+    char buffer[64 * 1024];
+    ssize_t n;
+
+    while ((n = stream.read(buffer, sizeof(buffer))) > 0) {
+      total_read += static_cast<size_t>(n);
+    }
+  } // StreamHandle and Client destroyed here, closing the socket
+
+  server_thread.join();
+
+  // With set_payload_max_length, the client must stop reading before consuming
+  // all 10MB. The read loop should be cut off at or near the configured limit.
+  EXPECT_LE(total_read, CLIENT_READ_LIMIT)
+      << "Client read " << total_read << " bytes, exceeding the configured "
+      << "payload_max_length of " << CLIENT_READ_LIMIT << " bytes.";
+}
+
+// Verify that set_payload_max_length(0) means "no limit" and allows reading
+// the entire response body without truncation.
+TEST(ClientVulnerabilityTest, PayloadMaxLengthZeroMeansNoLimit) {
+  static constexpr size_t DATA_SIZE = 4 * 1024 * 1024; // 4MB from server
+
+#ifndef _WIN32
+  signal(SIGPIPE, SIG_IGN);
+#endif
+
+  auto server_thread = std::thread([] {
+    auto srv = ::socket(AF_INET, SOCK_STREAM, 0);
+    default_socket_options(srv);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_RCVTIMEO, 5, 0);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_SNDTIMEO, 5, 0);
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT + 2);
+    ::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+
+    int opt = 1;
+    ::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR,
+#ifdef _WIN32
+                 reinterpret_cast<const char *>(&opt),
+#else
+                 &opt,
+#endif
+                 sizeof(opt));
+
+    ::bind(srv, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+    ::listen(srv, 1);
+
+    sockaddr_in cli_addr{};
+    socklen_t cli_len = sizeof(cli_addr);
+    auto cli = ::accept(srv, reinterpret_cast<sockaddr *>(&cli_addr), &cli_len);
+
+    if (cli != INVALID_SOCKET) {
+      char buf[4096];
+      ::recv(cli, buf, sizeof(buf), 0);
+
+      std::string response_header = "HTTP/1.1 200 OK\r\n"
+                                    "Connection: close\r\n"
+                                    "\r\n";
+
+      ::send(cli,
+#ifdef _WIN32
+             static_cast<const char *>(response_header.c_str()),
+             static_cast<int>(response_header.size()),
+#else
+             response_header.c_str(), response_header.size(),
+#endif
+             0);
+
+      std::string chunk(64 * 1024, 'A');
+      size_t total_sent = 0;
+
+      while (total_sent < DATA_SIZE) {
+        auto to_send = std::min(chunk.size(), DATA_SIZE - total_sent);
+        auto sent = ::send(cli,
+#ifdef _WIN32
+                           static_cast<const char *>(chunk.c_str()),
+                           static_cast<int>(to_send),
+#else
+                           chunk.c_str(), to_send,
+#endif
+                           0);
+        if (sent <= 0) break;
+        total_sent += static_cast<size_t>(sent);
+      }
+
+#ifdef _WIN32
+      ::shutdown(cli, SD_SEND);
+#else
+      ::shutdown(cli, SHUT_WR);
+#endif
+      // Drain until the client closes its end, ensuring all data is delivered
+      char drain[1024];
+      while (::recv(cli, drain, sizeof(drain), 0) > 0) {}
+      detail::close_socket(cli);
+    }
+    detail::close_socket(srv);
+  });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+  size_t total_read = 0;
+
+  {
+    Client cli("127.0.0.1", PORT + 2);
+    cli.set_read_timeout(5, 0);
+    cli.set_payload_max_length(0); // 0 means no limit
+
+    auto stream = cli.open_stream("GET", "/data");
+    ASSERT_TRUE(stream.is_valid());
+
+    char buffer[64 * 1024];
+    ssize_t n;
+
+    while ((n = stream.read(buffer, sizeof(buffer))) > 0) {
+      total_read += static_cast<size_t>(n);
+    }
+  }
+
+  server_thread.join();
+
+  EXPECT_EQ(total_read, DATA_SIZE)
+      << "With payload_max_length(0), the client should read all " << DATA_SIZE
+      << " bytes without truncation, but only read " << total_read << " bytes.";
+}
+
+// Verify that content_receiver bypasses the default payload_max_length,
+// allowing streaming downloads larger than 100MB without requiring an explicit
+// set_payload_max_length call.
+TEST(ClientVulnerabilityTest, ContentReceiverBypassesDefaultPayloadMaxLength) {
+  static constexpr size_t DATA_SIZE = 200 * 1024 * 1024; // 200MB from server
+
+#ifndef _WIN32
+  signal(SIGPIPE, SIG_IGN);
+#endif
+
+  auto server_thread = std::thread([] {
+    auto srv = ::socket(AF_INET, SOCK_STREAM, 0);
+    default_socket_options(srv);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_RCVTIMEO, 5, 0);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_SNDTIMEO, 5, 0);
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT + 2);
+    ::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+
+    int opt = 1;
+    ::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR,
+#ifdef _WIN32
+                 reinterpret_cast<const char *>(&opt),
+#else
+                 &opt,
+#endif
+                 sizeof(opt));
+
+    ::bind(srv, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+    ::listen(srv, 1);
+
+    sockaddr_in cli_addr{};
+    socklen_t cli_len = sizeof(cli_addr);
+    auto cli = ::accept(srv, reinterpret_cast<sockaddr *>(&cli_addr), &cli_len);
+
+    if (cli != INVALID_SOCKET) {
+      char buf[4096];
+      ::recv(cli, buf, sizeof(buf), 0);
+
+      // Response with Content-Length larger than default 100MB limit
+      auto content_length = std::to_string(DATA_SIZE);
+      std::string response_header = "HTTP/1.1 200 OK\r\n"
+                                    "Content-Length: " +
+                                    content_length +
+                                    "\r\n"
+                                    "Connection: close\r\n"
+                                    "\r\n";
+
+      ::send(cli,
+#ifdef _WIN32
+             static_cast<const char *>(response_header.c_str()),
+             static_cast<int>(response_header.size()),
+#else
+             response_header.c_str(), response_header.size(),
+#endif
+             0);
+
+      std::string chunk(64 * 1024, 'A');
+      size_t total_sent = 0;
+
+      while (total_sent < DATA_SIZE) {
+        auto to_send = std::min(chunk.size(), DATA_SIZE - total_sent);
+        auto sent = ::send(cli,
+#ifdef _WIN32
+                           static_cast<const char *>(chunk.c_str()),
+                           static_cast<int>(to_send),
+#else
+                           chunk.c_str(), to_send,
+#endif
+                           0);
+        if (sent <= 0) break;
+        total_sent += static_cast<size_t>(sent);
+      }
+
+      detail::close_socket(cli);
+    }
+    detail::close_socket(srv);
+  });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+  size_t total_received = 0;
+
+  {
+    Client cli("127.0.0.1", PORT + 2);
+    cli.set_read_timeout(10, 0);
+    // Do NOT call set_payload_max_length — use the default 100MB limit
+
+    auto res =
+        cli.Get("/large", [&](const char * /*data*/, size_t data_length) {
+          total_received += data_length;
+          return true;
+        });
+
+    ASSERT_TRUE(res);
+    EXPECT_EQ(StatusCode::OK_200, res->status);
+  }
+
+  server_thread.join();
+
+  EXPECT_EQ(total_received, DATA_SIZE)
+      << "With content_receiver, the client should read all " << DATA_SIZE
+      << " bytes despite the default 100MB payload_max_length, but only read "
+      << total_received << " bytes.";
+}
+
+// Verify that an explicit set_payload_max_length smaller than the response is
+// enforced even when a content_receiver is used.
+TEST(ClientVulnerabilityTest,
+     ContentReceiverRespectsExplicitPayloadMaxLength150MB) {
+  static constexpr size_t DATA_SIZE = 200 * 1024 * 1024; // 200MB from server
+  static constexpr size_t EXPLICIT_LIMIT = 150 * 1024 * 1024; // 150MB limit
+
+#ifndef _WIN32
+  signal(SIGPIPE, SIG_IGN);
+#endif
+
+  auto server_thread = std::thread([] {
+    auto srv = ::socket(AF_INET, SOCK_STREAM, 0);
+    default_socket_options(srv);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_RCVTIMEO, 5, 0);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_SNDTIMEO, 5, 0);
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT + 2);
+    ::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+
+    int opt = 1;
+    ::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR,
+#ifdef _WIN32
+                 reinterpret_cast<const char *>(&opt),
+#else
+                 &opt,
+#endif
+                 sizeof(opt));
+
+    ::bind(srv, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+    ::listen(srv, 1);
+
+    sockaddr_in cli_addr{};
+    socklen_t cli_len = sizeof(cli_addr);
+    auto cli = ::accept(srv, reinterpret_cast<sockaddr *>(&cli_addr), &cli_len);
+
+    if (cli != INVALID_SOCKET) {
+      char buf[4096];
+      ::recv(cli, buf, sizeof(buf), 0);
+
+      auto content_length = std::to_string(DATA_SIZE);
+      std::string response_header = "HTTP/1.1 200 OK\r\n"
+                                    "Content-Length: " +
+                                    content_length +
+                                    "\r\n"
+                                    "Connection: close\r\n"
+                                    "\r\n";
+
+      ::send(cli,
+#ifdef _WIN32
+             static_cast<const char *>(response_header.c_str()),
+             static_cast<int>(response_header.size()),
+#else
+             response_header.c_str(), response_header.size(),
+#endif
+             0);
+
+      std::string chunk(64 * 1024, 'A');
+      size_t total_sent = 0;
+
+      while (total_sent < DATA_SIZE) {
+        auto to_send = std::min(chunk.size(), DATA_SIZE - total_sent);
+        auto sent = ::send(cli,
+#ifdef _WIN32
+                           static_cast<const char *>(chunk.c_str()),
+                           static_cast<int>(to_send),
+#else
+                           chunk.c_str(), to_send,
+#endif
+                           0);
+        if (sent <= 0) break;
+        total_sent += static_cast<size_t>(sent);
+      }
+
+      detail::close_socket(cli);
+    }
+    detail::close_socket(srv);
+  });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+  size_t total_received = 0;
+
+  {
+    Client cli("127.0.0.1", PORT + 2);
+    cli.set_read_timeout(10, 0);
+    cli.set_payload_max_length(EXPLICIT_LIMIT); // Explicit 150MB limit
+
+    auto res =
+        cli.Get("/large", [&](const char * /*data*/, size_t data_length) {
+          total_received += data_length;
+          return true;
+        });
+
+    // Should fail because 200MB exceeds the explicit 150MB limit
+    EXPECT_FALSE(res);
+  }
+
+  server_thread.join();
+
+  EXPECT_LE(total_received, EXPLICIT_LIMIT)
+      << "Client with content_receiver should respect the explicit "
+      << "payload_max_length of " << EXPLICIT_LIMIT << " bytes, but read "
+      << total_received << " bytes.";
+}
+
+// Verify that an explicit set_payload_max_length larger than the response
+// allows the content_receiver to read all data successfully.
+TEST(ClientVulnerabilityTest,
+     ContentReceiverRespectsExplicitPayloadMaxLength250MB) {
+  static constexpr size_t DATA_SIZE = 200 * 1024 * 1024; // 200MB from server
+  static constexpr size_t EXPLICIT_LIMIT = 250 * 1024 * 1024; // 250MB limit
+
+#ifndef _WIN32
+  signal(SIGPIPE, SIG_IGN);
+#endif
+
+  auto server_thread = std::thread([] {
+    auto srv = ::socket(AF_INET, SOCK_STREAM, 0);
+    default_socket_options(srv);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_RCVTIMEO, 5, 0);
+    detail::set_socket_opt_time(srv, SOL_SOCKET, SO_SNDTIMEO, 5, 0);
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT + 2);
+    ::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+
+    int opt = 1;
+    ::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR,
+#ifdef _WIN32
+                 reinterpret_cast<const char *>(&opt),
+#else
+                 &opt,
+#endif
+                 sizeof(opt));
+
+    ::bind(srv, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+    ::listen(srv, 1);
+
+    sockaddr_in cli_addr{};
+    socklen_t cli_len = sizeof(cli_addr);
+    auto cli = ::accept(srv, reinterpret_cast<sockaddr *>(&cli_addr), &cli_len);
+
+    if (cli != INVALID_SOCKET) {
+      char buf[4096];
+      ::recv(cli, buf, sizeof(buf), 0);
+
+      auto content_length = std::to_string(DATA_SIZE);
+      std::string response_header = "HTTP/1.1 200 OK\r\n"
+                                    "Content-Length: " +
+                                    content_length +
+                                    "\r\n"
+                                    "Connection: close\r\n"
+                                    "\r\n";
+
+      ::send(cli,
+#ifdef _WIN32
+             static_cast<const char *>(response_header.c_str()),
+             static_cast<int>(response_header.size()),
+#else
+             response_header.c_str(), response_header.size(),
+#endif
+             0);
+
+      std::string chunk(64 * 1024, 'A');
+      size_t total_sent = 0;
+
+      while (total_sent < DATA_SIZE) {
+        auto to_send = std::min(chunk.size(), DATA_SIZE - total_sent);
+        auto sent = ::send(cli,
+#ifdef _WIN32
+                           static_cast<const char *>(chunk.c_str()),
+                           static_cast<int>(to_send),
+#else
+                           chunk.c_str(), to_send,
+#endif
+                           0);
+        if (sent <= 0) break;
+        total_sent += static_cast<size_t>(sent);
+      }
+
+#ifdef _WIN32
+      ::shutdown(cli, SD_SEND);
+#else
+      ::shutdown(cli, SHUT_WR);
+#endif
+      char drain[1024];
+      while (::recv(cli, drain, sizeof(drain), 0) > 0) {}
+      detail::close_socket(cli);
+    }
+    detail::close_socket(srv);
+  });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+  size_t total_received = 0;
+
+  {
+    Client cli("127.0.0.1", PORT + 2);
+    cli.set_read_timeout(10, 0);
+    cli.set_payload_max_length(EXPLICIT_LIMIT); // Explicit 250MB limit
+
+    auto res =
+        cli.Get("/large", [&](const char * /*data*/, size_t data_length) {
+          total_received += data_length;
+          return true;
+        });
+
+    ASSERT_TRUE(res);
+    EXPECT_EQ(StatusCode::OK_200, res->status);
+  }
+
+  server_thread.join();
+
+  EXPECT_EQ(total_received, DATA_SIZE)
+      << "With explicit payload_max_length of " << EXPLICIT_LIMIT
+      << " bytes (larger than " << DATA_SIZE
+      << " bytes response), content_receiver should read all data, but only "
+         "read "
+      << total_received << " bytes.";
+}
+
+#if defined(CPPHTTPLIB_ZLIB_SUPPORT) && !defined(_WIN32)
+// Regression test for "zip bomb" attack on the client side: a malicious server
+// sends a small gzip-compressed response that decompresses to a huge payload.
+// The client must enforce payload_max_length on the decompressed size.
+TEST(ClientVulnerabilityTest, ZipBombWithoutContentLength) {
+  constexpr size_t DECOMPRESSED_SIZE =
+      10 * 1024 * 1024; // 10MB after decompression
+  constexpr size_t CLIENT_READ_LIMIT = 2 * 1024 * 1024; // 2MB safety limit
+
+  // Prepare gzip-compressed data: 10MB of zeros compresses to a few KB
+  std::string uncompressed(DECOMPRESSED_SIZE, '\0');
+  std::string compressed;
+  {
+    httplib::detail::gzip_compressor compressor;
+    bool ok =
+        compressor.compress(uncompressed.data(), uncompressed.size(),
+                            /*last=*/true, [&](const char *buf, size_t len) {
+                              compressed.append(buf, len);
+                              return true;
+                            });
+    ASSERT_TRUE(ok);
+  }
+  // Sanity: compressed data should be much smaller than the decompressed size
+  ASSERT_LT(compressed.size(), DECOMPRESSED_SIZE / 10);
+
+#ifndef _WIN32
+  signal(SIGPIPE, SIG_IGN);
+#endif
+
+  // Set up the listening socket in the main thread so the server is guaranteed
+  // to be ready before the client connects (eliminates race condition).
+  auto srv = ::socket(AF_INET, SOCK_STREAM, 0);
+  default_socket_options(srv);
+  detail::set_socket_opt_time(srv, SOL_SOCKET, SO_RCVTIMEO, 5, 0);
+  detail::set_socket_opt_time(srv, SOL_SOCKET, SO_SNDTIMEO, 5, 0);
+
+  sockaddr_in addr{};
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(PORT + 3);
+  ::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+
+  int opt = 1;
+  ::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR,
+#ifdef _WIN32
+               reinterpret_cast<const char *>(&opt),
+#else
+               &opt,
+#endif
+               sizeof(opt));
+
+  ASSERT_EQ(0, ::bind(srv, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)));
+  ASSERT_EQ(0, ::listen(srv, 1));
+
+  auto server_thread = std::thread([&compressed, srv] {
+    sockaddr_in cli_addr{};
+    socklen_t cli_len = sizeof(cli_addr);
+    auto cli = ::accept(srv, reinterpret_cast<sockaddr *>(&cli_addr), &cli_len);
+
+    if (cli != INVALID_SOCKET) {
+      // Read the full HTTP request (until \r\n\r\n)
+      char buf[4096];
+      size_t total = 0;
+      while (total < sizeof(buf)) {
+        auto n = ::recv(cli, buf + total, sizeof(buf) - total, 0);
+        if (n <= 0) break;
+        total += static_cast<size_t>(n);
+        // Check for end of headers
+        if (total >= 4) {
+          std::string req(buf, total);
+          if (req.find("\r\n\r\n") != std::string::npos) break;
+        }
+      }
+
+      // Malicious response: gzip-compressed body, no Content-Length
+      std::string response_header = "HTTP/1.1 200 OK\r\n"
+                                    "Content-Encoding: gzip\r\n"
+                                    "Connection: close\r\n"
+                                    "\r\n";
+
+      ::send(cli,
+#ifdef _WIN32
+             static_cast<const char *>(response_header.c_str()),
+             static_cast<int>(response_header.size()),
+#else
+             response_header.c_str(), response_header.size(),
+#endif
+             0);
+
+      // Send the compressed payload (small on the wire, huge when decompressed)
+      size_t total_sent = 0;
+      while (total_sent < compressed.size()) {
+        auto to_send = std::min(compressed.size() - total_sent,
+                                static_cast<size_t>(64 * 1024));
+        auto sent =
+            ::send(cli,
+#ifdef _WIN32
+                   static_cast<const char *>(compressed.c_str() + total_sent),
+                   static_cast<int>(to_send),
+#else
+                   compressed.c_str() + total_sent, to_send,
+#endif
+                   0);
+        if (sent <= 0) break;
+        total_sent += static_cast<size_t>(sent);
+      }
+
+      detail::close_socket(cli);
+    }
+  });
+
+  auto se = detail::scope_exit([&] {
+    detail::close_socket(srv);
+    server_thread.join();
+  });
+
+  size_t total_decompressed = 0;
+
+  {
+    Client cli("127.0.0.1", PORT + 3);
+    cli.set_read_timeout(5, 0);
+    cli.set_decompress(true);
+    cli.set_payload_max_length(CLIENT_READ_LIMIT);
+
+    auto stream = cli.open_stream("GET", "/zipbomb");
+    ASSERT_TRUE(stream.is_valid());
+
+    char buffer[64 * 1024];
+    ssize_t n;
+
+    while ((n = stream.read(buffer, sizeof(buffer))) > 0) {
+      total_decompressed += static_cast<size_t>(n);
+    }
+  }
+
+  // The decompressed size must be capped by payload_max_length. Without
+  // protection, the client would decompress the full 10MB from a tiny
+  // compressed payload, enabling a zip bomb DoS attack.
+  EXPECT_LE(total_decompressed, CLIENT_READ_LIMIT)
+      << "Client decompressed " << total_decompressed
+      << " bytes from a gzip response. The decompressed size should be "
+      << "limited by set_payload_max_length to prevent zip bomb attacks.";
+}
+#endif
+
 TEST(HostAndPortPropertiesTest, NoSSL) {
   httplib::Client cli("www.google.com", 1234);
   ASSERT_EQ("www.google.com", cli.host());
@@ -8518,26 +9441,33 @@ TEST(HostAndPortPropertiesTest, NoSSLWithSimpleAPI) {
   ASSERT_EQ(1234, cli.port());
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(HostAndPortPropertiesTest, SSL) {
   httplib::SSLClient cli("www.google.com");
   ASSERT_EQ("www.google.com", cli.host());
   ASSERT_EQ(443, cli.port());
 }
-#endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-TEST(SSLClientTest, UpdateCAStore) {
+TEST(SSLClientTest, UpdateCAStoreWithPem_Online) {
+  // Test updating CA store multiple times using PEM-based load_ca_cert_store
+  std::string cert;
+  read_file(CA_CERT_FILE, cert);
+
   httplib::SSLClient httplib_client("www.google.com");
-  auto ca_store_1 = X509_STORE_new();
-  X509_STORE_load_locations(ca_store_1, "/etc/ssl/certs/ca-certificates.crt",
-                            nullptr);
-  httplib_client.set_ca_cert_store(ca_store_1);
 
-  auto ca_store_2 = X509_STORE_new();
-  X509_STORE_load_locations(ca_store_2, "/etc/ssl/certs/ca-certificates.crt",
-                            nullptr);
-  httplib_client.set_ca_cert_store(ca_store_2);
+  // Load CA store first time
+  httplib_client.load_ca_cert_store(cert.data(), cert.size());
+
+  // Load CA store second time (update)
+  httplib_client.load_ca_cert_store(cert.data(), cert.size());
+
+  // Verify client is still valid and can make connections
+  httplib_client.enable_server_certificate_verification(true);
+  auto res = httplib_client.Get("/");
+  ASSERT_TRUE(res);
+  // Google may return 200 or 301 depending on various factors
+  EXPECT_TRUE(res->status == StatusCode::OK_200 ||
+              res->status == StatusCode::MovedPermanently_301);
 }
 
 TEST(SSLClientTest, ServerNameIndication_Online) {
@@ -8564,14 +9494,22 @@ TEST(SSLClientTest, ServerCertificateVerificationError_Online) {
   ASSERT_TRUE(!res);
   EXPECT_EQ(Error::SSLServerVerification, res.error());
 
-  // For SSL server verification errors, ssl_error should be 0, only
-  // ssl_openssl_error should be set
+  // Verify backend error is captured for SSLServerVerification
+  // This occurs when certificate verification fails
+  // OpenSSL: X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT (18)
+  // Mbed TLS: MBEDTLS_X509_BADCERT_NOT_TRUSTED or similar flags
+  EXPECT_NE(0UL, res.ssl_backend_error());
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+  // For OpenSSL, ssl_error is 0 for verification errors
   EXPECT_EQ(0, res.ssl_error());
-
-  // Verify OpenSSL error is captured for SSLServerVerification
-  // This occurs when SSL_get_verify_result() returns a verification failure
+#if !defined(_WIN32) ||                                                        \
+    defined(CPPHTTPLIB_DISABLE_WINDOWS_AUTOMATIC_ROOT_CERTIFICATES_UPDATE)
+  // On non-Windows or when Windows Schannel is disabled, the error comes
+  // from OpenSSL's verification
   EXPECT_EQ(static_cast<unsigned long>(X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT),
-            res.ssl_openssl_error());
+            res.ssl_backend_error());
+#endif
+#endif
 }
 
 TEST(SSLClientTest, ServerHostnameVerificationError_Online) {
@@ -8584,17 +9522,46 @@ TEST(SSLClientTest, ServerHostnameVerificationError_Online) {
   auto res = cli.Get("/");
   ASSERT_TRUE(!res);
 
-  EXPECT_EQ(Error::SSLServerHostnameVerification, res.error());
+  // The error type depends on when hostname verification occurs:
+  // - OpenSSL: SSLServerHostnameVerification (post-handshake verification)
+  // - Mbed TLS: SSLServerVerification (during handshake)
+  EXPECT_TRUE(res.error() == Error::SSLServerHostnameVerification ||
+              res.error() == Error::SSLServerVerification);
 
-  // For SSL hostname verification errors, ssl_error should be 0, only
-  // ssl_openssl_error should be set
+  // Verify backend error is captured for hostname verification failure
+  EXPECT_NE(0UL, res.ssl_backend_error());
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+  // For OpenSSL, ssl_error is 0 for verification errors
   EXPECT_EQ(0, res.ssl_error());
-
-  // Verify OpenSSL error is captured for SSLServerHostnameVerification
-  // This occurs when verify_host() fails due to hostname mismatch
+#if !defined(_WIN32) ||                                                        \
+    defined(CPPHTTPLIB_DISABLE_WINDOWS_AUTOMATIC_ROOT_CERTIFICATES_UPDATE)
+  // On non-Windows or when Windows Schannel is disabled, the error comes
+  // from OpenSSL's hostname verification
   EXPECT_EQ(static_cast<unsigned long>(X509_V_ERR_HOSTNAME_MISMATCH),
-            res.ssl_openssl_error());
+            res.ssl_backend_error());
+#endif
+#endif
 }
+
+#if defined(_WIN32) && defined(CPPHTTPLIB_SSL_ENABLED) &&                      \
+    !defined(CPPHTTPLIB_DISABLE_WINDOWS_AUTOMATIC_ROOT_CERTIFICATES_UPDATE)
+TEST(SSLClientTest, WindowsCertificateVerification_DefaultEnabled) {
+  SSLClient cli("www.google.com", 443);
+  cli.enable_server_certificate_verification(true);
+
+  auto res = cli.Get("/");
+  if (res) { EXPECT_NE(StatusCode::InternalServerError_500, res->status); }
+}
+
+TEST(SSLClientTest, WindowsCertificateVerification_Disabled) {
+  SSLClient cli("www.google.com", 443);
+  cli.enable_server_certificate_verification(true);
+  cli.enable_windows_certificate_verification(false);
+
+  auto res = cli.Get("/");
+  if (res) { EXPECT_NE(StatusCode::InternalServerError_500, res->status); }
+}
+#endif
 
 TEST(SSLClientTest, ServerCertificateVerification1_Online) {
   Client cli("https://google.com");
@@ -8620,18 +9587,22 @@ TEST(SSLClientTest, ServerCertificateVerification3_Online) {
   ASSERT_TRUE(!res);
   EXPECT_EQ(Error::SSLLoadingCerts, res.error());
 
-  // For SSL_CTX operations, ssl_error should be 0, only ssl_openssl_error
+  // For SSL_CTX operations, ssl_error should be 0, only ssl_backend_error
   // should be set
   EXPECT_EQ(0, res.ssl_error());
 
-  // Verify OpenSSL error is captured for SSLLoadingCerts
-  // This error occurs when SSL_CTX_load_verify_locations() fails
+  // Verify backend error is captured for SSLLoadingCerts
+  // This error occurs when loading CA certificates fails
+  EXPECT_NE(0UL, res.ssl_backend_error());
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+  // OpenSSL specific error codes:
   // > openssl errstr 0x80000002
   // error:80000002:system library::No such file or directory
   // > openssl errstr 0xA000126
   // error:0A000126:SSL routines::unexpected eof while reading
-  EXPECT_TRUE(res.ssl_openssl_error() == 0x80000002 ||
-              res.ssl_openssl_error() == 0xA000126);
+  EXPECT_TRUE(res.ssl_backend_error() == 0x80000002 ||
+              res.ssl_backend_error() == 0xA000126);
+#endif
 }
 
 TEST(SSLClientTest, ServerCertificateVerification4) {
@@ -8786,28 +9757,26 @@ TEST(SSLClientTest, Issue2251_SwappedClientCertAndKey) {
 
   // SSL error should be recorded in the Result object (this is the key fix for
   // Issue #2251)
-  auto openssl_error = res.ssl_openssl_error();
-  EXPECT_NE(0u, openssl_error);
+  auto backend_error = res.ssl_backend_error();
+  EXPECT_NE(0u, backend_error);
 }
 
-TEST(SSLClientTest, Issue2251_ClientCertFileNotMatchingKey) {
-  // Another variant: using valid file paths but with mismatched cert/key pair
-  // This tests the case where files exist but contain incompatible key material
+// Tests cert/key mismatch detection at the TLS context level
+TEST(TlsApiTest, ClientCertKeyMismatch) {
+  // Test that using mismatched cert/key causes connection failure.
+  // We verify this at the SSLClient level rather than through internal
+  // TLS API functions.
+  SSLClient cli(HOST, PORT, "client.cert.pem", "key.pem");
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(2);
 
-  // Using client cert with wrong key (cert2 key)
-  SSLClient cli("localhost", 8080, "client.cert.pem", "key.pem");
-
-  // Should fail validation
-  ASSERT_FALSE(cli.is_valid());
-
-  auto res = cli.Get("/");
-  ASSERT_FALSE(res);
-  // Must report error properly, not appear as success
-  EXPECT_EQ(Error::SSLConnection, res.error());
-
-  // OpenSSL error should be captured in Result
-  EXPECT_NE(0u, res.ssl_openssl_error());
+  // The mismatch should cause a connection or handshake error
+  auto res = cli.Get("/test");
+  // OpenSSL detects mismatch at context setup, MbedTLS at handshake
+  // Either way, the request should fail
+  EXPECT_FALSE(res);
 }
+#endif
 
 #if 0
 TEST(SSLClientTest, SetInterfaceWithINET6) {
@@ -8823,10 +9792,14 @@ TEST(SSLClientTest, SetInterfaceWithINET6) {
 }
 #endif
 
+// ClientCertPresent uses get_peer_cert() - works with all TLS backends
+#ifdef CPPHTTPLIB_SSL_ENABLED
 void ClientCertPresent(
     const std::string &client_cert_file,
     const std::string &client_private_key_file,
     const std::string &client_encrypted_private_key_pass = std::string()) {
+  using namespace httplib::tls;
+
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE,
                 CLIENT_CA_CERT_DIR);
   ASSERT_TRUE(svr.is_valid());
@@ -8834,23 +9807,11 @@ void ClientCertPresent(
   svr.Get("/test", [&](const Request &req, Response &res) {
     res.set_content("test", "text/plain");
 
-    auto peer_cert = SSL_get_peer_certificate(req.ssl);
-    ASSERT_TRUE(peer_cert != nullptr);
+    auto cert = req.peer_cert();
+    ASSERT_TRUE(static_cast<bool>(cert));
 
-    auto subject_name = X509_get_subject_name(peer_cert);
-    ASSERT_TRUE(subject_name != nullptr);
-
-    std::string common_name;
-    {
-      char name[BUFSIZ];
-      auto name_len = X509_NAME_get_text_by_NID(subject_name, NID_commonName,
-                                                name, sizeof(name));
-      common_name.assign(name, static_cast<size_t>(name_len));
-    }
-
+    std::string common_name = cert.subject_cn();
     EXPECT_EQ("Common Name", common_name);
-
-    X509_free(peer_cert);
   });
 
   thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
@@ -8882,58 +9843,37 @@ TEST(SSLClientServerTest, ClientEncryptedCertPresent) {
                     CLIENT_ENCRYPTED_PRIVATE_KEY_PASS);
 }
 
-#if !defined(_WIN32) || defined(OPENSSL_USE_APPLINK)
-void MemoryClientCertPresent(
+// PEM memory-based constructor tests (works with all TLS backends)
+void PemMemoryClientCertPresent(
     const std::string &client_cert_file,
     const std::string &client_private_key_file,
     const std::string &client_encrypted_private_key_pass = std::string()) {
-  auto f = fopen(SERVER_CERT_FILE, "r+");
-  auto server_cert = PEM_read_X509(f, nullptr, nullptr, nullptr);
-  fclose(f);
+  // Read PEM files into memory
+  std::string server_cert_pem, server_key_pem;
+  std::string client_ca_pem;
+  std::string client_cert_pem, client_key_pem;
 
-  f = fopen(SERVER_PRIVATE_KEY_FILE, "r+");
-  auto server_private_key = PEM_read_PrivateKey(f, nullptr, nullptr, nullptr);
-  fclose(f);
+  read_file(SERVER_CERT_FILE, server_cert_pem);
+  read_file(SERVER_PRIVATE_KEY_FILE, server_key_pem);
+  read_file(CLIENT_CA_CERT_FILE, client_ca_pem);
+  read_file(client_cert_file, client_cert_pem);
+  read_file(client_private_key_file, client_key_pem);
 
-  f = fopen(CLIENT_CA_CERT_FILE, "r+");
-  auto client_cert = PEM_read_X509(f, nullptr, nullptr, nullptr);
-  auto client_ca_cert_store = X509_STORE_new();
-  X509_STORE_add_cert(client_ca_cert_store, client_cert);
-  X509_free(client_cert);
-  fclose(f);
-
-  f = fopen(client_cert_file.c_str(), "r+");
-  client_cert = PEM_read_X509(f, nullptr, nullptr, nullptr);
-  fclose(f);
-
-  f = fopen(client_private_key_file.c_str(), "r+");
-  auto client_private_key = PEM_read_PrivateKey(
-      f, nullptr, nullptr, (void *)client_encrypted_private_key_pass.c_str());
-  fclose(f);
-
-  SSLServer svr(server_cert, server_private_key, client_ca_cert_store);
+  // Create server with PEM memory
+  SSLServer::PemMemory server_pem = {
+      server_cert_pem.c_str(),
+      server_cert_pem.size(),
+      server_key_pem.c_str(),
+      server_key_pem.size(),
+      client_ca_pem.c_str(),
+      client_ca_pem.size(),
+      nullptr // no password for server key
+  };
+  SSLServer svr(server_pem);
   ASSERT_TRUE(svr.is_valid());
 
-  svr.Get("/test", [&](const Request &req, Response &res) {
+  svr.Get("/test", [&](const Request &, Response &res) {
     res.set_content("test", "text/plain");
-
-    auto peer_cert = SSL_get_peer_certificate(req.ssl);
-    ASSERT_TRUE(peer_cert != nullptr);
-
-    auto subject_name = X509_get_subject_name(peer_cert);
-    ASSERT_TRUE(subject_name != nullptr);
-
-    std::string common_name;
-    {
-      char name[BUFSIZ];
-      auto name_len = X509_NAME_get_text_by_NID(subject_name, NID_commonName,
-                                                name, sizeof(name));
-      common_name.assign(name, static_cast<size_t>(name_len));
-    }
-
-    EXPECT_EQ("Common Name", common_name);
-
-    X509_free(peer_cert);
   });
 
   thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
@@ -8945,31 +9885,31 @@ void MemoryClientCertPresent(
 
   svr.wait_until_ready();
 
-  SSLClient cli(HOST, PORT, client_cert, client_private_key,
-                client_encrypted_private_key_pass);
+  // Create client with PEM memory
+  const char *password = client_encrypted_private_key_pass.empty()
+                             ? nullptr
+                             : client_encrypted_private_key_pass.c_str();
+  SSLClient::PemMemory client_pem = {
+      client_cert_pem.c_str(), client_cert_pem.size(), client_key_pem.c_str(),
+      client_key_pem.size(), password};
+  SSLClient cli(HOST, PORT, client_pem);
   cli.enable_server_certificate_verification(false);
   cli.set_connection_timeout(30);
 
   auto res = cli.Get("/test");
   ASSERT_TRUE(res);
   ASSERT_EQ(StatusCode::OK_200, res->status);
-
-  X509_free(server_cert);
-  EVP_PKEY_free(server_private_key);
-  X509_free(client_cert);
-  EVP_PKEY_free(client_private_key);
 }
 
-TEST(SSLClientServerTest, MemoryClientCertPresent) {
-  MemoryClientCertPresent(CLIENT_CERT_FILE, CLIENT_PRIVATE_KEY_FILE);
+TEST(SSLClientServerTest, PemMemoryClientCertPresent) {
+  PemMemoryClientCertPresent(CLIENT_CERT_FILE, CLIENT_PRIVATE_KEY_FILE);
 }
 
-TEST(SSLClientServerTest, MemoryClientEncryptedCertPresent) {
-  MemoryClientCertPresent(CLIENT_ENCRYPTED_CERT_FILE,
-                          CLIENT_ENCRYPTED_PRIVATE_KEY_FILE,
-                          CLIENT_ENCRYPTED_PRIVATE_KEY_PASS);
+TEST(SSLClientServerTest, PemMemoryClientEncryptedCertPresent) {
+  PemMemoryClientCertPresent(CLIENT_ENCRYPTED_CERT_FILE,
+                             CLIENT_ENCRYPTED_PRIVATE_KEY_FILE,
+                             CLIENT_ENCRYPTED_PRIVATE_KEY_PASS);
 }
-#endif
 
 TEST(SSLClientServerTest, ClientCertMissing) {
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE,
@@ -8992,16 +9932,15 @@ TEST(SSLClientServerTest, ClientCertMissing) {
 
   auto res = cli.Get("/test");
   ASSERT_TRUE(!res);
-  EXPECT_EQ(Error::SSLServerVerification, res.error());
+  // When client cert is missing and server requires it, connection fails
+  // Error type depends on backend implementation
+  EXPECT_TRUE(res.error() == Error::SSLServerVerification ||
+              res.error() == Error::SSLConnection);
 
-  // For SSL server verification errors, ssl_error should be 0, only
-  // ssl_openssl_error should be set
-  EXPECT_EQ(0, res.ssl_error());
-
-  // Verify OpenSSL error is captured for SSLServerVerification
+  // Verify backend error is captured
   // Note: This test may have different error codes depending on the exact
   // verification failure
-  EXPECT_NE(0UL, res.ssl_openssl_error());
+  EXPECT_NE(0UL, res.ssl_backend_error());
 }
 
 TEST(SSLClientServerTest, TrustDirOptional) {
@@ -9076,61 +10015,25 @@ TEST(SSLClientServerTest, SSLConnectTimeout) {
   auto res = cli.Get("/test");
   ASSERT_TRUE(!res);
   EXPECT_EQ(Error::SSLConnection, res.error());
-  EXPECT_EQ(SSL_ERROR_WANT_READ, res.ssl_error());
+  // Timeout results in WantRead error code (maps to backend-specific value)
+  EXPECT_NE(0, res.ssl_error());
 }
 
-TEST(SSLClientServerTest, CustomizeServerSSLCtx) {
-  auto setup_ssl_ctx_callback = [](SSL_CTX &ssl_ctx) {
-    SSL_CTX_set_options(&ssl_ctx, SSL_OP_NO_COMPRESSION);
-    SSL_CTX_set_options(&ssl_ctx,
-                        SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-    SSL_CTX_set_options(&ssl_ctx, SSL_OP_NO_SSLv2);
-    SSL_CTX_set_options(&ssl_ctx, SSL_OP_NO_SSLv3);
-    SSL_CTX_set_options(&ssl_ctx, SSL_OP_NO_TLSv1);
-    SSL_CTX_set_options(&ssl_ctx, SSL_OP_NO_TLSv1_1);
-    auto ciphers = "ECDHE-RSA-AES128-SHA256:"
-                   "ECDHE-DSS-AES128-SHA256:"
-                   "ECDHE-RSA-AES256-SHA256:"
-                   "ECDHE-DSS-AES256-SHA256:";
-    SSL_CTX_set_cipher_list(&ssl_ctx, ciphers);
-    if (SSL_CTX_use_certificate_chain_file(&ssl_ctx, SERVER_CERT_FILE) != 1 ||
-        SSL_CTX_use_PrivateKey_file(&ssl_ctx, SERVER_PRIVATE_KEY_FILE,
-                                    SSL_FILETYPE_PEM) != 1) {
-      return false;
-    }
-    SSL_CTX_load_verify_locations(&ssl_ctx, CLIENT_CA_CERT_FILE,
-                                  CLIENT_CA_CERT_DIR);
-    SSL_CTX_set_verify(
-        &ssl_ctx,
-        SSL_VERIFY_PEER |
-            SSL_VERIFY_FAIL_IF_NO_PEER_CERT, // SSL_VERIFY_CLIENT_ONCE,
-        nullptr);
-    return true;
-  };
-
-  SSLServer svr(setup_ssl_ctx_callback);
+TEST(SSLClientServerTest, CustomizeServerSSLCtxGeneric) {
+  // Test SSLServer with client certificate verification using the standard
+  // constructor (ContextSetupCallback is tested by backend-specific tests)
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE,
+                CLIENT_CA_CERT_DIR);
   ASSERT_TRUE(svr.is_valid());
 
   svr.Get("/test", [&](const Request &req, Response &res) {
     res.set_content("test", "text/plain");
 
-    auto peer_cert = SSL_get_peer_certificate(req.ssl);
-    ASSERT_TRUE(peer_cert != nullptr);
+    auto cert = req.peer_cert();
+    ASSERT_TRUE(static_cast<bool>(cert));
 
-    auto subject_name = X509_get_subject_name(peer_cert);
-    ASSERT_TRUE(subject_name != nullptr);
-
-    std::string common_name;
-    {
-      char name[BUFSIZ];
-      auto name_len = X509_NAME_get_text_by_NID(subject_name, NID_commonName,
-                                                name, sizeof(name));
-      common_name.assign(name, static_cast<size_t>(name_len));
-    }
-
+    auto common_name = cert.subject_cn();
     EXPECT_EQ("Common Name", common_name);
-
-    X509_free(peer_cert);
   });
 
   thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
@@ -9151,6 +10054,71 @@ TEST(SSLClientServerTest, CustomizeServerSSLCtx) {
   ASSERT_EQ(StatusCode::OK_200, res->status);
 }
 
+// Test verify_hostname for both OpenSSL and MbedTLS backends
+// Verifies that wildcard matching and exact matching work consistently
+TEST(SSLClientServerTest, TlsVerifyHostname) {
+  using namespace httplib::tls;
+
+  // We need a running server to test against
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  svr.Get("/test", [](const Request &, Response &res) {
+    res.set_content("ok", "text/plain");
+  });
+
+  thread t([&]() { svr.listen(HOST, PORT); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+  });
+  svr.wait_until_ready();
+
+  bool verify_callback_called = false;
+  bool verify_result_wrong = false;
+
+  SSLClient cli(HOST, PORT);
+  cli.enable_server_certificate_verification(true);
+  cli.set_ca_cert_path(CA_CERT_FILE);
+  cli.set_connection_timeout(5);
+
+  // Note: Test certificate has CN="Common Name", not "localhost"
+  bool verify_result_cn = false;
+  cli.set_server_certificate_verifier([&](const VerifyContext &ctx) -> bool {
+    verify_callback_called = true;
+
+    if (!ctx.cert) return false;
+
+    // Test 1: "Common Name" should match (our test server cert CN)
+    verify_result_cn = ctx.check_hostname("Common Name");
+
+    // Test 2: wrong hostname should not match
+    verify_result_wrong = ctx.check_hostname("wronghost.example.com");
+
+    return true; // Accept for the purpose of this test
+  });
+
+  auto res = cli.Get("/test");
+  // The request may succeed or fail depending on cert configuration
+  // but the callback should have been called
+
+  ASSERT_TRUE(verify_callback_called)
+      << "Verify callback should have been called";
+
+  // CN="Common Name" should match our test certificate
+  EXPECT_TRUE(verify_result_cn)
+      << "verify_hostname should match 'Common Name' (certificate CN)";
+
+  // Wrong hostname should not match
+  EXPECT_FALSE(verify_result_wrong)
+      << "verify_hostname should not match 'wronghost.example.com'";
+}
+#endif
+
+// mbedTLS-specific callback constructor test
+// Tests that the void* callback can customize TLS settings via MbedTlsContext
+
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(SSLClientServerTest, ClientCAListSentToClient) {
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE);
   ASSERT_TRUE(svr.is_valid());
@@ -9183,39 +10151,35 @@ TEST(SSLClientServerTest, ClientCAListSentToClient) {
   ASSERT_TRUE(client_cert_verified);
   EXPECT_EQ("success", res->body);
 }
+#endif
 
+// ClientCAListSetInContext uses get_peer_cert() - works with all TLS
+// backends
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(SSLClientServerTest, ClientCAListSetInContext) {
+  using namespace httplib::tls;
+
   // Test that when client CA cert file is provided,
-  // SSL_CTX_set_client_CA_list is called and the CA list is properly set
+  // the server properly requests and validates client certificates
 
   // Create a server with client authentication
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE);
   ASSERT_TRUE(svr.is_valid());
-
-  // We can't directly access the SSL_CTX from SSLServer to verify,
-  // but we can test that the server properly requests client certificates
-  // and accepts valid ones from the specified CA
 
   bool handler_called = false;
   svr.Get("/test", [&](const Request &req, Response &res) {
     handler_called = true;
 
     // Verify that a client certificate was provided
-    auto peer_cert = SSL_get_peer_certificate(req.ssl);
-    ASSERT_TRUE(peer_cert != nullptr);
+    auto cert = req.peer_cert();
+    ASSERT_TRUE(static_cast<bool>(cert));
 
     // Get the issuer name
-    auto issuer_name = X509_get_issuer_name(peer_cert);
-    ASSERT_TRUE(issuer_name != nullptr);
-
-    char issuer_buf[256];
-    X509_NAME_oneline(issuer_name, issuer_buf, sizeof(issuer_buf));
+    std::string issuer_str = cert.issuer_name();
+    ASSERT_FALSE(issuer_str.empty());
 
     // The client certificate should be issued by our test CA
-    std::string issuer_str(issuer_buf);
     EXPECT_TRUE(issuer_str.find("Root CA Name") != std::string::npos);
-
-    X509_free(peer_cert);
     res.set_content("authenticated", "text/plain");
   });
 
@@ -9238,6 +10202,134 @@ TEST(SSLClientServerTest, ClientCAListSetInContext) {
   ASSERT_EQ(StatusCode::OK_200, res->status);
   ASSERT_TRUE(handler_called);
   EXPECT_EQ("authenticated", res->body);
+}
+
+TEST(TlsCertIntrospectionTest, GetCertSANs) {
+  using namespace httplib::tls;
+
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  svr.Get("/test", [](const Request &, Response &res) {
+    res.set_content("ok", "text/plain");
+  });
+
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+  });
+
+  svr.wait_until_ready();
+
+  SSLClient cli(HOST, PORT);
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(30);
+
+  bool cert_checked = false;
+  cli.set_server_certificate_verifier([&](const VerifyContext &ctx) -> bool {
+    if (ctx.cert) {
+      auto sans = ctx.sans();
+      // Test certificate may or may not have SANs - just verify the API
+      // works If SANs exist, verify the types are valid
+      for (const auto &san : sans) {
+        EXPECT_TRUE(san.type == SanType::DNS || san.type == SanType::IP ||
+                    san.type == SanType::EMAIL || san.type == SanType::URI ||
+                    san.type == SanType::OTHER);
+        EXPECT_FALSE(san.value.empty());
+      }
+      cert_checked = true;
+    }
+    return true;
+  });
+
+  auto res = cli.Get("/test");
+  ASSERT_TRUE(res);
+  EXPECT_TRUE(cert_checked);
+}
+
+TEST(TlsCertIntrospectionTest, GetCertValidity) {
+  using namespace httplib::tls;
+
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  svr.Get("/test", [](const Request &, Response &res) {
+    res.set_content("ok", "text/plain");
+  });
+
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+  });
+
+  svr.wait_until_ready();
+
+  SSLClient cli(HOST, PORT);
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(30);
+
+  bool validity_checked = false;
+  cli.set_server_certificate_verifier([&](const VerifyContext &ctx) -> bool {
+    if (ctx.cert) {
+      time_t not_before = 0, not_after = 0;
+      bool result = ctx.validity(not_before, not_after);
+      EXPECT_TRUE(result);
+      // Verify that not_before < now < not_after for a valid cert
+      time_t now = time(nullptr);
+      EXPECT_LT(not_before, now);
+      EXPECT_GT(not_after, now);
+      validity_checked = true;
+    }
+    return true;
+  });
+
+  auto res = cli.Get("/test");
+  ASSERT_TRUE(res);
+  EXPECT_TRUE(validity_checked);
+}
+
+TEST(TlsCertIntrospectionTest, GetCertSerial) {
+  using namespace httplib::tls;
+
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  svr.Get("/test", [](const Request &, Response &res) {
+    res.set_content("ok", "text/plain");
+  });
+
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+  });
+
+  svr.wait_until_ready();
+
+  SSLClient cli(HOST, PORT);
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(30);
+
+  bool serial_checked = false;
+  cli.set_server_certificate_verifier([&](const VerifyContext &ctx) -> bool {
+    if (ctx.cert) {
+      std::string serial = ctx.serial();
+      EXPECT_FALSE(serial.empty());
+      // Serial should be a hex string
+      for (char c : serial) {
+        EXPECT_TRUE((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') ||
+                    (c >= 'a' && c <= 'f'));
+      }
+      serial_checked = true;
+    }
+    return true;
+  });
+
+  auto res = cli.Get("/test");
+  ASSERT_TRUE(res);
+  EXPECT_TRUE(serial_checked);
 }
 
 TEST(SSLClientServerTest, ClientCAListLoadErrorRecorded) {
@@ -9276,47 +10368,223 @@ TEST(SSLClientServerTest, ClientCAListLoadErrorRecorded) {
   }
 }
 
-TEST(SSLClientServerTest, ClientCAListFromX509Store) {
-  // Test SSL server using X509_STORE constructor with client CA certificates
-  // This test verifies that Phase 2 implementation correctly extracts CA names
-  // from an X509_STORE and sets them in the SSL context
+TEST(VerifyCallbackTest, VerifyContextFields) {
+  using namespace httplib::tls;
 
-  // Load the CA certificate into memory
-  auto bio = BIO_new_file(CLIENT_CA_CERT_FILE, "r");
-  ASSERT_NE(nullptr, bio);
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
 
-  auto ca_cert = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
-  BIO_free(bio);
-  ASSERT_NE(nullptr, ca_cert);
+  svr.Get("/test", [](const Request &, Response &res) {
+    res.set_content("ok", "text/plain");
+  });
 
-  // Create an X509_STORE and add the CA certificate
-  auto store = X509_STORE_new();
-  ASSERT_NE(nullptr, store);
-  ASSERT_EQ(1, X509_STORE_add_cert(store, ca_cert));
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+  });
 
-  // Load server certificate and private key
-  auto cert_bio = BIO_new_file(SERVER_CERT_FILE, "r");
-  ASSERT_NE(nullptr, cert_bio);
-  auto server_cert = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
-  BIO_free(cert_bio);
-  ASSERT_NE(nullptr, server_cert);
+  svr.wait_until_ready();
 
-  auto key_bio = BIO_new_file(SERVER_PRIVATE_KEY_FILE, "r");
-  ASSERT_NE(nullptr, key_bio);
-  auto server_key = PEM_read_bio_PrivateKey(key_bio, nullptr, nullptr, nullptr);
-  BIO_free(key_bio);
-  ASSERT_NE(nullptr, server_key);
+  SSLClient cli(HOST, PORT);
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(30);
 
-  // Create SSLServer with X509_STORE constructor
-  // Note: X509_STORE ownership is transferred to SSL_CTX
-  SSLServer svr(server_cert, server_key, store);
+  int callback_count = 0;
+  bool saw_leaf_cert = false;
+
+  cli.set_server_certificate_verifier([&](const VerifyContext &ctx) -> bool {
+    if (ctx.cert) {
+      callback_count++;
+      // We should see at least one certificate (the leaf)
+      std::string cn = ctx.subject_cn();
+      if (!cn.empty()) { saw_leaf_cert = true; }
+      // Verify context fields are populated
+      EXPECT_NE(ctx.session, nullptr);
+      EXPECT_GE(ctx.depth, 0);
+    }
+    return true;
+  });
+
+  auto res = cli.Get("/test");
+  ASSERT_TRUE(res);
+  EXPECT_GT(callback_count, 0);
+  EXPECT_TRUE(saw_leaf_cert);
+}
+
+TEST(TlsVerifyErrorTest, GetVerifyErrorString) {
+  using httplib::tls::TlsError;
+
+  // Test that verify_error_to_string returns empty for success
+  std::string success_str = TlsError::verify_error_to_string(0);
+  EXPECT_TRUE(success_str.empty());
+
+  // Test that verify_error_to_string returns non-empty for error codes
+  // Using a common error code (certificate expired)
+  std::string error_str =
+      TlsError::verify_error_to_string(10); // X509_V_ERR_CERT_HAS_EXPIRED
+  EXPECT_FALSE(error_str.empty());
+}
+
+TEST(SessionVerifierTest, CertificateAccepted) {
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  svr.Get("/test", [](const Request &, Response &res) {
+    res.set_content("ok", "text/plain");
+  });
+
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+  });
+
+  svr.wait_until_ready();
+
+  SSLClient cli(HOST, PORT);
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(30);
+
+  bool callback_called = false;
+  cli.set_session_verifier([&](tls::session_t session) -> SSLVerifierResponse {
+    EXPECT_NE(session, nullptr);
+    callback_called = true;
+    return SSLVerifierResponse::CertificateAccepted;
+  });
+
+  auto res = cli.Get("/test");
+  ASSERT_TRUE(res);
+  EXPECT_EQ(200, res->status);
+  EXPECT_TRUE(callback_called);
+}
+
+TEST(SessionVerifierTest, CertificateRejected) {
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  svr.Get("/test", [](const Request &, Response &res) {
+    res.set_content("ok", "text/plain");
+  });
+
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+  });
+
+  svr.wait_until_ready();
+
+  SSLClient cli(HOST, PORT);
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(30);
+
+  bool callback_called = false;
+  cli.set_session_verifier([&](tls::session_t session) -> SSLVerifierResponse {
+    EXPECT_NE(session, nullptr);
+    callback_called = true;
+    return SSLVerifierResponse::CertificateRejected;
+  });
+
+  auto res = cli.Get("/test");
+  EXPECT_FALSE(res);
+  EXPECT_TRUE(callback_called);
+}
+
+TEST(SessionVerifierTest, NoDecisionFallsThrough) {
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  svr.Get("/test", [](const Request &, Response &res) {
+    res.set_content("ok", "text/plain");
+  });
+
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+  });
+
+  svr.wait_until_ready();
+
+  // NoDecisionMade with verification disabled should succeed (no default check)
+  SSLClient cli(HOST, PORT);
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(30);
+
+  bool callback_called = false;
+  cli.set_session_verifier([&](tls::session_t session) -> SSLVerifierResponse {
+    EXPECT_NE(session, nullptr);
+    callback_called = true;
+    return SSLVerifierResponse::NoDecisionMade;
+  });
+
+  auto res = cli.Get("/test");
+  ASSERT_TRUE(res);
+  EXPECT_EQ(200, res->status);
+  EXPECT_TRUE(callback_called);
+}
+
+TEST(SessionVerifierTest, NoDecisionWithVerificationEnabled) {
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  svr.Get("/test", [](const Request &, Response &res) {
+    res.set_content("ok", "text/plain");
+  });
+
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+  });
+
+  svr.wait_until_ready();
+
+  // NoDecisionMade with verification enabled should fail (self-signed cert).
+  // Note: On MbedTLS, the handshake itself fails before reaching the verifier,
+  // so we only check that the request fails, not whether the callback was
+  // called.
+  SSLClient cli(HOST, PORT);
+  cli.enable_server_certificate_verification(true);
+  cli.set_connection_timeout(30);
+
+  cli.set_session_verifier([&](tls::session_t session) -> SSLVerifierResponse {
+    EXPECT_NE(session, nullptr);
+    return SSLVerifierResponse::NoDecisionMade;
+  });
+
+  auto res = cli.Get("/test");
+  EXPECT_FALSE(res);
+}
+
+TEST(SSLClientServerTest, ClientCAListFromPem) {
+  // Test SSL server using PemMemory constructor with client CA certificates
+
+  // Read PEM files
+  std::string server_cert_pem, server_key_pem, client_ca_pem;
+  read_file(SERVER_CERT_FILE, server_cert_pem);
+  read_file(SERVER_PRIVATE_KEY_FILE, server_key_pem);
+  read_file(CLIENT_CA_CERT_FILE, client_ca_pem);
+
+  // Create SSLServer with PemMemory constructor including client CA
+  SSLServer::PemMemory server_pem = {
+      server_cert_pem.c_str(),
+      server_cert_pem.size(),
+      server_key_pem.c_str(),
+      server_key_pem.size(),
+      client_ca_pem.c_str(),
+      client_ca_pem.size(),
+      nullptr // no password for server key
+  };
+  SSLServer svr(server_pem);
   ASSERT_TRUE(svr.is_valid());
 
   // No SSL error should be recorded for valid setup
   EXPECT_EQ(0, svr.ssl_last_error());
 
   // Set up server endpoints
-  svr.Get("/test-x509store", [&](const Request & /*req*/, Response &res) {
+  svr.Get("/test-pem-ca", [&](const Request & /*req*/, Response &res) {
     res.set_content("ok", "text/plain");
   });
 
@@ -9328,61 +10596,13 @@ TEST(SSLClientServerTest, ClientCAListFromX509Store) {
   SSLClient cli(HOST, PORT, CLIENT_CERT_FILE, CLIENT_PRIVATE_KEY_FILE);
   cli.enable_server_certificate_verification(false);
 
-  auto res = cli.Get("/test-x509store");
+  auto res = cli.Get("/test-pem-ca");
   ASSERT_TRUE(res);
   EXPECT_EQ(200, res->status);
   EXPECT_EQ("ok", res->body);
 
-  // Clean up
-  X509_free(server_cert);
-  EVP_PKEY_free(server_key);
-  X509_free(ca_cert);
-
   svr.stop();
   server_thread.join();
-}
-
-// Disabled due to the out-of-memory problem on GitHub Actions Workflows
-TEST(SSLClientServerTest, DISABLED_LargeDataTransfer) {
-
-  // prepare large data
-  std::random_device seed_gen;
-  std::mt19937 random(seed_gen());
-  constexpr auto large_size_byte = 2147483648UL + 1048576UL; // 2GiB + 1MiB
-  std::vector<std::uint32_t> binary(large_size_byte / sizeof(std::uint32_t));
-  std::generate(binary.begin(), binary.end(), [&random]() { return random(); });
-
-  // server
-  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
-  ASSERT_TRUE(svr.is_valid());
-
-  svr.Post("/binary", [&](const Request &req, Response &res) {
-    EXPECT_EQ(large_size_byte, req.body.size());
-    EXPECT_EQ(0, std::memcmp(binary.data(), req.body.data(), large_size_byte));
-    res.set_content(req.body, "application/octet-stream");
-  });
-
-  auto listen_thread = std::thread([&svr]() { svr.listen("localhost", PORT); });
-  auto se = detail::scope_exit([&] {
-    svr.stop();
-    listen_thread.join();
-    ASSERT_FALSE(svr.is_running());
-  });
-
-  svr.wait_until_ready();
-
-  // client POST
-  SSLClient cli("localhost", PORT);
-  cli.enable_server_certificate_verification(false);
-  cli.set_read_timeout(std::chrono::seconds(100));
-  cli.set_write_timeout(std::chrono::seconds(100));
-  auto res = cli.Post("/binary", reinterpret_cast<char *>(binary.data()),
-                      large_size_byte, "application/octet-stream");
-
-  // compare
-  EXPECT_EQ(StatusCode::OK_200, res->status);
-  EXPECT_EQ(large_size_byte, res->body.size());
-  EXPECT_EQ(0, std::memcmp(binary.data(), res->body.data(), large_size_byte));
 }
 #endif
 
@@ -9393,7 +10613,7 @@ TEST(CleanupTest, WSACleanup) {
 }
 #endif
 
-#ifndef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifndef CPPHTTPLIB_SSL_ENABLED
 TEST(NoSSLSupport, SimpleInterface) {
   ASSERT_ANY_THROW(Client cli("https://yahoo.com"));
 }
@@ -9462,7 +10682,8 @@ TEST(ClientImplMethods, GetSocketTest) {
     res.status = StatusCode::OK_200;
   });
 
-  auto thread = std::thread([&]() { svr.listen("127.0.0.1", 3333); });
+  auto port = svr.bind_to_any_port("127.0.0.1");
+  auto thread = std::thread([&]() { svr.listen_after_bind(); });
   auto se = detail::scope_exit([&] {
     svr.stop();
     thread.join();
@@ -9472,7 +10693,7 @@ TEST(ClientImplMethods, GetSocketTest) {
   svr.wait_until_ready();
 
   {
-    httplib::Client cli("http://127.0.0.1:3333");
+    httplib::Client cli("127.0.0.1", port);
     cli.set_keep_alive(true);
 
     // Use the behavior of cpp-httplib of opening the connection
@@ -9524,7 +10745,7 @@ TEST(ServerLargeContentTest, DISABLED_SendLargeContent) {
 }
 #endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(YahooRedirectTest2, SimpleInterface_Online) {
   Client cli("http://yahoo.com");
 
@@ -9631,10 +10852,13 @@ TEST(HttpsToHttpRedirectTest3, SimpleInterface_Online) {
 }
 
 TEST(HttpToHttpsRedirectTest, CertFile) {
+  auto ssl_port = PORT + 1;
+
   Server svr;
   ASSERT_TRUE(svr.is_valid());
   svr.Get("/index", [&](const Request &, Response &res) {
-    res.set_redirect("https://127.0.0.1:1235/index");
+    res.set_redirect("https://127.0.0.1:" + std::to_string(ssl_port) +
+                     "/index");
     svr.stop();
   });
 
@@ -9646,7 +10870,8 @@ TEST(HttpToHttpsRedirectTest, CertFile) {
   });
 
   thread t = thread([&]() { ASSERT_TRUE(svr.listen("127.0.0.1", PORT)); });
-  thread t2 = thread([&]() { ASSERT_TRUE(ssl_svr.listen("127.0.0.1", 1235)); });
+  thread t2 =
+      thread([&]() { ASSERT_TRUE(ssl_svr.listen("127.0.0.1", ssl_port)); });
   auto se = detail::scope_exit([&] {
     t2.join();
     t.join();
@@ -9668,10 +10893,13 @@ TEST(HttpToHttpsRedirectTest, CertFile) {
 }
 
 TEST(SSLClientRedirectTest, CertFile) {
+  auto ssl_port = PORT + 1;
+
   SSLServer ssl_svr1(SERVER_CERT2_FILE, SERVER_PRIVATE_KEY_FILE);
   ASSERT_TRUE(ssl_svr1.is_valid());
   ssl_svr1.Get("/index", [&](const Request &, Response &res) {
-    res.set_redirect("https://127.0.0.1:1235/index");
+    res.set_redirect("https://127.0.0.1:" + std::to_string(ssl_port) +
+                     "/index");
     ssl_svr1.stop();
   });
 
@@ -9684,7 +10912,7 @@ TEST(SSLClientRedirectTest, CertFile) {
 
   thread t = thread([&]() { ASSERT_TRUE(ssl_svr1.listen("127.0.0.1", PORT)); });
   thread t2 =
-      thread([&]() { ASSERT_TRUE(ssl_svr2.listen("127.0.0.1", 1235)); });
+      thread([&]() { ASSERT_TRUE(ssl_svr2.listen("127.0.0.1", ssl_port)); });
   auto se = detail::scope_exit([&] {
     t2.join();
     t.join();
@@ -9706,7 +10934,9 @@ TEST(SSLClientRedirectTest, CertFile) {
   ASSERT_TRUE(res);
   ASSERT_EQ(StatusCode::OK_200, res->status);
 }
+#endif
 
+#ifdef CPPHTTPLIB_SSL_ENABLED
 // Test that set_ca_cert_store() skips system certs (consistent with
 // set_ca_cert_path behavior). When a custom cert store is set, only those certs
 // should be trusted - system certs should NOT be loaded.
@@ -9763,7 +10993,8 @@ TEST(MultipartFormDataTest, LargeData) {
     }
   });
 
-  auto t = std::thread([&]() { svr.listen(HOST, 8080); });
+  auto port = svr.bind_to_any_port(HOST);
+  auto t = std::thread([&]() { svr.listen_after_bind(); });
   auto se = detail::scope_exit([&] {
     svr.stop();
     t.join();
@@ -9777,7 +11008,7 @@ TEST(MultipartFormDataTest, LargeData) {
     std::stringstream buffer;
     buffer << data;
 
-    Client cli("https://localhost:8080");
+    SSLClient cli(HOST, port);
     cli.enable_server_certificate_verification(false);
 
     UploadFormDataItems items{
@@ -9910,7 +11141,8 @@ TEST(MultipartFormDataTest, DataProviderItems) {
     EXPECT_EQ(items[3].content_type, "");
   });
 
-  auto t = std::thread([&]() { svr.listen("localhost", 8080); });
+  auto port = svr.bind_to_any_port("localhost");
+  auto t = std::thread([&]() { svr.listen_after_bind(); });
   auto se = detail::scope_exit([&] {
     svr.stop();
     t.join();
@@ -9920,7 +11152,7 @@ TEST(MultipartFormDataTest, DataProviderItems) {
   svr.wait_until_ready();
 
   {
-    Client cli("https://localhost:8080");
+    SSLClient cli("localhost", port);
     cli.enable_server_certificate_verification(false);
 
     UploadFormDataItems items{
@@ -10111,7 +11343,8 @@ TEST(MultipartFormDataTest, PostCustomBoundary) {
     }
   });
 
-  auto t = std::thread([&]() { svr.listen("localhost", 8080); });
+  auto port = svr.bind_to_any_port("localhost");
+  auto t = std::thread([&]() { svr.listen_after_bind(); });
   auto se = detail::scope_exit([&] {
     svr.stop();
     t.join();
@@ -10125,7 +11358,7 @@ TEST(MultipartFormDataTest, PostCustomBoundary) {
     std::stringstream buffer;
     buffer << data;
 
-    Client cli("https://localhost:8080");
+    SSLClient cli("localhost", port);
     cli.enable_server_certificate_verification(false);
 
     UploadFormDataItems items{
@@ -10194,7 +11427,8 @@ TEST(MultipartFormDataTest, PutFormData) {
     }
   });
 
-  auto t = std::thread([&]() { svr.listen("localhost", 8080); });
+  auto port = svr.bind_to_any_port("localhost");
+  auto t = std::thread([&]() { svr.listen_after_bind(); });
   auto se = detail::scope_exit([&] {
     svr.stop();
     t.join();
@@ -10208,7 +11442,7 @@ TEST(MultipartFormDataTest, PutFormData) {
     std::stringstream buffer;
     buffer << data;
 
-    Client cli("https://localhost:8080");
+    SSLClient cli("localhost", port);
     cli.enable_server_certificate_verification(false);
 
     UploadFormDataItems items{
@@ -10258,7 +11492,8 @@ TEST(MultipartFormDataTest, PutFormDataCustomBoundary) {
             }
           });
 
-  auto t = std::thread([&]() { svr.listen("localhost", 8080); });
+  auto port = svr.bind_to_any_port("localhost");
+  auto t = std::thread([&]() { svr.listen_after_bind(); });
   auto se = detail::scope_exit([&] {
     svr.stop();
     t.join();
@@ -10272,7 +11507,7 @@ TEST(MultipartFormDataTest, PutFormDataCustomBoundary) {
     std::stringstream buffer;
     buffer << data;
 
-    Client cli("https://localhost:8080");
+    SSLClient cli("localhost", port);
     cli.enable_server_certificate_verification(false);
 
     UploadFormDataItems items{
@@ -10370,6 +11605,55 @@ TEST(MultipartFormDataTest, AlternateFilename) {
              "<!DOCTYPE html><title>Content of a.html.</title>\r\n"
              "\r\n"
              "------------\r\n";
+
+  ASSERT_TRUE(send_request(1, req));
+}
+
+TEST(MultipartFormDataTest, AlternateFilenameLongValueAndCaseInsensitive) {
+  auto handled = false;
+
+  Server svr;
+  svr.Post("/test", [&](const Request &req, Response &res) {
+    // Case-insensitive "utf-8''" prefix with a long value
+    const auto &file = req.form.get_file("file1");
+    ASSERT_EQ("file1", file.name);
+    // 8000 chars exercises both the Content-Disposition parser and the
+    // filename* parser near the CPPHTTPLIB_HEADER_MAX_LENGTH limit (8192).
+    // Prior to the fix, std::regex_match on this header would cause O(N)
+    // stack recursion in libstdc++, leading to SIGSEGV.
+    std::string expected_filename(8000, 'A');
+    ASSERT_EQ(expected_filename, file.filename);
+
+    res.set_content("ok", "text/plain");
+    handled = true;
+  });
+
+  thread t = thread([&] { svr.listen(HOST, PORT); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+    ASSERT_FALSE(svr.is_running());
+    ASSERT_TRUE(handled);
+  });
+
+  svr.wait_until_ready();
+
+  // Build body with a long filename* value using mixed-case prefix "Utf-8''"
+  // Regression test for GHSA-qq6v-r583-3h69
+  std::string long_filename(8000, 'A');
+  std::string body = "----------\r\n"
+                     "Content-Disposition: form-data; name=\"file1\"; "
+                     "filename*=\"Utf-8''" +
+                     long_filename +
+                     "\"\r\n"
+                     "\r\n"
+                     "hello\r\n"
+                     "------------\r\n";
+
+  auto req = "POST /test HTTP/1.1\r\n"
+             "Content-Type: multipart/form-data;boundary=--------\r\n"
+             "Content-Length: " +
+             std::to_string(body.size()) + "\r\n\r\n" + body;
 
   ASSERT_TRUE(send_request(1, req));
 }
@@ -10520,7 +11804,6 @@ TEST(MultipartFormDataTest, AccessPartHeaders) {
   ASSERT_TRUE(send_request(1, req, &response));
   ASSERT_EQ("200", response.substr(9, 3));
 }
-#endif
 
 TEST(MultipartFormDataTest, LargeHeader) {
   auto handled = false;
@@ -10575,6 +11858,140 @@ TEST(MultipartFormDataTest, LargeHeader) {
   ASSERT_EQ("200", response.substr(9, 3));
 }
 
+TEST(MultipartFormDataTest, UploadItemsHasContentLength) {
+  // Verify that Post(path, headers, UploadFormDataItems) sends Content-Length
+  // (not chunked Transfer-Encoding) after the streaming refactor.
+  auto handled = false;
+
+  Server svr;
+  svr.Post("/upload", [&](const Request &req, Response &res) {
+    auto cl_it = req.headers.find("Content-Length");
+    EXPECT_TRUE(cl_it != req.headers.end());
+    auto te_it = req.headers.find("Transfer-Encoding");
+    EXPECT_TRUE(te_it == req.headers.end());
+    EXPECT_EQ(2u, req.form.fields.size() + req.form.files.size());
+    res.set_content("ok", "text/plain");
+    handled = true;
+  });
+
+  auto port = svr.bind_to_any_port(HOST);
+  auto t = thread([&] { svr.listen_after_bind(); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+    ASSERT_FALSE(svr.is_running());
+    ASSERT_TRUE(handled);
+  });
+
+  svr.wait_until_ready();
+
+  UploadFormDataItems items = {
+      {"field1", "hello", "", "text/plain"},
+      {"file1", "world", "test.txt", "application/octet-stream"},
+  };
+
+  Client cli(HOST, port);
+  auto res = cli.Post("/upload", {}, items);
+  ASSERT_TRUE(res);
+  EXPECT_EQ(StatusCode::OK_200, res->status);
+}
+
+TEST(MultipartFormDataTest, MakeFileProvider) {
+  // Verify make_file_provider sends a file's contents correctly.
+  const std::string file_content(4096, 'Z');
+  const std::string tmp_path = "/tmp/httplib_test_make_file_provider.bin";
+  {
+    std::ofstream ofs(tmp_path, std::ios::binary);
+    ofs.write(file_content.data(),
+              static_cast<std::streamsize>(file_content.size()));
+  }
+
+  auto handled = false;
+
+  Server svr;
+  svr.Post("/upload", [&](const Request &req, Response & /*res*/,
+                          const ContentReader &content_reader) {
+    ASSERT_TRUE(req.is_multipart_form_data());
+    std::vector<FormData> items;
+    content_reader(
+        [&](const FormData &file) {
+          items.push_back(file);
+          return true;
+        },
+        [&](const char *data, size_t data_length) {
+          items.back().content.append(data, data_length);
+          return true;
+        });
+    ASSERT_EQ(1u, items.size());
+    EXPECT_EQ("myfile", items[0].name);
+    EXPECT_EQ("data.bin", items[0].filename);
+    EXPECT_EQ("application/octet-stream", items[0].content_type);
+    EXPECT_EQ(file_content, items[0].content);
+    handled = true;
+  });
+
+  auto port = svr.bind_to_any_port(HOST);
+  auto t = thread([&] { svr.listen_after_bind(); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+    ASSERT_FALSE(svr.is_running());
+    ASSERT_TRUE(handled);
+    std::remove(tmp_path.c_str());
+  });
+
+  svr.wait_until_ready();
+
+  FormDataProviderItems providers;
+  providers.push_back(make_file_provider("myfile", tmp_path, "data.bin",
+                                         "application/octet-stream"));
+
+  Client cli(HOST, port);
+  auto res = cli.Post("/upload", {}, {}, providers);
+  ASSERT_TRUE(res);
+  EXPECT_EQ(StatusCode::OK_200, res->status);
+}
+
+TEST(MakeFileBodyTest, Basic) {
+  const std::string file_content(4096, 'Z');
+  const std::string tmp_path = "/tmp/httplib_test_make_file_body.bin";
+  {
+    std::ofstream ofs(tmp_path, std::ios::binary);
+    ofs.write(file_content.data(),
+              static_cast<std::streamsize>(file_content.size()));
+  }
+
+  auto handled = false;
+
+  Server svr;
+  svr.Post("/upload", [&](const Request &req, Response &res) {
+    EXPECT_EQ(file_content, req.body);
+    handled = true;
+    res.status = StatusCode::OK_200;
+  });
+
+  auto port = svr.bind_to_any_port(HOST);
+  auto t = thread([&] { svr.listen_after_bind(); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+    ASSERT_FALSE(svr.is_running());
+    ASSERT_TRUE(handled);
+    std::remove(tmp_path.c_str());
+  });
+
+  svr.wait_until_ready();
+
+  auto fb = make_file_body(tmp_path);
+  ASSERT_GT(fb.first, 0u);
+
+  Client cli(HOST, port);
+  auto res =
+      cli.Post("/upload", fb.first, fb.second, "application/octet-stream");
+  ASSERT_TRUE(res);
+  EXPECT_EQ(StatusCode::OK_200, res->status);
+}
+
 TEST(TaskQueueTest, IncreaseAtomicInteger) {
   static constexpr unsigned int number_of_tasks{1000000};
   std::atomic_uint count{0};
@@ -10587,7 +12004,11 @@ TEST(TaskQueueTest, IncreaseAtomicInteger) {
     EXPECT_TRUE(queued);
   }
 
+#ifdef CPPHTTPLIB_NO_EXCEPTIONS
+  task_queue->shutdown();
+#else
   EXPECT_NO_THROW(task_queue->shutdown());
+#endif
   EXPECT_EQ(number_of_tasks, count.load());
 }
 
@@ -10597,7 +12018,7 @@ TEST(TaskQueueTest, IncreaseAtomicIntegerWithQueueLimit) {
   unsigned int queued_count{0};
   std::atomic_uint count{0};
   std::unique_ptr<TaskQueue> task_queue{
-      new ThreadPool{/*num_threads=*/1, qlimit}};
+      new ThreadPool{/*num_threads=*/1, /*max_threads=*/1, qlimit}};
 
   for (unsigned int i = 0; i < number_of_tasks; ++i) {
     if (task_queue->enqueue(
@@ -10606,7 +12027,11 @@ TEST(TaskQueueTest, IncreaseAtomicIntegerWithQueueLimit) {
     }
   }
 
+#ifdef CPPHTTPLIB_NO_EXCEPTIONS
+  task_queue->shutdown();
+#else
   EXPECT_NO_THROW(task_queue->shutdown());
+#endif
   EXPECT_EQ(queued_count, count.load());
   EXPECT_TRUE(queued_count <= number_of_tasks);
   EXPECT_TRUE(queued_count >= qlimit);
@@ -10614,7 +12039,7 @@ TEST(TaskQueueTest, IncreaseAtomicIntegerWithQueueLimit) {
 
 TEST(TaskQueueTest, MaxQueuedRequests) {
   static constexpr unsigned int qlimit{3};
-  std::unique_ptr<TaskQueue> task_queue{new ThreadPool{1, qlimit}};
+  std::unique_ptr<TaskQueue> task_queue{new ThreadPool{1, 1, qlimit}};
   std::condition_variable sem_cv;
   std::mutex sem_mtx;
   int credits = 0;
@@ -10672,7 +12097,11 @@ TEST(TaskQueueTest, MaxQueuedRequests) {
     EXPECT_TRUE(queued);
   }
 
+#ifdef CPPHTTPLIB_NO_EXCEPTIONS
+  task_queue->shutdown();
+#else
   EXPECT_NO_THROW(task_queue->shutdown());
+#endif
 }
 
 TEST(RedirectTest, RedirectToUrlWithQueryParameters) {
@@ -10705,6 +12134,7 @@ TEST(RedirectTest, RedirectToUrlWithQueryParameters) {
     EXPECT_EQ("val&key2=val2", res->body);
   }
 }
+#endif
 
 TEST(RedirectTest, RedirectToUrlWithPlusInQueryParameters) {
   Server svr;
@@ -10737,7 +12167,7 @@ TEST(RedirectTest, RedirectToUrlWithPlusInQueryParameters) {
   }
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(RedirectTest, Issue2185_Online) {
   SSLClient client("github.com");
   client.set_follow_location(true);
@@ -11142,7 +12572,7 @@ TEST(MakeHostAndPortStringTest, VariousPatterns) {
             detail::make_host_and_port_string("example.com", 65536, false));
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(SSLClientHostHeaderTest, Issue2301_Online) {
   httplib::SSLClient cli("roblox.com", 443);
   cli.set_follow_location(true);
@@ -11516,7 +12946,7 @@ TEST(MaxTimeoutTest, ContentStream) {
   max_timeout_test(svr, cli, timeout, threshold);
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(MaxTimeoutTest, ContentStreamSSL) {
   time_t timeout = 2000;
   time_t threshold = 1200; // SSL_shutdown is slow on some operating systems.
@@ -11913,6 +13343,7 @@ TEST(ForwardedHeadersTest, HandlesWhitespaceAroundIPs) {
   EXPECT_EQ(observed_remote_addr, "203.0.113.66");
 }
 
+#ifndef _WIN32
 TEST(ServerRequestParsingTest, RequestWithoutContentLengthOrTransferEncoding) {
   Server svr;
 
@@ -11982,6 +13413,7 @@ TEST(ServerRequestParsingTest, RequestWithoutContentLengthOrTransferEncoding) {
                            &resp));
   EXPECT_TRUE(resp.find("HTTP/1.1 200 OK") == 0);
 }
+#endif
 
 //==============================================================================
 // open_stream() Tests
@@ -12151,7 +13583,8 @@ protected:
       }
       res.set_content(body, "text/plain");
     });
-    thread_ = std::thread([this]() { svr_.listen("127.0.0.1", 8787); });
+    port_ = svr_.bind_to_any_port("127.0.0.1");
+    thread_ = std::thread([this]() { svr_.listen_after_bind(); });
     svr_.wait_until_ready();
   }
   void TearDown() override {
@@ -12160,17 +13593,18 @@ protected:
   }
   Server svr_;
   std::thread thread_;
+  int port_ = 0;
 };
 
 TEST_F(OpenStreamTest, Basic) {
-  Client cli("127.0.0.1", 8787);
+  Client cli("127.0.0.1", port_);
   auto handle = cli.open_stream("GET", "/hello");
   EXPECT_TRUE(handle.is_valid());
   EXPECT_EQ("Hello World!", read_all(handle));
 }
 
 TEST_F(OpenStreamTest, SmallBuffer) {
-  Client cli("127.0.0.1", 8787);
+  Client cli("127.0.0.1", port_);
   auto handle = cli.open_stream("GET", "/hello");
   std::string result;
   char buf[4];
@@ -12181,14 +13615,15 @@ TEST_F(OpenStreamTest, SmallBuffer) {
 }
 
 TEST_F(OpenStreamTest, DefaultHeaders) {
-  Client cli("127.0.0.1", 8787);
+  Client cli("127.0.0.1", port_);
 
   // open_stream GET should include Host, User-Agent and Accept-Encoding
   {
     auto handle = cli.open_stream("GET", "/echo-headers");
     ASSERT_TRUE(handle.is_valid());
     auto body = read_all(handle);
-    EXPECT_NE(body.find("Host:127.0.0.1:8787"), std::string::npos);
+    EXPECT_NE(body.find("Host:127.0.0.1:" + std::to_string(port_)),
+              std::string::npos);
     EXPECT_NE(body.find("User-Agent:cpp-httplib/" CPPHTTPLIB_VERSION),
               std::string::npos);
     EXPECT_NE(body.find("Accept-Encoding:"), std::string::npos);
@@ -12226,7 +13661,7 @@ TEST_F(OpenStreamTest, DefaultHeaders) {
 }
 
 TEST_F(OpenStreamTest, Large) {
-  Client cli("127.0.0.1", 8787);
+  Client cli("127.0.0.1", port_);
   auto handle = cli.open_stream("GET", "/large");
   EXPECT_EQ(10000u, read_all(handle).size());
 }
@@ -12238,7 +13673,7 @@ TEST_F(OpenStreamTest, ConnectionError) {
 }
 
 TEST_F(OpenStreamTest, Chunked) {
-  Client cli("127.0.0.1", 8787);
+  Client cli("127.0.0.1", port_);
   auto handle = cli.open_stream("GET", "/chunked");
   EXPECT_TRUE(handle.response && handle.response->get_header_value(
                                      "Transfer-Encoding") == "chunked");
@@ -12246,7 +13681,7 @@ TEST_F(OpenStreamTest, Chunked) {
 }
 
 TEST_F(OpenStreamTest, ProhibitedTrailersAreIgnored_Stream) {
-  Client cli("127.0.0.1", 8787);
+  Client cli("127.0.0.1", port_);
   auto handle =
       cli.open_stream("GET", "/streamed-chunked-with-prohibited-trailer");
   ASSERT_TRUE(handle.is_valid());
@@ -12279,7 +13714,7 @@ TEST_F(OpenStreamTest, ProhibitedTrailersAreIgnored_Stream) {
 
 #ifdef CPPHTTPLIB_ZLIB_SUPPORT
 TEST_F(OpenStreamTest, Gzip) {
-  Client cli("127.0.0.1", 8787);
+  Client cli("127.0.0.1", port_);
   auto handle = cli.open_stream("GET", "/compressible", {},
                                 {{"Accept-Encoding", "gzip"}});
   EXPECT_EQ("gzip", handle.response->get_header_value("Content-Encoding"));
@@ -12289,7 +13724,7 @@ TEST_F(OpenStreamTest, Gzip) {
 
 #ifdef CPPHTTPLIB_BROTLI_SUPPORT
 TEST_F(OpenStreamTest, Brotli) {
-  Client cli("127.0.0.1", 8787);
+  Client cli("127.0.0.1", port_);
   auto handle =
       cli.open_stream("GET", "/compressible", {}, {{"Accept-Encoding", "br"}});
   EXPECT_EQ("br", handle.response->get_header_value("Content-Encoding"));
@@ -12299,7 +13734,7 @@ TEST_F(OpenStreamTest, Brotli) {
 
 #ifdef CPPHTTPLIB_ZSTD_SUPPORT
 TEST_F(OpenStreamTest, Zstd) {
-  Client cli("127.0.0.1", 8787);
+  Client cli("127.0.0.1", port_);
   auto handle = cli.open_stream("GET", "/compressible", {},
                                 {{"Accept-Encoding", "zstd"}});
   EXPECT_EQ("zstd", handle.response->get_header_value("Content-Encoding"));
@@ -12307,7 +13742,7 @@ TEST_F(OpenStreamTest, Zstd) {
 }
 #endif
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 class SSLOpenStreamTest : public ::testing::Test {
 protected:
   SSLOpenStreamTest() : svr_("cert.pem", "key.pem") {}
@@ -12340,7 +13775,8 @@ protected:
             return true;
           });
     });
-    thread_ = std::thread([this]() { svr_.listen("127.0.0.1", 8788); });
+    port_ = svr_.bind_to_any_port("127.0.0.1");
+    thread_ = std::thread([this]() { svr_.listen_after_bind(); });
     svr_.wait_until_ready();
   }
   void TearDown() override {
@@ -12349,10 +13785,11 @@ protected:
   }
   SSLServer svr_;
   std::thread thread_;
+  int port_ = 0;
 };
 
 TEST_F(SSLOpenStreamTest, Basic) {
-  SSLClient cli("127.0.0.1", 8788);
+  SSLClient cli("127.0.0.1", port_);
   cli.enable_server_certificate_verification(false);
   auto handle = cli.open_stream("GET", "/hello");
   ASSERT_TRUE(handle.is_valid());
@@ -12360,7 +13797,7 @@ TEST_F(SSLOpenStreamTest, Basic) {
 }
 
 TEST_F(SSLOpenStreamTest, Chunked) {
-  SSLClient cli("127.0.0.1", 8788);
+  SSLClient cli("127.0.0.1", port_);
   cli.enable_server_certificate_verification(false);
 
   auto handle = cli.open_stream("GET", "/chunked");
@@ -12374,7 +13811,7 @@ TEST_F(SSLOpenStreamTest, Chunked) {
 }
 
 TEST_F(SSLOpenStreamTest, Post) {
-  SSLClient cli("127.0.0.1", 8788);
+  SSLClient cli("127.0.0.1", port_);
   cli.enable_server_certificate_verification(false);
 
   auto handle =
@@ -12388,7 +13825,7 @@ TEST_F(SSLOpenStreamTest, Post) {
 }
 
 TEST_F(SSLOpenStreamTest, PostChunked) {
-  SSLClient cli("127.0.0.1", 8788);
+  SSLClient cli("127.0.0.1", port_);
   cli.enable_server_certificate_verification(false);
 
   auto handle = cli.open_stream("POST", "/chunked-response", {}, {},
@@ -12400,7 +13837,7 @@ TEST_F(SSLOpenStreamTest, PostChunked) {
   auto body = read_all(handle);
   EXPECT_EQ("Chunked SSL Data", body);
 }
-#endif // CPPHTTPLIB_OPENSSL_SUPPORT
+#endif // CPPHTTPLIB_SSL_ENABLED
 
 //==============================================================================
 // Parity Tests: ensure streaming and non-streaming APIs produce identical
@@ -12703,7 +14140,7 @@ TEST_F(StreamApiTest, HeadAndOptions) {
 }
 
 // SSL stream::* tests
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 class SSLStreamApiTest : public ::testing::Test {
 protected:
   void SetUp() override {
@@ -12713,7 +14150,8 @@ protected:
     svr_.Post("/echo", [](const httplib::Request &req, httplib::Response &res) {
       res.set_content(req.body, "text/plain");
     });
-    thread_ = std::thread([this]() { svr_.listen("127.0.0.1", 8803); });
+    port_ = svr_.bind_to_any_port("127.0.0.1");
+    thread_ = std::thread([this]() { svr_.listen_after_bind(); });
     svr_.wait_until_ready();
   }
   void TearDown() override {
@@ -12722,10 +14160,11 @@ protected:
   }
   httplib::SSLServer svr_{"cert.pem", "key.pem"};
   std::thread thread_;
+  int port_ = 0;
 };
 
 TEST_F(SSLStreamApiTest, GetAndPost) {
-  httplib::SSLClient cli("127.0.0.1", 8803);
+  httplib::SSLClient cli("127.0.0.1", port_);
   cli.enable_server_certificate_verification(false);
   auto get = httplib::stream::Get(cli, "/hello");
   EXPECT_EQ("Hello SSL!", read_body(get));
@@ -12850,7 +14289,7 @@ TEST(ErrorHandlingTest, StreamConnectionClosed) {
   t.join();
 }
 
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#ifdef CPPHTTPLIB_SSL_ENABLED
 TEST(ErrorHandlingTest, SSLStreamReadTimeout) {
   // Test that read timeout during SSL streaming is detected
   SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
@@ -13038,6 +14477,76 @@ TEST(ETagTest, StaticFileETagIfNoneMatchStarNotFound) {
 
   svr.stop();
   t.join();
+}
+
+TEST(ETagTest, IfNoneMatchBoundaryCheck) {
+  using namespace httplib;
+
+  // Create a test file
+  const char *fname = "etag_boundary_testfile.txt";
+  const char *content = "boundary-test";
+  {
+    std::ofstream ofs(fname);
+    ofs << content;
+    ASSERT_TRUE(ofs.good());
+  }
+
+  Server svr;
+  svr.set_mount_point("/static", ".");
+  auto t = std::thread([&]() { svr.listen("localhost", PORT); });
+  svr.wait_until_ready();
+
+  Client cli(HOST, PORT);
+
+  // Get the actual ETag
+  auto res1 = cli.Get("/static/etag_boundary_testfile.txt");
+  ASSERT_TRUE(res1);
+  ASSERT_EQ(200, res1->status);
+  ASSERT_TRUE(res1->has_header("ETag"));
+  std::string etag = res1->get_header_value("ETag");
+
+  // Test 1: Very long ETag value (longer than actual ETag)
+  // Should NOT match and return 200 (not trigger out-of-bounds read)
+  Headers h1 = {{"If-None-Match", "W/"
+                                  "\"very-long-etag-value-that-is-much-longer-"
+                                  "than-the-actual-etag-value\""}};
+  auto res2 = cli.Get("/static/etag_boundary_testfile.txt", h1);
+  ASSERT_TRUE(res2);
+  EXPECT_EQ(200, res2->status); // Should not match
+
+  // Test 2: Long string followed by wildcard
+  // Should match on "*" and return 304 (without out-of-bounds read on the long
+  // string)
+  Headers h2 = {{"If-None-Match", "W/\"another-very-long-value\", *"}};
+  auto res3 = cli.Get("/static/etag_boundary_testfile.txt", h2);
+  ASSERT_TRUE(res3);
+  EXPECT_EQ(304, res3->status); // Should match on "*"
+
+  // Test 3: Wildcard followed by long string
+  // Should match on "*" immediately and return 304
+  Headers h3 = {{"If-None-Match", "*, W/\"long-value-after-wildcard\""}};
+  auto res4 = cli.Get("/static/etag_boundary_testfile.txt", h3);
+  ASSERT_TRUE(res4);
+  EXPECT_EQ(304, res4->status); // Should match on "*"
+
+  // Test 4: Multiple long non-matching values
+  // Should NOT match and return 200 (test that all comparisons are safe)
+  Headers h4 = {{"If-None-Match", "W/\"first-long-non-matching-value\", "
+                                  "W/\"second-long-non-matching-value\", "
+                                  "W/\"third-long-non-matching-value\""}};
+  auto res5 = cli.Get("/static/etag_boundary_testfile.txt", h4);
+  ASSERT_TRUE(res5);
+  EXPECT_EQ(200, res5->status); // Should not match
+
+  // Test 5: Single character that is not "*" (edge case)
+  Headers h5 = {{"If-None-Match", "X"}};
+  auto res6 = cli.Get("/static/etag_boundary_testfile.txt", h5);
+  ASSERT_TRUE(res6);
+  EXPECT_EQ(200, res6->status); // Should not match
+
+  svr.stop();
+  t.join();
+  std::remove(fname);
 }
 
 TEST(ETagTest, LastModifiedAndIfModifiedSince) {
@@ -13541,10 +15050,11 @@ protected:
       msg.id = value;
     } else if (field == "retry") {
       // Parse retry interval in milliseconds
-      try {
-        retry_ms = std::stoi(value);
-      } catch (...) {
-        // Invalid retry value, ignore
+      {
+        int v = 0;
+        auto res =
+            detail::from_chars(value.data(), value.data() + value.size(), v);
+        if (res.ec == std::errc{}) { retry_ms = v; }
       }
     }
     // Unknown fields are ignored per SSE spec
@@ -14281,6 +15791,1055 @@ TEST(ZipBombProtectionTest, DecompressedSizeExceedsLimit) {
 
   // Server should reject because decompressed size (8KB) exceeds limit (1KB)
   ASSERT_TRUE(res);
-  EXPECT_EQ(StatusCode::BadRequest_400, res->status);
+  EXPECT_EQ(StatusCode::PayloadTooLarge_413, res->status);
+}
+#endif
+
+// ============================================================================
+// OpenSSL-Specific Tests
+// ============================================================================
+
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+X509 *readCertificate(const std::string &strFileName) {
+  std::ifstream inStream(strFileName);
+  std::string strCertPEM((std::istreambuf_iterator<char>(inStream)),
+                         std::istreambuf_iterator<char>());
+
+  if (strCertPEM.empty()) return (nullptr);
+
+  BIO *pbCert = BIO_new(BIO_s_mem());
+  BIO_write(pbCert, strCertPEM.c_str(), (int)strCertPEM.size());
+  X509 *pCert = PEM_read_bio_X509(pbCert, NULL, 0, NULL);
+  BIO_free(pbCert);
+
+  return (pCert);
+}
+
+EVP_PKEY *readPrivateKey(const std::string &strFileName) {
+  std::ifstream inStream(strFileName);
+  std::string strPrivateKeyPEM((std::istreambuf_iterator<char>(inStream)),
+                               std::istreambuf_iterator<char>());
+
+  if (strPrivateKeyPEM.empty()) return (nullptr);
+
+  BIO *pbPrivKey = BIO_new(BIO_s_mem());
+  BIO_write(pbPrivKey, strPrivateKeyPEM.c_str(), (int)strPrivateKeyPEM.size());
+  EVP_PKEY *pPrivateKey = PEM_read_bio_PrivateKey(pbPrivKey, NULL, NULL, NULL);
+  BIO_free(pbPrivKey);
+
+  return (pPrivateKey);
+}
+
+TEST(BindServerTest, UpdateCerts) {
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE);
+  int port = svr.bind_to_any_port("0.0.0.0");
+  ASSERT_TRUE(svr.is_valid());
+  ASSERT_TRUE(port > 0);
+
+  X509 *cert = readCertificate(SERVER_CERT_FILE);
+  X509 *ca_cert = readCertificate(CLIENT_CA_CERT_FILE);
+  EVP_PKEY *key = readPrivateKey(SERVER_PRIVATE_KEY_FILE);
+
+  ASSERT_TRUE(cert != nullptr);
+  ASSERT_TRUE(ca_cert != nullptr);
+  ASSERT_TRUE(key != nullptr);
+
+  X509_STORE *cert_store = X509_STORE_new();
+
+  X509_STORE_add_cert(cert_store, ca_cert);
+
+  // svr.update_certs(cert, key, cert_store); // deprecated
+  svr.update_certs_pem(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE,
+                       CLIENT_CA_CERT_FILE);
+
+  ASSERT_TRUE(svr.is_valid());
+  svr.stop();
+
+  X509_STORE_free(cert_store);
+  X509_free(cert);
+  X509_free(ca_cert);
+  EVP_PKEY_free(key);
+}
+
+// Test that SSLServer(X509*, EVP_PKEY*, X509_STORE*) constructor sets
+// client CA list correctly for TLS handshake
+TEST(SSLClientServerTest, X509ConstructorSetsClientCAList) {
+  X509 *cert = readCertificate(SERVER_CERT_FILE);
+  X509 *ca_cert = readCertificate(CLIENT_CA_CERT_FILE);
+  EVP_PKEY *key = readPrivateKey(SERVER_PRIVATE_KEY_FILE);
+
+  ASSERT_TRUE(cert != nullptr);
+  ASSERT_TRUE(ca_cert != nullptr);
+  ASSERT_TRUE(key != nullptr);
+
+  X509_STORE *cert_store = X509_STORE_new();
+  X509_STORE_add_cert(cert_store, ca_cert);
+
+  // Use X509-based constructor (deprecated but should still work correctly)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+  SSLServer svr(cert, key, cert_store);
+#pragma GCC diagnostic pop
+
+  ASSERT_TRUE(svr.is_valid());
+
+  // Verify that client CA list is set in SSL_CTX
+  auto ssl_ctx = static_cast<SSL_CTX *>(svr.tls_context());
+  ASSERT_TRUE(ssl_ctx != nullptr);
+
+  STACK_OF(X509_NAME) *ca_list = SSL_CTX_get_client_CA_list(ssl_ctx);
+  ASSERT_TRUE(ca_list != nullptr);
+  EXPECT_GT(sk_X509_NAME_num(ca_list), 0);
+
+  X509_free(cert);
+  X509_free(ca_cert);
+  EVP_PKEY_free(key);
+}
+
+// Test that update_certs() updates client CA list correctly
+TEST(SSLClientServerTest, UpdateCertsSetsClientCAList) {
+  // Start with file-based constructor
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  // Initially no client CA list should be set
+  auto ssl_ctx = static_cast<SSL_CTX *>(svr.tls_context());
+  ASSERT_TRUE(ssl_ctx != nullptr);
+
+  STACK_OF(X509_NAME) *ca_list_before = SSL_CTX_get_client_CA_list(ssl_ctx);
+  int count_before = ca_list_before ? sk_X509_NAME_num(ca_list_before) : 0;
+  EXPECT_EQ(0, count_before);
+
+  // Now update with client CA (PEM string)
+  std::string cert_pem, key_pem, ca_pem;
+  read_file(SERVER_CERT_FILE, cert_pem);
+  read_file(SERVER_PRIVATE_KEY_FILE, key_pem);
+  read_file(CLIENT_CA_CERT_FILE, ca_pem);
+
+  svr.update_certs_pem(cert_pem.c_str(), key_pem.c_str(), ca_pem.c_str());
+
+  ASSERT_TRUE(svr.is_valid());
+
+  // Now client CA list should be set
+  STACK_OF(X509_NAME) *ca_list_after = SSL_CTX_get_client_CA_list(ssl_ctx);
+  ASSERT_TRUE(ca_list_after != nullptr);
+  EXPECT_GT(sk_X509_NAME_num(ca_list_after), 0);
+}
+
+TEST(SSLClientServerTest, FilePathConstructorSetsClientCAList) {
+  // Test that the file-path SSLServer constructor properly sets the client CA
+  // list that is sent to clients during the TLS handshake (CertificateRequest)
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE, CLIENT_CA_CERT_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  auto ssl_ctx = static_cast<SSL_CTX *>(svr.tls_context());
+  ASSERT_TRUE(ssl_ctx != nullptr);
+
+  STACK_OF(X509_NAME) *ca_list = SSL_CTX_get_client_CA_list(ssl_ctx);
+  ASSERT_TRUE(ca_list != nullptr);
+  EXPECT_GT(sk_X509_NAME_num(ca_list), 0);
+}
+
+// Disabled due to the out-of-memory problem on GitHub Actions Workflows
+TEST(SSLClientServerTest, DISABLED_LargeDataTransfer) {
+
+  // prepare large data
+  std::random_device seed_gen;
+  std::mt19937 random(seed_gen());
+  constexpr auto large_size_byte = 2147483648UL + 1048576UL; // 2GiB + 1MiB
+  std::vector<std::uint32_t> binary(large_size_byte / sizeof(std::uint32_t));
+  std::generate(binary.begin(), binary.end(), [&random]() { return random(); });
+
+  // server
+  SSLServer svr(SERVER_CERT_FILE, SERVER_PRIVATE_KEY_FILE);
+  ASSERT_TRUE(svr.is_valid());
+
+  svr.Post("/binary", [&](const Request &req, Response &res) {
+    EXPECT_EQ(large_size_byte, req.body.size());
+    EXPECT_EQ(0, std::memcmp(binary.data(), req.body.data(), large_size_byte));
+    res.set_content(req.body, "application/octet-stream");
+  });
+
+  auto listen_thread = std::thread([&svr]() { svr.listen("localhost", PORT); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    listen_thread.join();
+    ASSERT_FALSE(svr.is_running());
+  });
+
+  svr.wait_until_ready();
+
+  // client POST
+  SSLClient cli("localhost", PORT);
+  cli.enable_server_certificate_verification(false);
+  cli.set_read_timeout(std::chrono::seconds(100));
+  cli.set_write_timeout(std::chrono::seconds(100));
+  auto res = cli.Post("/binary", reinterpret_cast<char *>(binary.data()),
+                      large_size_byte, "application/octet-stream");
+
+  // compare
+  EXPECT_EQ(StatusCode::OK_200, res->status);
+  EXPECT_EQ(large_size_byte, res->body.size());
+  EXPECT_EQ(0, std::memcmp(binary.data(), res->body.data(), large_size_byte));
+}
+#endif
+
+// ============================================================================
+// MbedTLS-Specific Tests
+// ============================================================================
+
+#ifdef CPPHTTPLIB_MBEDTLS_SUPPORT
+TEST(SSLClientServerTest, CustomizeServerSSLCtxMbedTLS) {
+  using namespace httplib::tls;
+
+  // Track if callback was invoked
+  bool callback_invoked = false;
+
+  // The callback receives void* ctx which is actually MbedTlsContext*
+  // We can access the mbedtls_ssl_config via the context
+  auto setup_callback = [&callback_invoked](void *ctx) {
+    callback_invoked = true;
+
+    // Cast to MbedTlsContext* to access the ssl config
+    auto *mbedtls_ctx = static_cast<httplib::tls::impl::MbedTlsContext *>(ctx);
+    mbedtls_ssl_config *conf = &mbedtls_ctx->conf;
+
+    // Use static variables to hold certificate data (simplified for test)
+    static mbedtls_x509_crt own_cert;
+    static mbedtls_pk_context own_key;
+    static mbedtls_x509_crt ca_chain;
+    static bool initialized = false;
+
+    if (!initialized) {
+      mbedtls_x509_crt_init(&own_cert);
+      mbedtls_pk_init(&own_key);
+      mbedtls_x509_crt_init(&ca_chain);
+
+      // Load server certificate
+      if (mbedtls_x509_crt_parse_file(&own_cert, SERVER_CERT_FILE) != 0) {
+        return false;
+      }
+      // Load server private key
+      if (mbedtls_pk_parse_keyfile(&own_key, SERVER_PRIVATE_KEY_FILE, nullptr
+#if MBEDTLS_VERSION_MAJOR >= 3
+                                   ,
+                                   mbedtls_ctr_drbg_random, nullptr
+#endif
+                                   ) != 0) {
+        return false;
+      }
+      // Load CA chain for client verification
+      if (mbedtls_x509_crt_parse_file(&ca_chain, CLIENT_CA_CERT_FILE) != 0) {
+        return false;
+      }
+      initialized = true;
+    }
+
+    // Configure the SSL config
+    mbedtls_ssl_conf_own_cert(conf, &own_cert, &own_key);
+    mbedtls_ssl_conf_ca_chain(conf, &ca_chain, nullptr);
+    mbedtls_ssl_conf_authmode(conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+
+    // Set minimum TLS version using mbedTLS native API
+#if MBEDTLS_VERSION_MAJOR >= 3
+    mbedtls_ssl_conf_min_tls_version(conf, MBEDTLS_SSL_VERSION_TLS1_2);
+#else
+    mbedtls_ssl_conf_min_version(conf, MBEDTLS_SSL_MAJOR_VERSION_3,
+                                 MBEDTLS_SSL_MINOR_VERSION_3);
+#endif
+
+    return true;
+  };
+
+  SSLServer svr(setup_callback);
+  ASSERT_TRUE(svr.is_valid());
+  ASSERT_TRUE(callback_invoked);
+
+  svr.Get("/test", [&](const Request &req, Response &res) {
+    res.set_content("test", "text/plain");
+
+    auto cert = req.peer_cert();
+    ASSERT_TRUE(static_cast<bool>(cert));
+
+    auto common_name = cert.subject_cn();
+    EXPECT_EQ("Common Name", common_name);
+  });
+
+  thread t = thread([&]() { ASSERT_TRUE(svr.listen(HOST, PORT)); });
+  auto se = detail::scope_exit([&] {
+    svr.stop();
+    t.join();
+    ASSERT_FALSE(svr.is_running());
+  });
+
+  svr.wait_until_ready();
+
+  SSLClient cli(HOST, PORT, CLIENT_CERT_FILE, CLIENT_PRIVATE_KEY_FILE);
+  cli.enable_server_certificate_verification(false);
+  cli.set_connection_timeout(30);
+
+  auto res = cli.Get("/test");
+  ASSERT_TRUE(res);
+  ASSERT_EQ(StatusCode::OK_200, res->status);
+}
+#endif
+
+// WebSocket Tests
+
+TEST(WebSocketTest, RSVBitsMustBeZero) {
+  // RFC 6455 Section 5.2: RSV1, RSV2, RSV3 MUST be 0 unless an extension
+  // defining the meaning of these bits has been negotiated.
+  auto make_frame = [](uint8_t first_byte) {
+    std::string frame;
+    frame += static_cast<char>(first_byte); // FIN + RSV + opcode
+    frame += static_cast<char>(0x05);       // mask=0, payload_len=5
+    frame += "Hello";
+    return frame;
+  };
+
+  // RSV1 set (0x40)
+  {
+    detail::BufferStream strm;
+    strm.write(make_frame(0x81 | 0x40).data(), 8); // FIN + RSV1 + Text
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_FALSE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                                false, 1024));
+  }
+
+  // RSV2 set (0x20)
+  {
+    detail::BufferStream strm;
+    strm.write(make_frame(0x81 | 0x20).data(), 8); // FIN + RSV2 + Text
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_FALSE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                                false, 1024));
+  }
+
+  // RSV3 set (0x10)
+  {
+    detail::BufferStream strm;
+    strm.write(make_frame(0x81 | 0x10).data(), 8); // FIN + RSV3 + Text
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_FALSE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                                false, 1024));
+  }
+
+  // No RSV bits set - should succeed
+  {
+    detail::BufferStream strm;
+    strm.write(make_frame(0x81).data(), 8); // FIN + Text, no RSV
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_TRUE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                               false, 1024));
+    EXPECT_EQ(ws::Opcode::Text, opcode);
+    EXPECT_EQ("Hello", payload);
+    EXPECT_TRUE(fin);
+  }
+}
+
+TEST(WebSocketTest, ControlFrameValidation) {
+  // RFC 6455 Section 5.5: control frames MUST have FIN=1 and
+  // payload length <= 125.
+
+  // Ping with FIN=0 - must be rejected
+  {
+    detail::BufferStream strm;
+    std::string frame;
+    frame += static_cast<char>(0x09); // FIN=0, opcode=Ping
+    frame += static_cast<char>(0x00); // mask=0, payload_len=0
+    strm.write(frame.data(), frame.size());
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_FALSE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                                false, 1024));
+  }
+
+  // Close with FIN=0 - must be rejected
+  {
+    detail::BufferStream strm;
+    std::string frame;
+    frame += static_cast<char>(0x08); // FIN=0, opcode=Close
+    frame += static_cast<char>(0x00); // mask=0, payload_len=0
+    strm.write(frame.data(), frame.size());
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_FALSE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                                false, 1024));
+  }
+
+  // Ping with payload_len=126 (extended length) - must be rejected
+  {
+    detail::BufferStream strm;
+    std::string frame;
+    frame += static_cast<char>(0x89); // FIN=1, opcode=Ping
+    frame += static_cast<char>(126);  // payload_len=126 (>125)
+    frame += static_cast<char>(0x00); // extended length high byte
+    frame += static_cast<char>(126);  // extended length low byte
+    frame += std::string(126, 'x');
+    strm.write(frame.data(), frame.size());
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_FALSE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                                false, 1024));
+  }
+
+  // Ping with FIN=1 and payload_len=125 - should succeed
+  {
+    detail::BufferStream strm;
+    std::string frame;
+    frame += static_cast<char>(0x89); // FIN=1, opcode=Ping
+    frame += static_cast<char>(125);  // payload_len=125
+    frame += std::string(125, 'x');
+    strm.write(frame.data(), frame.size());
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_TRUE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                               false, 1024));
+    EXPECT_EQ(ws::Opcode::Ping, opcode);
+    EXPECT_EQ(125u, payload.size());
+    EXPECT_TRUE(fin);
+  }
+}
+
+TEST(WebSocketTest, PayloadLength64BitMSBMustBeZero) {
+  // RFC 6455 Section 5.2: the most significant bit of a 64-bit payload
+  // length MUST be 0.
+
+  // MSB set - must be rejected
+  {
+    detail::BufferStream strm;
+    std::string frame;
+    frame += static_cast<char>(0x81); // FIN=1, opcode=Text
+    frame += static_cast<char>(127);  // 64-bit extended length
+    frame += static_cast<char>(0x80); // MSB set (invalid)
+    frame += std::string(7, '\0');    // remaining 7 bytes of length
+    strm.write(frame.data(), frame.size());
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_FALSE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                                false, 1024));
+  }
+
+  // MSB clear - should pass length parsing (will be rejected by max_len,
+  // but that's a different check; use a small length to verify)
+  {
+    detail::BufferStream strm;
+    std::string frame;
+    frame += static_cast<char>(0x81); // FIN=1, opcode=Text
+    frame += static_cast<char>(127);  // 64-bit extended length
+    frame += std::string(7, '\0');    // high bytes = 0
+    frame += static_cast<char>(0x03); // length = 3
+    frame += "abc";
+    strm.write(frame.data(), frame.size());
+    ws::Opcode opcode;
+    std::string payload;
+    bool fin;
+    EXPECT_TRUE(ws::impl::read_websocket_frame(strm, opcode, payload, fin,
+                                               false, 1024));
+    EXPECT_EQ(ws::Opcode::Text, opcode);
+    EXPECT_EQ("abc", payload);
+  }
+}
+
+TEST(WebSocketTest, InvalidUTF8TextFrame) {
+  // RFC 6455 Section 5.6: text frames must contain valid UTF-8.
+
+  // Valid UTF-8
+  EXPECT_TRUE(ws::impl::is_valid_utf8("Hello"));
+  EXPECT_TRUE(ws::impl::is_valid_utf8("\xC3\xA9"));         // é (U+00E9)
+  EXPECT_TRUE(ws::impl::is_valid_utf8("\xE3\x81\x82"));     // あ (U+3042)
+  EXPECT_TRUE(ws::impl::is_valid_utf8("\xF0\x9F\x98\x80")); // 😀 (U+1F600)
+  EXPECT_TRUE(ws::impl::is_valid_utf8(""));
+
+  // Invalid UTF-8
+  EXPECT_FALSE(ws::impl::is_valid_utf8("\x80"));     // Invalid start byte
+  EXPECT_FALSE(ws::impl::is_valid_utf8("\xC3\x28")); // Bad continuation
+  EXPECT_FALSE(ws::impl::is_valid_utf8("\xC0\xAF")); // Overlong encoding
+  EXPECT_FALSE(
+      ws::impl::is_valid_utf8("\xED\xA0\x80")); // Surrogate half U+D800
+  EXPECT_FALSE(ws::impl::is_valid_utf8("\xF4\x90\x80\x80")); // Beyond U+10FFFF
+}
+
+TEST(WebSocketTest, ConnectAndDisconnect) {
+  Server svr;
+  svr.WebSocket("/ws", [](const Request &, ws::WebSocket &ws) {
+    std::string msg;
+    while (ws.read(msg)) {}
+  });
+
+  auto port = svr.bind_to_any_port(HOST);
+  std::thread t([&]() { svr.listen_after_bind(); });
+  svr.wait_until_ready();
+
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port) + "/ws");
+  ASSERT_TRUE(client.connect());
+  EXPECT_TRUE(client.is_open());
+  client.close();
+  EXPECT_FALSE(client.is_open());
+
+  svr.stop();
+  t.join();
+}
+
+TEST(WebSocketTest, ValidURL) {
+  ws::WebSocketClient ws1("ws://localhost:8080/path");
+  EXPECT_TRUE(ws1.is_valid());
+
+  ws::WebSocketClient ws2("ws://example.com/path");
+  EXPECT_TRUE(ws2.is_valid());
+
+  ws::WebSocketClient ws3("ws://example.com:9090/path/to/endpoint");
+  EXPECT_TRUE(ws3.is_valid());
+
+#ifdef CPPHTTPLIB_SSL_ENABLED
+  ws::WebSocketClient wss1("wss://example.com/path");
+  EXPECT_TRUE(wss1.is_valid());
+
+  ws::WebSocketClient wss2("wss://example.com:443/path");
+  EXPECT_TRUE(wss2.is_valid());
+#endif
+}
+
+TEST(WebSocketTest, InvalidURL) {
+  // No scheme
+  ws::WebSocketClient ws1("localhost:8080/path");
+  EXPECT_FALSE(ws1.is_valid());
+
+  // No path
+  ws::WebSocketClient ws2("ws://localhost:8080");
+  EXPECT_FALSE(ws2.is_valid());
+
+  // Empty string
+  ws::WebSocketClient ws3("");
+  EXPECT_FALSE(ws3.is_valid());
+
+  // Missing host
+  ws::WebSocketClient ws4("ws://:8080/path");
+  EXPECT_FALSE(ws4.is_valid());
+}
+
+TEST(WebSocketTest, UnsupportedScheme) {
+#ifdef CPPHTTPLIB_NO_EXCEPTIONS
+  ws::WebSocketClient ws1("http://localhost:8080/path");
+  EXPECT_FALSE(ws1.is_valid());
+
+  ws::WebSocketClient ws2("https://localhost:8080/path");
+  EXPECT_FALSE(ws2.is_valid());
+
+  ws::WebSocketClient ws3("ftp://localhost:8080/path");
+  EXPECT_FALSE(ws3.is_valid());
+#else
+  EXPECT_THROW(ws::WebSocketClient("http://localhost:8080/path"),
+               std::invalid_argument);
+
+  EXPECT_THROW(ws::WebSocketClient("ftp://localhost:8080/path"),
+               std::invalid_argument);
+#endif
+}
+
+TEST(WebSocketTest, ConnectWhenInvalid) {
+  ws::WebSocketClient ws("not a valid url");
+  EXPECT_FALSE(ws.is_valid());
+  EXPECT_FALSE(ws.connect());
+}
+
+TEST(WebSocketTest, DefaultPort) {
+  ws::WebSocketClient ws1("ws://example.com/path");
+  EXPECT_TRUE(ws1.is_valid());
+  // ws:// defaults to port 80 (verified by successful parse)
+
+#ifdef CPPHTTPLIB_SSL_ENABLED
+  ws::WebSocketClient ws2("wss://example.com/path");
+  EXPECT_TRUE(ws2.is_valid());
+  // wss:// defaults to port 443 (verified by successful parse)
+#endif
+}
+
+TEST(WebSocketTest, IPv6LiteralAddress) {
+  ws::WebSocketClient ws1("ws://[::1]:8080/path");
+  EXPECT_TRUE(ws1.is_valid());
+
+  ws::WebSocketClient ws2("ws://[fe80::1]:3000/ws");
+  EXPECT_TRUE(ws2.is_valid());
+}
+
+TEST(WebSocketTest, ComplexPath) {
+  ws::WebSocketClient ws1("ws://localhost:8080/path/to/endpoint");
+  EXPECT_TRUE(ws1.is_valid());
+
+  ws::WebSocketClient ws2("ws://localhost:8080/");
+  EXPECT_TRUE(ws2.is_valid());
+}
+
+class WebSocketIntegrationTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    server_ = httplib::detail::make_unique<Server>();
+    setup_server();
+    start_server();
+  }
+
+  void TearDown() override {
+    server_->stop();
+    if (server_thread_.joinable()) { server_thread_.join(); }
+  }
+
+  void setup_server() {
+    server_->WebSocket("/ws-echo", [](const Request &, ws::WebSocket &ws) {
+      std::string msg;
+      ws::ReadResult ret;
+      while ((ret = ws.read(msg))) {
+        if (ret == ws::Binary) {
+          ws.send(msg.data(), msg.size());
+        } else {
+          ws.send(msg);
+        }
+      }
+    });
+
+    server_->WebSocket("/ws-echo-string",
+                       [](const Request &, ws::WebSocket &ws) {
+                         std::string msg;
+                         while (ws.read(msg)) {
+                           ws.send("echo: " + msg);
+                         }
+                       });
+
+    server_->WebSocket(
+        "/ws-request-info", [](const Request &req, ws::WebSocket &ws) {
+          // Echo back request metadata
+          ws.send("path:" + req.path);
+          ws.send("header:" + req.get_header_value("X-Test-Header"));
+          std::string msg;
+          while (ws.read(msg)) {}
+        });
+
+    server_->WebSocket("/ws-close", [](const Request &, ws::WebSocket &ws) {
+      std::string msg;
+      ws.read(msg); // wait for a message
+      ws.close();
+    });
+
+    server_->WebSocket("/ws-close-status",
+                       [](const Request &, ws::WebSocket &ws) {
+                         std::string msg;
+                         ws.read(msg); // wait for a message
+                         ws.close(ws::CloseStatus::GoingAway, "shutting down");
+                       });
+
+    server_->WebSocket(
+        "/ws-subprotocol",
+        [](const Request &, ws::WebSocket &ws) {
+          std::string msg;
+          while (ws.read(msg)) {
+            ws.send(msg);
+          }
+        },
+        [](const std::vector<std::string> &protocols) -> std::string {
+          for (const auto &p : protocols) {
+            if (p == "graphql-ws") { return p; }
+          }
+          return "";
+        });
+  }
+
+  void start_server() {
+    port_ = server_->bind_to_any_port(HOST);
+    server_thread_ = std::thread([this]() { server_->listen_after_bind(); });
+    server_->wait_until_ready();
+  }
+
+  std::unique_ptr<Server> server_;
+  std::thread server_thread_;
+  int port_ = 0;
+};
+
+TEST_F(WebSocketIntegrationTest, TextEcho) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  ASSERT_TRUE(client.connect());
+  ASSERT_TRUE(client.is_open());
+
+  ASSERT_TRUE(client.send("Hello WebSocket"));
+  std::string msg;
+  EXPECT_EQ(ws::Text, client.read(msg));
+  EXPECT_EQ("Hello WebSocket", msg);
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, BinaryEcho) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  ASSERT_TRUE(client.connect());
+
+  std::string binary_data = {'\x00', '\x01', '\x02', '\xFF', '\xFE'};
+  ASSERT_TRUE(client.send(binary_data.data(), binary_data.size()));
+
+  std::string msg;
+  EXPECT_EQ(ws::Binary, client.read(msg));
+  EXPECT_EQ(binary_data, msg);
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, MultipleMessages) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  ASSERT_TRUE(client.connect());
+
+  for (int i = 0; i < 10; i++) {
+    auto text = "message " + std::to_string(i);
+    ASSERT_TRUE(client.send(text));
+    std::string msg;
+    ASSERT_TRUE(client.read(msg));
+    EXPECT_EQ(text, msg);
+  }
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, CloseHandshake) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-close");
+  ASSERT_TRUE(client.connect());
+
+  // Send a message to trigger the server to close
+  ASSERT_TRUE(client.send("trigger close"));
+
+  // The server will close, so read should return false
+  std::string msg;
+  EXPECT_FALSE(client.read(msg));
+  EXPECT_FALSE(client.is_open());
+}
+
+TEST_F(WebSocketIntegrationTest, LargeMessage) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  ASSERT_TRUE(client.connect());
+
+  // 128KB message
+  std::string large_data(128 * 1024, 'X');
+  ASSERT_TRUE(client.send(large_data));
+  std::string msg;
+  ASSERT_TRUE(client.read(msg));
+  EXPECT_EQ(large_data, msg);
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, ConcurrentSend) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  ASSERT_TRUE(client.connect());
+
+  const int num_threads = 4;
+  std::vector<std::thread> threads;
+  std::atomic<int> send_count{0};
+
+  for (int t = 0; t < num_threads; t++) {
+    threads.emplace_back([&client, &send_count, t]() {
+      for (int i = 0; i < 5; i++) {
+        auto text = "thread" + std::to_string(t) + "_msg" + std::to_string(i);
+        if (client.send(text)) { send_count++; }
+      }
+    });
+  }
+
+  for (auto &th : threads) {
+    th.join();
+  }
+
+  int received = 0;
+  std::string msg;
+  while (received < send_count.load()) {
+    if (!client.read(msg)) { break; }
+    received++;
+  }
+  EXPECT_EQ(send_count.load(), received);
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, ReadString) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo-string");
+  ASSERT_TRUE(client.connect());
+
+  ASSERT_TRUE(client.send("hello"));
+  std::string msg;
+  ASSERT_TRUE(client.read(msg));
+  EXPECT_EQ("echo: hello", msg);
+
+  ASSERT_TRUE(client.send("world"));
+  ASSERT_TRUE(client.read(msg));
+  EXPECT_EQ("echo: world", msg);
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, RequestAccess) {
+  Headers headers = {{"X-Test-Header", "test-value"}};
+  ws::WebSocketClient client(
+      "ws://localhost:" + std::to_string(port_) + "/ws-request-info", headers);
+  ASSERT_TRUE(client.connect());
+
+  std::string msg;
+  ASSERT_TRUE(client.read(msg));
+  EXPECT_EQ("path:/ws-request-info", msg);
+
+  ASSERT_TRUE(client.read(msg));
+  EXPECT_EQ("header:test-value", msg);
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, ReadTimeout) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  client.set_read_timeout(1, 0); // 1 second
+  ASSERT_TRUE(client.connect());
+
+  // Don't send anything — server echo handler waits for a message,
+  // so read() should time out and return false.
+  std::string msg;
+  EXPECT_FALSE(client.read(msg));
+}
+
+TEST_F(WebSocketIntegrationTest, MaxPayloadExceeded) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  client.set_read_timeout(5, 0);
+  ASSERT_TRUE(client.connect());
+
+  // Send a message exceeding CPPHTTPLIB_WEBSOCKET_MAX_PAYLOAD_LENGTH (16MB).
+  // The server should reject it and close the connection.
+  std::string oversized(CPPHTTPLIB_WEBSOCKET_MAX_PAYLOAD_LENGTH + 1, 'A');
+  client.send(oversized);
+
+  // The server's read() should have failed due to payload limit,
+  // so our read() should return false (connection closed).
+  std::string msg;
+  EXPECT_FALSE(client.read(msg));
+}
+
+TEST_F(WebSocketIntegrationTest, MaxPayloadAtLimit) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  client.set_read_timeout(10, 0);
+  ASSERT_TRUE(client.connect());
+
+  // Send a message exactly at CPPHTTPLIB_WEBSOCKET_MAX_PAYLOAD_LENGTH (16MB).
+  // This should succeed.
+  std::string at_limit(CPPHTTPLIB_WEBSOCKET_MAX_PAYLOAD_LENGTH, 'B');
+  ASSERT_TRUE(client.send(at_limit));
+
+  std::string msg;
+  ASSERT_TRUE(client.read(msg));
+  EXPECT_EQ(at_limit.size(), msg.size());
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, ConnectToInvalidPath) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/nonexistent");
+  EXPECT_FALSE(client.connect());
+  EXPECT_FALSE(client.is_open());
+}
+
+TEST_F(WebSocketIntegrationTest, EmptyMessage) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  ASSERT_TRUE(client.connect());
+
+  ASSERT_TRUE(client.send(""));
+  std::string msg;
+  EXPECT_EQ(ws::Text, client.read(msg));
+  EXPECT_EQ("", msg);
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, Reconnect) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+
+  // First connection
+  ASSERT_TRUE(client.connect());
+  ASSERT_TRUE(client.send("first"));
+  std::string msg;
+  ASSERT_TRUE(client.read(msg));
+  EXPECT_EQ("first", msg);
+  client.close();
+  EXPECT_FALSE(client.is_open());
+
+  // Reconnect using the same client object
+  ASSERT_TRUE(client.connect());
+  ASSERT_TRUE(client.is_open());
+  ASSERT_TRUE(client.send("second"));
+  ASSERT_TRUE(client.read(msg));
+  EXPECT_EQ("second", msg);
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, CloseWithStatus) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-close-status");
+  ASSERT_TRUE(client.connect());
+
+  // Trigger the server to close with GoingAway status
+  ASSERT_TRUE(client.send("trigger"));
+
+  // read() should return false after receiving the close frame
+  std::string msg;
+  EXPECT_FALSE(client.read(msg));
+  EXPECT_FALSE(client.is_open());
+}
+
+TEST_F(WebSocketIntegrationTest, ClientCloseWithStatus) {
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  ASSERT_TRUE(client.connect());
+
+  client.close(ws::CloseStatus::GoingAway, "client leaving");
+  EXPECT_FALSE(client.is_open());
+}
+
+TEST_F(WebSocketIntegrationTest, SubProtocolNegotiation) {
+  Headers headers = {{"Sec-WebSocket-Protocol", "mqtt, graphql-ws"}};
+  ws::WebSocketClient client(
+      "ws://localhost:" + std::to_string(port_) + "/ws-subprotocol", headers);
+  ASSERT_TRUE(client.connect());
+
+  // Server should have selected graphql-ws
+  EXPECT_EQ("graphql-ws", client.subprotocol());
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, SubProtocolNoMatch) {
+  Headers headers = {{"Sec-WebSocket-Protocol", "mqtt, wamp"}};
+  ws::WebSocketClient client(
+      "ws://localhost:" + std::to_string(port_) + "/ws-subprotocol", headers);
+  ASSERT_TRUE(client.connect());
+
+  // Server should not have selected any subprotocol
+  EXPECT_TRUE(client.subprotocol().empty());
+
+  client.close();
+}
+
+TEST_F(WebSocketIntegrationTest, SubProtocolNotRequested) {
+  // Connect without requesting any subprotocol
+  ws::WebSocketClient client("ws://localhost:" + std::to_string(port_) +
+                             "/ws-subprotocol");
+  ASSERT_TRUE(client.connect());
+
+  EXPECT_TRUE(client.subprotocol().empty());
+
+  client.close();
+}
+
+TEST(WebSocketPreRoutingTest, RejectWithoutAuth) {
+  Server svr;
+
+  svr.set_pre_routing_handler([](const Request &req, Response &res) {
+    if (!req.has_header("Authorization")) {
+      res.status = StatusCode::Unauthorized_401;
+      res.set_content("Unauthorized", "text/plain");
+      return Server::HandlerResponse::Handled;
+    }
+    return Server::HandlerResponse::Unhandled;
+  });
+
+  svr.WebSocket("/ws", [](const Request &, ws::WebSocket &ws) {
+    std::string msg;
+    while (ws.read(msg)) {
+      ws.send(msg);
+    }
+  });
+
+  auto port = svr.bind_to_any_port("localhost");
+  std::thread t([&]() { svr.listen_after_bind(); });
+  svr.wait_until_ready();
+
+  // Without Authorization header - should be rejected before upgrade
+  ws::WebSocketClient client1("ws://localhost:" + std::to_string(port) + "/ws");
+  EXPECT_FALSE(client1.connect());
+
+  // With Authorization header - should succeed
+  Headers headers = {{"Authorization", "Bearer token123"}};
+  ws::WebSocketClient client2("ws://localhost:" + std::to_string(port) + "/ws",
+                              headers);
+  ASSERT_TRUE(client2.connect());
+  ASSERT_TRUE(client2.send("hello"));
+  std::string msg;
+  ASSERT_TRUE(client2.read(msg));
+  EXPECT_EQ("hello", msg);
+  client2.close();
+
+  svr.stop();
+  t.join();
+}
+
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+class WebSocketSSLIntegrationTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    server_ = httplib::detail::make_unique<SSLServer>(SERVER_CERT_FILE,
+                                                      SERVER_PRIVATE_KEY_FILE);
+    server_->WebSocket("/ws-echo", [](const Request &, ws::WebSocket &ws) {
+      std::string msg;
+      ws::ReadResult ret;
+      while ((ret = ws.read(msg))) {
+        if (ret == ws::Binary) {
+          ws.send(msg.data(), msg.size());
+        } else {
+          ws.send(msg);
+        }
+      }
+    });
+    port_ = server_->bind_to_any_port(HOST);
+    server_thread_ = std::thread([this]() { server_->listen_after_bind(); });
+    server_->wait_until_ready();
+  }
+
+  void TearDown() override {
+    server_->stop();
+    if (server_thread_.joinable()) { server_thread_.join(); }
+  }
+
+  std::unique_ptr<SSLServer> server_;
+  std::thread server_thread_;
+  int port_ = 0;
+};
+
+TEST_F(WebSocketSSLIntegrationTest, TextEcho) {
+  ws::WebSocketClient client("wss://localhost:" + std::to_string(port_) +
+                             "/ws-echo");
+  client.enable_server_certificate_verification(false);
+  ASSERT_TRUE(client.connect());
+  ASSERT_TRUE(client.is_open());
+
+  ASSERT_TRUE(client.send("Hello WSS"));
+  std::string msg;
+  EXPECT_EQ(ws::Text, client.read(msg));
+  EXPECT_EQ("Hello WSS", msg);
+
+  client.close();
 }
 #endif

@@ -39,16 +39,36 @@ endif
 deps = [dependency('threads')]
 args = []
 
-openssl_dep = dependency('openssl', version: '>=3.0.0', required: get_option('openssl'))
-if openssl_dep.found()
-  deps += openssl_dep
-  args += '-DCPPHTTPLIB_OPENSSL_SUPPORT'
-  if host_machine.system() == 'darwin'
-    macosx_keychain_dep = dependency('appleframeworks', modules: ['CFNetwork', 'CoreFoundation', 'Security'], required: get_option('macosx_keychain'))
-    if macosx_keychain_dep.found()
+if get_option('tls').allowed()
+  tls_found = false
+  if get_option('tls_backend') == 'openssl'
+    openssl_dep = dependency('openssl', version: '>=3.0.0', required: get_option('tls'))
+    if openssl_dep.found()
+      deps += openssl_dep
+      args += '-DCPPHTTPLIB_OPENSSL_SUPPORT'
+      tls_found = true
+    endif
+  else
+    mbedtls_dep = dependency('mbedtls', required: get_option('tls'))
+    mbedtlsx509_dep = dependency('mbedx509', required: get_option('tls'))
+    mbedtlscrypto_dep = dependency('mbedcrypto', required: get_option('tls'))
+    if mbedtls_dep.found() and mbedtlsx509_dep.found() and mbedtlscrypto_dep.found()
+      deps += mbedtls_dep
+      deps += mbedtlsx509_dep
+      deps += mbedtlscrypto_dep
+      args += '-DCPPHTTPLIB_MBEDTLS_SUPPORT'
+      tls_found = true
+    endif
+  endif
+
+  if tls_found and host_machine.system() == 'darwin'
+    disable_macosx_certs = get_option('disable_macosx_automatic_root_certificates')
+    if disable_macosx_certs
+        args += '-DCPPHTTPLIB_DISABLE_MACOSX_AUTOMATIC_ROOT_CERTIFICATES'
+    else
+        macosx_keychain_dep = dependency('appleframeworks', modules: ['CFNetwork', 'CoreFoundation', 'Security'], required: true)
         deps += macosx_keychain_dep
-        args += '-DCPPHTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN'
-    endif  
+    endif
   endif
 endif
 
