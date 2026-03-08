@@ -24,6 +24,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# 安装 supervisor (在切换用户之前)
+RUN apt-get update && apt-get install -y --no-install-recommends supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建 supervisor 配置 (在切换用户之前)
+RUN mkdir -p /var/log/supervisor
+RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'nodaemon=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '[program:stock-cpp]' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=/app/stock_for_cpp' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'directory=/app' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '[program:stock-bot]' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=node /app/nodejs/src/index.js' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'directory=/app/nodejs' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf
+
 # 创建非 root 用户
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
@@ -48,28 +71,6 @@ USER appuser
 
 # 暴露端口
 EXPOSE 3000
-
-# 使用 supervisor 同时运行 C++ 程序和 Node.js 服务
-RUN apt-get update && apt-get install -y supervisor && rm -rf /var/lib/apt/lists/*
-
-# 创建 supervisor 配置
-RUN mkdir -p /var/log/supervisor
-RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'nodaemon=true' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo '[program:stock-cpp]' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'command=/app/stock_for_cpp' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'directory=/app' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo '[program:stock-bot]' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'command=node /app/nodejs/src/index.js' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'directory=/app/nodejs' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf
 
 # 启动 supervisor (会同时启动两个服务)
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
