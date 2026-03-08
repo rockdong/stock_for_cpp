@@ -141,6 +141,8 @@ jobs:
           PORT=3000
           DB_PATH=../cpp/stock.db
           EOF
+
+      - name: 🔧 设置 Docker Buildx
         run: chmod +x cpp/build/stock_for_cpp
 
       - name: 🔧 设置 Docker Buildx
