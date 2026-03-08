@@ -130,6 +130,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             DATA_SOURCE_API_KEY=${{ secrets.DATA_SOURCE_API_KEY }}
+            FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}
+            FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
+            FEISHU_ENCRYPT_KEY=${{ secrets.FEISHU_ENCRYPT_KEY }}
+            FEISHU_VERIFICATION_TOKEN=${{ secrets.FEISHU_VERIFICATION_TOKEN }}
 
       - name: ✅ 镜像推送完成
         run: echo "🎉 Docker 镜像已成功推送到 Docker Hub！"
