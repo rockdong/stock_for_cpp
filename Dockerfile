@@ -10,12 +10,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# 启用 i386 架构支持（在 Apple Silicon Mac 上运行 x86_64 二进制需要）
+RUN dpkg --add-architecture i386
+
 # 安装运行时依赖 (C++)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-0 \
     libssl3 \
     ca-certificates \
     tzdata \
+    libc6:i386 \
+    libstdc++6:i386 \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 Node.js
