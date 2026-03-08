@@ -13,3 +13,6 @@ stock.db
 .env.local
 .env.*.local
 secret.key
+
+# 允许 cpp/.env 用于 Docker 构建
+!.env
