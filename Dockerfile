@@ -66,6 +66,10 @@ COPY --chown=appuser:appgroup nodejs/ /app/nodejs/
 COPY --chown=appuser:appgroup cpp/.env /app/.env
 COPY --chown=appuser:appgroup nodejs/.env /app/nodejs/.env
 
+# 使用 CI 传入的密钥覆盖敏感配置
+ARG DATA_SOURCE_API_KEY
+ENV DATA_SOURCE_API_KEY=${DATA_SOURCE_API_KEY}
+
 # 切换到非 root 用户
 USER appuser
 
