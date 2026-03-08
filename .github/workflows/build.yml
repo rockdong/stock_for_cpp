@@ -125,6 +125,24 @@ jobs:
       - name: 🔑 设置可执行权限
         run: chmod +x cpp/build/stock_for_cpp
 
+      - name: 📝 创建临时 .env 文件（C++）
+        run: |
+          cat > cpp/.env << EOF
+          DATA_SOURCE_API_KEY=${{ secrets.DATA_SOURCE_API_KEY }}
+          EOF
+
+      - name: 📝 创建临时 .env 文件（Node.js）
+        run: |
+          cat > nodejs/.env << EOF
+          APP_ID=${{ secrets.FEISHU_APP_ID }}
+          APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
+          ENCRYPT_KEY=${{ secrets.FEISHU_ENCRYPT_KEY }}
+          VERIFICATION_TOKEN=${{ secrets.FEISHU_VERIFICATION_TOKEN }}
+          PORT=3000
+          DB_PATH=../cpp/stock.db
+          EOF
+        run: chmod +x cpp/build/stock_for_cpp
+
       - name: 🔧 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -156,12 +174,3 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-          build-args: |
-            DATA_SOURCE_API_KEY=${{ secrets.DATA_SOURCE_API_KEY }}
-            FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}
-            FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
-            FEISHU_ENCRYPT_KEY=${{ secrets.FEISHU_ENCRYPT_KEY }}
-            FEISHU_VERIFICATION_TOKEN=${{ secrets.FEISHU_VERIFICATION_TOKEN }}
-
-      - name: ✅ 镜像推送完成
-        run: echo "🎉 Docker 镜像已成功推送到 Docker Hub！"

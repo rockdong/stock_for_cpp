@@ -68,22 +68,9 @@ RUN cd /app/nodejs && npm install --production
 # 修复 node_modules 权限
 RUN chown -R appuser:appgroup /app/nodejs/node_modules
 
-# 复制配置文件
+# 复制包含敏感信息的 .env 文件
 COPY --chown=appuser:appgroup cpp/.env /app/.env
 COPY --chown=appuser:appgroup nodejs/.env /app/nodejs/.env
-
-# 使用 CI 传入的密钥覆盖敏感配置
-ARG DATA_SOURCE_API_KEY
-ARG FEISHU_APP_ID
-ARG FEISHU_APP_SECRET
-ARG FEISHU_ENCRYPT_KEY
-ARG FEISHU_VERIFICATION_TOKEN
-
-ENV DATA_SOURCE_API_KEY=${DATA_SOURCE_API_KEY}
-ENV APP_ID=${FEISHU_APP_ID}
-ENV APP_SECRET=${FEISHU_APP_SECRET}
-ENV ENCRYPT_KEY=${FEISHU_ENCRYPT_KEY}
-ENV VERIFICATION_TOKEN=${FEISHU_VERIFICATION_TOKEN}
 
 # 切换到非 root 用户
 USER appuser
