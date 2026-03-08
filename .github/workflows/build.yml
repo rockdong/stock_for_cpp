@@ -14,8 +14,8 @@ env:
   DOCKER_IMAGE_NAME: stock_for_cpp
 
 jobs:
-  build-cpp:
-    name: 🏗️ 编译 C++ 项目
+  build-cpp-ubuntu:
+    name: 🏗️ 编译 C++ (Ubuntu)
     runs-on: ubuntu-latest
 
     steps:
@@ -37,10 +37,40 @@ jobs:
       env:
         BUILD_NUMBER: ${{ github.run_number }}
 
-    - name: 📤 上传 C++ 构建产物
+    - name: 📤 上传 C++ 构建产物 (Ubuntu)
       uses: actions/upload-artifact@v4
       with:
-        name: cpp-build
+        name: cpp-build-ubuntu
+        path: |
+          cpp/build/stock_for_cpp
+          cpp/build/version.h
+
+  build-cpp-macos:
+    name: 🏗️ 编译 C++ (macOS)
+    runs-on: macos-latest
+
+    steps:
+    - name: 📥 检出代码仓库
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: 🔧 安装构建依赖
+      run: |
+        brew install cmake sqlite3 openssl@3
+
+    - name: ⚙️ 配置 CMake (使用 cpp 目录)
+      run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3)
+
+    - name: 🏗️ 编译项目
+      run: cmake --build cpp/build --config ${{ env.BUILD_TYPE }} -- -j$(sysctl -n hw.ncpu)
+      env:
+        BUILD_NUMBER: ${{ github.run_number }}
+
+    - name: 📤 上传 C++ 构建产物 (macOS)
+      uses: actions/upload-artifact@v4
+      with:
+        name: cpp-build-macos
         path: |
           cpp/build/stock_for_cpp
           cpp/build/version.h
@@ -70,22 +100,21 @@ jobs:
           nodejs/node_modules
           nodejs/src
           nodejs/package.json
-          nodejs/package-lock.json
 
   docker:
     name: 🐳 构建并推送 Docker 镜像
     runs-on: ubuntu-latest
-    needs: [build-cpp, build-nodejs]
+    needs: [build-cpp-ubuntu, build-nodejs]
     if: github.event_name != 'pull_request'
 
     steps:
       - name: 📥 检出代码仓库
         uses: actions/checkout@v4
 
-      - name: 📦 下载 C++ 构建产物
+      - name: 📦 下载 C++ 构建产物 (Ubuntu)
         uses: actions/download-artifact@v4
         with:
-          name: cpp-build
+          name: cpp-build-ubuntu
           path: cpp/build/
 
       - name: 📦 下载 Node.js 产物
