@@ -97,6 +97,17 @@ jobs:
       with:
         name: nodejs-build
         path: |
+          nodejs/src
+          nodejs/package.json
+          nodejs/package-lock.json
+      working-directory: nodejs
+      run: npm install
+
+    - name: 📤 上传 Node.js 产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: nodejs-build
+        path: |
           nodejs/node_modules
           nodejs/src
           nodejs/package.json

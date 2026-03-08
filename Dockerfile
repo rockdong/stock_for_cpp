@@ -62,6 +62,12 @@ COPY --chown=appuser:appgroup cpp/build/stock_for_cpp /app/stock_for_cpp
 # 复制 Node.js 文件
 COPY --chown=appuser:appgroup nodejs/ /app/nodejs/
 
+# 安装 Node.js 依赖（在切换用户之前，以 root 身份）
+RUN cd /app/nodejs && npm install --production
+
+# 修复 node_modules 权限
+RUN chown -R appuser:appgroup /app/nodejs/node_modules
+
 # 复制配置文件
 COPY --chown=appuser:appgroup cpp/.env /app/.env
 COPY --chown=appuser:appgroup nodejs/.env /app/nodejs/.env
