@@ -17,6 +17,7 @@ const config = {
   verificationToken: process.env.VERIFICATION_TOKEN,
   port: parseInt(process.env.PORT) || 3000,
   client,
+  dbPath: process.env.DB_PATH || '../cpp/stock.db',
 };
 
 module.exports = config;
