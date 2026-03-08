@@ -165,6 +165,68 @@ function closeDatabase() {
   }
 }
 
+/**
+ * 查询分析结果
+ * @param {string} tsCode - 股票代码
+ * @param {string} strategyName - 策略名称（可选）
+ * @param {number} limit - 返回数量限制
+ * @returns {Array} 分析结果列表
+ */
+function findAnalysisResults(tsCode, strategyName = null, limit = 20) {
+  if (!db) initDatabase();
+  if (!db) return [];
+  
+  try {
+    let sql = `
+      SELECT ar.ts_code, s.name, ar.strategy_name, ar.trade_date, ar.label, ar.opt, ar.freq, ar.created_at
+      FROM analysis_results ar
+      LEFT JOIN stocks s ON ar.ts_code = s.ts_code
+      WHERE ar.ts_code = ?
+    `;
+    
+    const params = [tsCode];
+    
+    if (strategyName) {
+      sql += ` AND ar.strategy_name = ?`;
+      params.push(strategyName);
+    }
+    
+    sql += ` ORDER BY ar.trade_date DESC LIMIT ?`;
+    params.push(limit);
+    
+    const stmt = db.prepare(sql);
+    return stmt.all(...params);
+  } catch (error) {
+    console.error('查询分析结果失败:', error.message);
+    return [];
+  }
+}
+
+/**
+ * 查询所有分析结果
+ * @param {number} limit - 返回数量限制
+ * @returns {Array} 分析结果列表
+ */
+function findAllAnalysisResults(limit = 20) {
+  if (!db) initDatabase();
+  if (!db) return [];
+  
+  try {
+    const stmt = db.prepare(`
+      SELECT ar.ts_code, s.name, ar.strategy_name, ar.trade_date, ar.label, ar.opt, ar.freq, ar.created_at
+      FROM analysis_results ar
+      LEFT JOIN stocks s ON ar.ts_code = s.ts_code
+      ORDER BY ar.trade_date DESC
+      LIMIT ?
+    `);
+    
+    return stmt.all(limit);
+  } catch (error) {
+    console.error('查询分析结果列表失败:', error.message);
+    return [];
+  }
+}
+
 module.exports = {
   initDatabase,
   findStockByTsCode,
@@ -172,5 +234,7 @@ module.exports = {
   findStocksByIndustry,
   findStocksByMarket,
   searchStocks,
+  findAnalysisResults,
+  findAllAnalysisResults,
   closeDatabase,
 };
