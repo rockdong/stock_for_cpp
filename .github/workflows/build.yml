@@ -16,7 +16,7 @@ env:
 jobs:
   build-cpp-ubuntu:
     name: 🏗️ 编译 C++ (Ubuntu)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: 📥 检出代码仓库
