@@ -125,22 +125,42 @@ jobs:
       - name: 🔑 设置可执行权限
         run: chmod +x cpp/build/stock_for_cpp
 
-      - name: 📝 创建临时 .env 文件（C++）
+      - name: 📝 创建 .env 文件（C++）- 使用环境变量直接写入
+        env:
+          DATA_SOURCE_API_KEY: ${{ secrets.DATA_SOURCE_API_KEY }}
         run: |
-          cat > cpp/.env << EOF
-          DATA_SOURCE_API_KEY=${{ secrets.DATA_SOURCE_API_KEY }}
-          EOF
+          # 使用 printf 避免 heredoc 处理特殊字符问题
+          printf 'DATA_SOURCE_API_KEY=%s\n' "$DATA_SOURCE_API_KEY" > cpp/.env
+          cat >> cpp/.env << 'ENDFILE'
+          # 日志配置
+          LOG_LEVEL=DEBUG
+          LOG_PATTERN=[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [%t] %v
+          LOG_FILE_PATH=logs/app.log
+          LOG_CONSOLE_ENABLED=true
+          LOG_FILE_ENABLED=true
+          LOG_MAX_FILE_SIZE=10485760
+          LOG_MAX_FILES=3
+          LOG_ASYNC_ENABLED=false
+          LOG_ASYNC_QUEUE_SIZE=8192
 
-      - name: 📝 创建临时 .env 文件（Node.js）
+          DATA_SOURCE_URL=http://api.tushare.pro
+
+          STRATEGIES=EMA25_GREATER_17_PRICE_MATCH
+
+          # 调度配置
+          SCHEDULER_EXECUTE_TIME=20:00
+          ENDFILE
+
+      - name: 📝 创建 .env 文件（Node.js）- 使用环境变量直接写入
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_ENCRYPT_KEY: ${{ secrets.FEISHU_ENCRYPT_KEY }}
+          FEISHU_VERIFICATION_TOKEN: ${{ secrets.FEISHU_VERIFICATION_TOKEN }}
         run: |
-          cat > nodejs/.env << EOF
-          APP_ID=${{ secrets.FEISHU_APP_ID }}
-          APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
-          ENCRYPT_KEY=${{ secrets.FEISHU_ENCRYPT_KEY }}
-          VERIFICATION_TOKEN=${{ secrets.FEISHU_VERIFICATION_TOKEN }}
-          PORT=3000
-          DB_PATH=../cpp/stock.db
-          EOF
+          # 使用 printf 避免 heredoc 处理特殊字符问题
+          printf '# 飞书机器人配置\nAPP_ID=%s\nAPP_SECRET=%s\nENCRYPT_KEY=%s\nVERIFICATION_TOKEN=%s\nPORT=3000\nDB_PATH=../cpp/stock.db\n' \
+            "$FEISHU_APP_ID" "$FEISHU_APP_SECRET" "$FEISHU_ENCRYPT_KEY" "$FEISHU_VERIFICATION_TOKEN" > nodejs/.env
 
       - name: 🔧 设置 Docker Buildx
         run: chmod +x cpp/build/stock_for_cpp
