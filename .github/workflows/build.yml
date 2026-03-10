@@ -127,6 +127,7 @@ jobs:
 
       - name: 📝 创建临时 .env 文件（C++）
         run: |
+          echo "" >> cpp/.env
           echo "DATA_SOURCE_API_KEY=${{ secrets.DATA_SOURCE_API_KEY }}" >> cpp/.env
 
       - name: 📝 创建临时 .env 文件（Node.js）
