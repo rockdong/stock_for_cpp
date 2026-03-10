@@ -138,7 +138,7 @@ jobs:
           ENCRYPT_KEY=${{ secrets.FEISHU_ENCRYPT_KEY }}
           VERIFICATION_TOKEN=${{ secrets.FEISHU_VERIFICATION_TOKEN }}
           PORT=3000
-          DB_PATH=../cpp/stock.db
+          DB_PATH=../stock.db
           EOF
 
       - name: 🔧 设置 Docker Buildx
