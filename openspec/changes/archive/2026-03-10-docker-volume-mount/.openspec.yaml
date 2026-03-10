@@ -1,0 +1,7 @@
+name: docker-volume-mount
+title: Docker挂载优化：日志和数据库持久化
+status: draft
+created: "2025-03-11"
+updated: "2025-03-11"
+description: 将容器内的logs目录和stock.db文件挂载到宿主机，保持本地开发相对路径兼容性
+author: OpenSpec

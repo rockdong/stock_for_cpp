@@ -1,0 +1,76 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+context: |
+  # 技术栈
+  - 后端核心引擎：C++ (C++17标准)
+  - Web服务层：Node.js + Express.js
+  - 数据库：SQLite + better-sqlite3驱动 (只读模式)
+  - 容器化：Docker + 多阶段构建
+  - CI/CD：GitHub Actions自动化构建
+  - 第三方API：Tushare金融数据接口、飞书/Feishu机器人SDK
+  
+  # 系统架构
+  - 多组件分层架构：C++数据处理引擎 + Node.js Web服务
+  - 数据流向：Tushare API → C++引擎处理 → SQLite存储 → Node.js API → 飞书通知
+  - 微服务设计：独立的数据获取、分析、通知模块
+  
+  # 构建配置
+  - C++构建：CMake构建系统，支持Ubuntu和macOS跨平台编译
+  - Node.js依赖：npm管理，生产环境依赖锁定
+  - 容器镜像：多架构构建(amd64)，推送到GitHub Container Registry
+  
+  # 开发规范
+  - 提交规范：使用约定式提交 + Emoji前缀 (🚀📦🐳🔧等)
+  - 数据库路径：各组件相对路径统一为 ../stock.db
+  - 错误处理：详细日志记录，包含错误代码和上下文信息
+  - API限流：严格遵守Tushare接口500次/分钟的限制
+  - 环境配置：敏感信息使用AES加密存储在.env文件中
+  
+  # 业务领域
+  - 金融数据分析与股票交易机器人
+  - 技术指标计算与量化策略回测
+  - 实时价格监控与智能通知系统
+  
+  # 核心功能模块
+  - 数据获取：股票基础信息、历史价格、实时行情
+  - 技术分析：移动平均线、MACD、RSI等技术指标计算
+  - 策略引擎：自定义交易策略开发和回测
+  - 通知系统：多渠道消息推送(飞书、邮件、短信)
+  - 监控管理：系统健康监控和性能指标追踪
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - 提案控制在800字以内，重点突出业务价值
+    - 必须包含"为什么"、"做什么"和"影响"三个部分
+    - 技术性变更需要说明与现有架构的兼容性
+    - 涉及外部API的变更需要说明限流和错误处理策略
+  
+  design:
+    - 设计文档必须包含技术选型的理由和备选方案
+    - 性能敏感的变更需要提供预期性能指标
+    - 数据库结构变更需要提供迁移方案
+    - 安全相关变更需要说明威胁模型和防护措施
+  
+  tasks:
+    - 任务拆分粒度控制在2小时内完成
+    - C++代码修改任务需要包含单元测试要求
+    - API变更需要包含向后兼容性检查
+    - 环境配置变更需要包含测试环境验证步骤
+  
+  specs:
+    - 功能规格书使用场景驱动格式(Given-When-Then)
+    - 性能规格书需要明确测试方法
+    - 安全规格书需要包含威胁建模分析
+    - 接口规格书需要包含API契约定义

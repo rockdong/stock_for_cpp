@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends supervisor \
 RUN mkdir -p /var/log/supervisor
 RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo 'nodaemon=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'user=root' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '[program:stock-cpp]' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'command=/app/stock_for_cpp' >> /etc/supervisor/conf.d/supervisord.conf && \
@@ -39,13 +40,19 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '[program:stock-bot]' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'command=node /app/nodejs/src/index.js' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'directory=/app/nodejs' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf
+    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/supervisord.conf
 
 # 创建非 root 用户
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
@@ -72,11 +79,16 @@ RUN chown -R appuser:appgroup /app/nodejs/node_modules
 COPY --chown=appuser:appgroup cpp/.env /app/.env
 COPY --chown=appuser:appgroup nodejs/.env /app/nodejs/.env
 
+# 复制启动脚本
+COPY --chown=appuser:appgroup docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # 切换到非 root 用户
 USER appuser
 
 # 暴露端口
 EXPOSE 3000
 
-# 启动 supervisor (会同时启动两个服务)
+# 启动容器初始化脚本，然后启动supervisor
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
