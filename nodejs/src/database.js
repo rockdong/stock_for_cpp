@@ -13,8 +13,8 @@ function initDatabase() {
   }
   
   try {
-    // 解析数据库路径（相对于 nodejs 目录）
-    const dbPath = path.resolve(__dirname, config.dbPath);
+    // 解析数据库路径（相对于 nodejs 根目录）
+    const dbPath = path.resolve(__dirname, '..', config.dbPath);
     console.log('连接数据库:', dbPath);
     
     db = new Database(dbPath, { readonly: true });
