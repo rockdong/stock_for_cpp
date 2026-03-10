@@ -3,6 +3,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <chrono>
 
 // 版本信息
 #include "version.h"
@@ -293,6 +294,11 @@ void performBatchAnalysis(
     std::atomic<int> successCount(0);
     std::atomic<int> failCount(0);
     
+    // 为了遵守 Tushare API 每分钟 500 次的调用限制，计算线程间的延迟
+    // 假设每只股票需要调用 3 次 API（日线、周线、月线），500 次/分钟 = 8.33 次/秒
+    // 安全起见，每秒最多调用 8 次，即每秒分析不超过 2-3 只股票
+    const int delay_between_tasks = 125; // 125ms，确保每秒不超过 8 次调用
+    
     for (const auto& stock : stockList) {
         pool.enqueue([&]() {
             try {
@@ -304,6 +310,9 @@ void performBatchAnalysis(
                 failCount++;
             }
         });
+        
+        // 在任务间添加延迟以控制 API 调用频率
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay_between_tasks));
     }
     
     pool.wait();
