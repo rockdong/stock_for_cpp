@@ -5,7 +5,6 @@ services:
     image: rockdong13/stock_for_cpp:v2
     container_name: stock-analysis-dev
     volumes:
-      - ./stock.db:/app/stock.db
       - ./logs:/app/logs
     ports:
       - "3000:3000"
@@ -20,6 +19,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+volumes:
+  stock-data:
 
   # 可选：SQLite数据库管理界面
   sqlite-browser:
