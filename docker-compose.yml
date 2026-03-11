@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   stock-analysis:
     image: rockdong13/stock_for_cpp:v2
