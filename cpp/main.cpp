@@ -391,7 +391,10 @@ int main(int argc, char* argv[]) {
             LOG_INFO("执行单次分析...");
             performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao);
         } else {
-            // 定时执行模式
+            // 定时执行模式 - 首次启动先执行一次
+            LOG_INFO("首次启动，立即执行一次分析...");
+            performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao);
+            
             LOG_INFO("启动定时调度模式，执行时间: " + options.executeTime);
             
             scheduler::Scheduler sched(options.executeTime, [&]() {
