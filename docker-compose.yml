@@ -20,10 +20,6 @@ services:
       retries: 3
       start_period: 40s
 
-volumes:
-  stock-data:
-
-  # 可选：SQLite数据库管理界面
   sqlite-browser:
     image: coleifer/sqlite-web
     container_name: stock-db-browser
@@ -35,9 +31,8 @@ volumes:
       - SQLITE_DATABASE=stock.db
     restart: unless-stopped
     profiles:
-      - tools  # 只在需要时启动
+      - tools
 
-  # 可选：日志监控工具
   dozzle:
     image: amir20/dozzle:latest
     container_name: stock-log-monitor
