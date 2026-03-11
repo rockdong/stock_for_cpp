@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   stock-analysis:
-    image: rockdong/stock_for_cpp
+    image: rockdong13/stock_for_cpp:v2
     container_name: stock-analysis-dev
     volumes:
       - ./stock.db:/app/stock.db

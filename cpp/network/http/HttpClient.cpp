@@ -85,8 +85,18 @@ HttpResponse HttpClient::get(const std::string& path,
             LOG_DEBUG("GET " + path + " - Status: " + std::to_string(res->status));
         } else {
             response.status_code = 0;
-            response.error_message = "Request failed: " + httplib::to_string(res.error());
-            LOG_ERROR("GET " + path + " 失败: " + response.error_message);
+            std::string error_detail = httplib::to_string(res.error());
+            response.error_message = "Request failed: " + error_detail;
+            
+            // 在超时或请求失败时打印详细信息
+            LOG_ERROR("GET " + path + " 失败: " + error_detail);
+            LOG_ERROR("错误类型: " + std::to_string((int)res.error()) + " - 详细信息已记录");
+            
+            // 如果有部分响应内容，也打印出来
+            if (!res->body.empty()) {
+                LOG_ERROR("部分响应内容: " + res->body.substr(0, 500) + 
+                         (res->body.length() > 500 ? "..." : ""));
+            }
         }
         
         return response;
@@ -121,8 +131,18 @@ HttpResponse HttpClient::post(const std::string& path,
             LOG_DEBUG("POST " + path + " - Status: " + std::to_string(res->status));
         } else {
             response.status_code = 0;
-            response.error_message = "Request failed: " + httplib::to_string(res.error());
-            LOG_ERROR("POST " + path + " 失败: " + response.error_message);
+            std::string error_detail = httplib::to_string(res.error());
+            response.error_message = "Request failed: " + error_detail;
+            
+            // 在超时或请求失败时打印详细信息
+            LOG_ERROR("POST " + path + " 失败: " + error_detail);
+            LOG_ERROR("错误类型: " + std::to_string((int)res.error()) + " - 详细信息已记录");
+            
+            // 如果有部分响应内容，也打印出来
+            if (!res->body.empty()) {
+                LOG_ERROR("部分响应内容: " + res->body.substr(0, 500) + 
+                         (res->body.length() > 500 ? "..." : ""));
+            }
         }
         
         return response;
