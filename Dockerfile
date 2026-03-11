@@ -80,11 +80,11 @@ COPY --chown=appuser:appgroup nodejs/.env /app/nodejs/.env
 COPY --chown=appuser:appgroup docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# 给app目录设置正确的权限，然后切换到非root用户
+# 给app目录设置正确的权限
 RUN chown -R appuser:appgroup /app
 
-# 切换到非 root 用户
-USER appuser
+# 保持容器使用默认的root用户来允许supervisord正常工作
+# supervisord将以root身份运行并按配置启动各服务
 
 # 暴露端口
 EXPOSE 3000
