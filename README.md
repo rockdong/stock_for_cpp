@@ -87,6 +87,11 @@ docker-compose --profile tools up -d
 docker-compose up stock-analysis -d
 ```
 
+**注意事项**：
+- 确保在运行前配置好 `.env` 文件中的 API 密钥和相关凭证
+- C++ 服务需要 Tushare API 密钥才能获取股票数据
+- Node.js 服务需要飞书机器人配置才能启动聊天机器人功能
+
 服务端口映射：
 - 主服务：3000 (应用) / 8888 (日志监控) / 8080 (数据库浏览器)
 
