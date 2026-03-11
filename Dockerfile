@@ -76,9 +76,6 @@ RUN cd /app/nodejs && npm install --production
 COPY --chown=appuser:appgroup cpp/.env /app/.env
 COPY --chown=appuser:appgroup nodejs/.env /app/nodejs/.env
 
-# 复制数据库文件（如果存在）
-COPY --chown=appuser:appgroup stock.db /app/stock.db
-
 # 复制启动脚本
 COPY --chown=appuser:appgroup docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
