@@ -24,11 +24,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 supervisor (在切换用户之前)
+# 安装 supervisor 
 RUN apt-get update && apt-get install -y --no-install-recommends supervisor \
     && rm -rf /var/lib/apt/lists/*
 
-# 创建 supervisor 配置 (在切换用户之前)
+# 创建 supervisor 配置 
 RUN mkdir -p /var/log/supervisor
 RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo 'nodaemon=true' >> /etc/supervisor/conf.d/supervisord.conf && \
@@ -57,8 +57,8 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
 # 创建非 root 用户
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
-# 创建应用目录和日志目录
-RUN mkdir -p /app/logs /app/output /app/nodejs && chown -R appuser:appgroup /app
+# 创建应用目录
+RUN mkdir -p /app
 
 # 设置工作目录
 WORKDIR /app
@@ -69,19 +69,22 @@ COPY --chown=appuser:appgroup cpp/build/stock_for_cpp /app/stock_for_cpp
 # 复制 Node.js 文件
 COPY --chown=appuser:appgroup nodejs/ /app/nodejs/
 
-# 安装 Node.js 依赖（在切换用户之前，以 root 身份）
+# 安装 Node.js 依赖
 RUN cd /app/nodejs && npm install --production
-
-# 修复 node_modules 权限
-RUN chown -R appuser:appgroup /app/nodejs/node_modules
 
 # 复制包含敏感信息的 .env 文件
 COPY --chown=appuser:appgroup cpp/.env /app/.env
 COPY --chown=appuser:appgroup nodejs/.env /app/nodejs/.env
 
+# 复制数据库文件（如果存在）
+COPY --chown=appuser:appgroup stock.db /app/stock.db
+
 # 复制启动脚本
 COPY --chown=appuser:appgroup docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# 给app目录设置正确的权限，然后切换到非root用户
+RUN chown -R appuser:appgroup /app
 
 # 切换到非 root 用户
 USER appuser
