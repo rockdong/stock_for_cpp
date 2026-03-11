@@ -64,3 +64,6 @@ done
 
 echo "=== 初始化完成 ==="
 echo "启动supervisor..."
+
+# 执行传递给容器的CMD命令
+exec "$@"
