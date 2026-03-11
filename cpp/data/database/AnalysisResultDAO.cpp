@@ -48,7 +48,7 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
         auto db = conn.getDb();
         
         // 业务规则：
-        // - 如果当天同一只股票、同一策略、同一频率的记录已存在，则仅更新 opt 字段
+        // - 如果同一只股票、同一分析日期、同一策略的记录已存在，则追加 opt 和 freq
         // - 如果不存在，则插入一条新记录
         int existingId = -1;
         for (const auto& row : (*db)(
@@ -56,35 +56,44 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
                      .from(results)
                      .where(results.tsCode == result.ts_code
                             and results.tradeDate == result.trade_date
-                            and results.strategyName == result.strategy_name
-                            and results.freq == result.freq)
+                            and results.strategyName == result.strategy_name)
                      .limit(1u))) {
             existingId = row.id;
         }
 
         if (existingId >= 0) {
-            // 更新已有记录的 opt 字段：在原有 opt 后追加（使用 "|" 分隔）
+            // 更新已有记录：追加 opt 和 freq 字段（使用 "|" 分隔）
             std::string newOptToken = mapOptToEmoji(result.opt);
             std::string newOpt = newOptToken;
+            std::string newFreq = result.freq;
+            
             for (const auto& row : (*db)(
-                     sqlpp::select(results.opt)
+                     sqlpp::select(results.opt, results.freq)
                          .from(results)
                          .where(results.id == existingId)
                          .limit(1u))) {
+                // 追加 opt
                 if (!row.opt.is_null()) {
                     std::string oldOpt = row.opt.value();
                     if (!oldOpt.empty()) {
                         newOpt = oldOpt + "|" + newOptToken;
                     }
                 }
+                // 追加 freq
+                if (!row.freq.is_null()) {
+                    std::string oldFreq = row.freq.value();
+                    if (!oldFreq.empty()) {
+                        newFreq = oldFreq + "|" + result.freq;
+                    }
+                }
             }
 
             (*db)(sqlpp::update(results)
-                      .set(results.opt = newOpt)
+                      .set(results.opt = newOpt, results.freq = newFreq)
                       .where(results.id == existingId));
-            LOG_DEBUG("追加分析结果 opt 成功: " + result.ts_code + " - " +
+            LOG_DEBUG("追加分析结果成功: " + result.ts_code + " - " +
                       result.strategy_name + " - " + result.trade_date +
-                      " - freq=" + result.freq + " - opt=" + newOpt);
+                      " - freq=" + newFreq + " - opt=" + newOpt);
         } else {
             // 插入新记录
             std::string emojiOpt = mapOptToEmoji(result.opt);

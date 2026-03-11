@@ -28,6 +28,7 @@
 
 // 工具类
 #include "ThreadPool.h"
+#include "utils/TimeUtil.h"
 
 #include <csignal>
 
@@ -187,6 +188,44 @@ bool initializeStrategies() {
 }
 
 /**
+ * @brief 计算分析日期
+ * 考虑切换时间：当前时间 < 切换时间时，分析日期为昨天
+ * @return 分析日期（格式：YYYYMMDD）
+ */
+std::string calculateAnalysisDate() {
+    auto& config = config::Config::getInstance();
+    std::string switchTimeStr = config.getAnalysisDateSwitchTime();
+    
+    // 解析切换时间 (格式: HH:MM)
+    int switchHour = 2, switchMinute = 0;
+    size_t colonPos = switchTimeStr.find(':');
+    if (colonPos != std::string::npos) {
+        switchHour = std::stoi(switchTimeStr.substr(0, colonPos));
+        switchMinute = std::stoi(switchTimeStr.substr(colonPos + 1));
+    }
+    
+    // 获取当前时间
+    auto now = std::chrono::system_clock::now();
+    auto nowTime = std::chrono::system_clock::to_time_t(now);
+    std::tm* nowTm = std::localtime(&nowTime);
+    
+    // 判断是否需要使用昨天的日期
+    int currentMinutes = nowTm->tm_hour * 60 + nowTm->tm_min;
+    int switchMinutes = switchHour * 60 + switchMinute;
+    
+    if (currentMinutes < switchMinutes) {
+        // 使用昨天的日期
+        nowTm->tm_mday -= 1;
+        std::mktime(nowTm); // 规范化 tm 结构
+    }
+    
+    // 格式化为 YYYYMMDD
+    char buffer[9];
+    std::strftime(buffer, sizeof(buffer), "%Y%m%d", nowTm);
+    return std::string(buffer);
+}
+
+/**
  * @brief 加载或获取股票列表
  * @param stockDao 股票 DAO
  * @param dataSource 数据源
@@ -240,16 +279,19 @@ void analyzeStock(
             // 使用所有策略分析
             auto strategyResults = strategyManager.analyzeAll(stock.ts_code, data);
             
+            // 计算分析日期
+            std::string analysisDate = calculateAnalysisDate();
+            
             // 收集有效结果
             for (const auto& pair : strategyResults) {
                 if (pair.second.has_value()) {
                     auto result = *pair.second;
+                    // 设置分析日期（不是股票交易日期）
+                    result.trade_date = analysisDate;
                     // 设置频率
                     result.freq = freq;
-                    // 根据 label 设置 opt
-                    if (result.label == "买入") {
-                        result.opt = "买入";
-                    }
+                    // opt 使用 freq 值，后续会转为 emoji
+                    result.opt = freq;
                     
                     results.push_back(result);
                     LOG_INFO("  " + freqName + " - " + pair.first + ": " + result.label);
