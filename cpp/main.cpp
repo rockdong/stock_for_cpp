@@ -29,6 +29,7 @@
 // 工具类
 #include "ThreadPool.h"
 #include "utils/TimeUtil.h"
+#include "utils/RateLimiter.h"
 
 #include <csignal>
 
@@ -38,6 +39,7 @@ scheduler::Scheduler* g_scheduler = nullptr;
 // 信号处理函数
 void signalHandler(int signal) {
     LOG_INFO("收到退出信号，正在优雅关闭...");
+    RateLimiter::getInstance().stop();
     if (g_scheduler) {
         g_scheduler->stop();
     }

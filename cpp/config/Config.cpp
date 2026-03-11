@@ -119,6 +119,10 @@ void Config::loadConfig() {
     data_source_retry_times_ = getEnvInt("DATA_SOURCE_RETRY_TIMES", 3);
     data_source_retry_delay_ = getEnvInt("DATA_SOURCE_RETRY_DELAY", 1000); // 毫秒
 
+    // ========== Tushare 限流配置 ==========
+    tushare_rate_limit_ = getEnvInt("TUSHARE_RATE_LIMIT", 8);
+    tushare_burst_size_ = getEnvInt("TUSHARE_BURST_SIZE", 10);
+
     // ========== 缓存配置 ==========
     cache_enabled_ = getEnvBool("CACHE_ENABLED", true);
     cache_size_ = getEnvSize("CACHE_SIZE", 1000);

@@ -1,8 +1,24 @@
 #include "TushareClient.h"
 #include "Config.h"
 #include "Logger.h"
+#include "../../utils/RateLimiter.h"
+#include <thread>
 
 namespace network {
+
+namespace {
+    bool rateLimiterConfigured = false;
+    void configureRateLimiterOnce() {
+        if (!rateLimiterConfigured) {
+            auto& config = config::Config::getInstance();
+            RateLimiter::getInstance().configure(
+                config.getTushareRateLimit(),
+                config.getTushareBurstSize()
+            );
+            rateLimiterConfigured = true;
+        }
+    }
+}
 
 TushareClient::TushareClient() {
     // 从配置模块获取参数
@@ -32,23 +48,37 @@ TushareClient::TushareClient(const std::string& api_token, const std::string& ba
 TushareResponse TushareClient::query(const std::string& api_name,
                                      const std::map<std::string, std::string>& params,
                                      const std::vector<std::string>& fields) {
-    LOG_DEBUG("调用 Tushare API: " + api_name);
+    configureRateLimiterOnce();
     
-    // 构建请求 JSON
-    std::string request_body = buildRequestJson(api_name, params, fields);
-    
-    // 发送 POST 请求
-    auto http_response = http_client_->post("/", request_body, "application/json");
-    
-    // 解析响应
-    if (http_response.isSuccess()) {
-        return parseResponse(http_response.body);
-    } else {
-        TushareResponse response;
-        response.code = -1;
-        response.msg = "HTTP 请求失败: " + http_response.error_message;
-        LOG_ERROR(response.msg);
-        return response;
+    while (true) {
+        RateLimiter::getInstance().acquire();
+        
+        LOG_DEBUG("调用 Tushare API: " + api_name);
+        
+        std::string request_body = buildRequestJson(api_name, params, fields);
+        
+        auto http_response = http_client_->post("/", request_body, "application/json");
+        
+        if (http_response.isSuccess()) {
+            auto response = parseResponse(http_response.body);
+            
+            if (response.code == -2 && 
+                (response.msg.find("500次") != std::string::npos ||
+                 response.msg.find("限流") != std::string::npos ||
+                 response.msg.find("访问次数") != std::string::npos)) {
+                LOG_WARN("触发 Tushare API 限流，等待 60 秒后重试: " + response.msg);
+                std::this_thread::sleep_for(std::chrono::seconds(60));
+                continue;
+            }
+            
+            return response;
+        } else {
+            TushareResponse response;
+            response.code = -1;
+            response.msg = "HTTP 请求失败: " + http_response.error_message;
+            LOG_ERROR(response.msg);
+            return response;
+        }
     }
 }
 

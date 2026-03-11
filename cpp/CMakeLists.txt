@@ -245,6 +245,7 @@ add_library(utils_lib STATIC
     utils/MathUtil.cpp
     utils/Encryptor.cpp
     utils/ThreadPool.cpp
+    utils/RateLimiter.cpp
 )
 
 target_include_directories(utils_lib PUBLIC

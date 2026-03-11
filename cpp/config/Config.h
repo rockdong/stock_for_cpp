@@ -75,6 +75,10 @@ public:
     int getDataSourceRetryTimes() const { return data_source_retry_times_; }
     int getDataSourceRetryDelay() const { return data_source_retry_delay_; }
 
+    // ========== Tushare 限流配置 ==========
+    int getTushareRateLimit() const { return tushare_rate_limit_; }
+    int getTushareBurstSize() const { return tushare_burst_size_; }
+
     // ========== 缓存配置 ==========
     bool isCacheEnabled() const { return cache_enabled_; }
     size_t getCacheSize() const { return cache_size_; }
@@ -178,6 +182,10 @@ private:
     int data_source_timeout_;
     int data_source_retry_times_;
     int data_source_retry_delay_;
+
+    // ========== Tushare 限流配置 ==========
+    int tushare_rate_limit_;
+    int tushare_burst_size_;
 
     // ========== 缓存配置 ==========
     bool cache_enabled_;
