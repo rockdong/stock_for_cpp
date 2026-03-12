@@ -1,4 +1,4 @@
-const { searchStocks, findStockByTsCode, findAllStocks, findStocksByIndustry, findAnalysisResults, findAllAnalysisResults } = require('./database');
+const { searchStocks, findStockByTsCode, findAllStocks, findStocksByIndustry, findAnalysisResults, findAllAnalysisResults, findLatestAnalysisResults } = require('./database');
 
 function formatStockAsTable(stocks) {
   if (!stocks || stocks.length === 0) {
@@ -37,6 +37,22 @@ function formatAnalysisAsTable(results) {
   return `📈 分析结果（共 ${results.length} 条）：\n\n${header}\n${separator}\n${rows.join('\n')}`;
 }
 
+function formatLatestAnalysisAsTable(results) {
+  if (!results || results.length === 0) {
+    return '未找到分析结果';
+  }
+
+  const tradeDate = results[0].trade_date;
+  const header = '| 股票代码 | 股票名称 | 分析日期 | opt |';
+  const separator = '|----------|----------|----------|-----|';
+
+  const rows = results.map(r => 
+    `| ${r.ts_code} | ${r.name || '-'} | ${r.trade_date} | ${r.opt || '-'} |`
+  );
+
+  return `📊 最新分析结果（${tradeDate}，共 ${results.length} 条）：\n\n${header}\n${separator}\n${rows.join('\n')}`;
+}
+
 function getReply(messageText) {
   const text = messageText.trim();
 
@@ -51,6 +67,7 @@ function getReply(messageText) {
 - 行业 <行业名>：按行业查询
 - 分析 <代码>：查询分析结果
 - 分析列表：显示所有分析结果
+- 分析结果：显示最近一天的分析结果
 
 示例：
 - 股票 000001
@@ -58,7 +75,8 @@ function getReply(messageText) {
 - 股票列表
 - 行业 银行
 - 分析 000001
-- 分析列表`;
+- 分析列表
+- 分析结果`;
   }
 
   if (text === 'hello' || text === '你好') {
@@ -85,6 +103,11 @@ function getReply(messageText) {
   if (text === '分析列表') {
     const results = findAllAnalysisResults(20);
     return formatAnalysisAsTable(results);
+  }
+
+  if (text === '分析结果') {
+    const results = findLatestAnalysisResults();
+    return formatLatestAnalysisAsTable(results);
   }
 
   if (text.startsWith('分析 ')) {

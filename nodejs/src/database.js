@@ -227,6 +227,30 @@ function findAllAnalysisResults(limit = 20) {
   }
 }
 
+/**
+ * 查询最近一天的分析结果
+ * @returns {Array} 分析结果列表
+ */
+function findLatestAnalysisResults() {
+  if (!db) initDatabase();
+  if (!db) return [];
+  
+  try {
+    const stmt = db.prepare(`
+      SELECT ar.ts_code, s.name, ar.strategy_name, ar.trade_date, ar.label, ar.opt, ar.freq, ar.created_at
+      FROM analysis_results ar
+      LEFT JOIN stocks s ON ar.ts_code = s.ts_code
+      WHERE ar.trade_date = (SELECT MAX(trade_date) FROM analysis_results)
+      ORDER BY ar.ts_code
+    `);
+    
+    return stmt.all();
+  } catch (error) {
+    console.error('查询最新分析结果失败:', error.message);
+    return [];
+  }
+}
+
 module.exports = {
   initDatabase,
   findStockByTsCode,
@@ -236,5 +260,6 @@ module.exports = {
   searchStocks,
   findAnalysisResults,
   findAllAnalysisResults,
+  findLatestAnalysisResults,
   closeDatabase,
 };
