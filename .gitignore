@@ -15,6 +15,9 @@ package-lock.json
 # Data
 data/
 
+# Logs
+logs/
+
 # IDE
 .idea/
 .vscode/

@@ -28,38 +28,47 @@ std::vector<Stock> TushareDataSource::getStockList(
     const std::string& exchange,
     const std::string& market) {
     
-    LOG_DEBUG("获取股票列表 [状态=" + list_status + ", 交易所=" + 
-              (exchange.empty() ? "全部" : exchange) + "]");
-    
-    auto response = client_->getStockBasic(list_status, exchange);
-    
-    if (response.isSuccess()) {
-        return parseStockBasic(response);
-    } else {
-        LOG_ERROR("获取股票列表失败: " + response.msg);
+    try {
+        LOG_DEBUG("获取股票列表 [状态=" + list_status + ", 交易所=" + 
+                  (exchange.empty() ? "全部" : exchange) + "]");
+        
+        auto response = client_->getStockBasic(list_status, exchange);
+        
+        if (response.isSuccess()) {
+            return parseStockBasic(response);
+        } else {
+            LOG_ERROR("获取股票列表失败: " + response.msg);
+            return {};
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取股票列表异常: " + std::string(e.what()));
         return {};
     }
 }
 
 Stock TushareDataSource::getStockInfo(const std::string& ts_code) {
-    LOG_DEBUG("获取股票信息: " + ts_code);
-    
-    // 使用通用查询接口，指定 ts_code 参数
-    std::map<std::string, std::string> params;
-    params["ts_code"] = ts_code;
-    
-    auto response = client_->query("stock_basic", params);
-    
-    if (response.isSuccess()) {
-        auto stocks = parseStockBasic(response);
-        if (!stocks.empty()) {
-            return stocks[0];
+    try {
+        LOG_DEBUG("获取股票信息: " + ts_code);
+        
+        std::map<std::string, std::string> params;
+        params["ts_code"] = ts_code;
+        
+        auto response = client_->query("stock_basic", params);
+        
+        if (response.isSuccess()) {
+            auto stocks = parseStockBasic(response);
+            if (!stocks.empty()) {
+                return stocks[0];
+            } else {
+                LOG_WARN("未找到股票: " + ts_code);
+                return Stock{};
+            }
         } else {
-            LOG_WARN("未找到股票: " + ts_code);
+            LOG_ERROR("获取股票信息失败: " + response.msg);
             return Stock{};
         }
-    } else {
-        LOG_ERROR("获取股票信息失败: " + response.msg);
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取股票信息异常: " + ts_code + " - " + std::string(e.what()));
         return Stock{};
     }
 }
@@ -69,14 +78,19 @@ std::vector<StockData> TushareDataSource::getDailyData(
     const std::string& start_date,
     const std::string& end_date) {
     
-    LOG_DEBUG("获取日线数据: " + ts_code + " [" + start_date + " - " + end_date + "]");
-    
-    auto response = client_->getDailyQuote(ts_code, "", start_date, end_date);
-    
-    if (response.isSuccess()) {
-        return parseStockData(response);
-    } else {
-        LOG_ERROR("获取日线数据失败: " + response.msg);
+    try {
+        LOG_DEBUG("获取日线数据: " + ts_code + " [" + start_date + " - " + end_date + "]");
+        
+        auto response = client_->getDailyQuote(ts_code, "", start_date, end_date);
+        
+        if (response.isSuccess()) {
+            return parseStockData(response);
+        } else {
+            LOG_ERROR("获取日线数据失败: " + response.msg);
+            return {};
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取日线数据异常: " + ts_code + " - " + std::string(e.what()));
         return {};
     }
 }
@@ -87,30 +101,34 @@ std::vector<StockData> TushareDataSource::getQuoteData(
     const std::string& end_date,
     const std::string& freq) {
     
-    std::string freq_name;
-    TushareResponse response;
-    
-    // 根据频率参数调用不同的接口
-    if (freq == "d" || freq == "D") {
-        freq_name = "日线";
-        response = client_->getDailyQuote(ts_code, "", start_date, end_date);
-    } else if (freq == "w" || freq == "W") {
-        freq_name = "周线";
-        response = client_->getWeeklyQuote(ts_code, "", start_date, end_date);
-    } else if (freq == "m" || freq == "M") {
-        freq_name = "月线";
-        response = client_->getMonthlyQuote(ts_code, "", start_date, end_date);
-    } else {
-        LOG_ERROR("不支持的频率参数: " + freq + "，支持的参数: d(日线), w(周线), m(月线)");
-        return {};
-    }
-    
-    LOG_DEBUG("获取" + freq_name + "数据: " + ts_code + " [" + start_date + " - " + end_date + "]");
-    
-    if (response.isSuccess()) {
-        return parseStockData(response);
-    } else {
-        LOG_ERROR("获取" + freq_name + "数据失败: " + response.msg);
+    try {
+        std::string freq_name;
+        TushareResponse response;
+        
+        if (freq == "d" || freq == "D") {
+            freq_name = "日线";
+            response = client_->getDailyQuote(ts_code, "", start_date, end_date);
+        } else if (freq == "w" || freq == "W") {
+            freq_name = "周线";
+            response = client_->getWeeklyQuote(ts_code, "", start_date, end_date);
+        } else if (freq == "m" || freq == "M") {
+            freq_name = "月线";
+            response = client_->getMonthlyQuote(ts_code, "", start_date, end_date);
+        } else {
+            LOG_ERROR("不支持的频率参数: " + freq + "，支持的参数: d(日线), w(周线), m(月线)");
+            return {};
+        }
+        
+        LOG_DEBUG("获取" + freq_name + "数据: " + ts_code + " [" + start_date + " - " + end_date + "]");
+        
+        if (response.isSuccess()) {
+            return parseStockData(response);
+        } else {
+            LOG_ERROR("获取" + freq_name + "数据失败: " + response.msg);
+            return {};
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取行情数据异常: " + ts_code + " - " + std::string(e.what()));
         return {};
     }
 }

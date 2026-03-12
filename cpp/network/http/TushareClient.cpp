@@ -50,33 +50,52 @@ TushareResponse TushareClient::query(const std::string& api_name,
                                      const std::vector<std::string>& fields) {
     configureRateLimiterOnce();
     
+    const int max_rate_limit_retries = 5;
+    int rate_limit_retry_count = 0;
+    
     while (true) {
-        RateLimiter::getInstance().acquire();
-        
-        LOG_DEBUG("调用 Tushare API: " + api_name);
-        
-        std::string request_body = buildRequestJson(api_name, params, fields);
-        
-        auto http_response = http_client_->post("/", request_body, "application/json");
-        
-        if (http_response.isSuccess()) {
-            auto response = parseResponse(http_response.body);
+        try {
+            RateLimiter::getInstance().acquire();
             
-            if (response.code == -2 && 
-                (response.msg.find("500次") != std::string::npos ||
-                 response.msg.find("限流") != std::string::npos ||
-                 response.msg.find("访问次数") != std::string::npos)) {
-                LOG_WARN("触发 Tushare API 限流，等待 60 秒后重试: " + response.msg);
-                std::this_thread::sleep_for(std::chrono::seconds(60));
-                continue;
+            LOG_DEBUG("调用 Tushare API: " + api_name);
+            
+            std::string request_body = buildRequestJson(api_name, params, fields);
+            
+            auto http_response = http_client_->post("/", request_body, "application/json");
+            
+            if (http_response.isSuccess()) {
+                auto response = parseResponse(http_response.body);
+                
+                if (response.code == -2 && 
+                    (response.msg.find("500次") != std::string::npos ||
+                     response.msg.find("限流") != std::string::npos ||
+                     response.msg.find("访问次数") != std::string::npos)) {
+                    
+                    if (rate_limit_retry_count >= max_rate_limit_retries) {
+                        LOG_ERROR("触发 Tushare API 限流，已达最大重试次数: " + std::to_string(max_rate_limit_retries));
+                        return response;
+                    }
+                    
+                    rate_limit_retry_count++;
+                    LOG_WARN("触发 Tushare API 限流，等待 60 秒后重试 (" + 
+                             std::to_string(rate_limit_retry_count) + "/" + std::to_string(max_rate_limit_retries) + "): " + response.msg);
+                    std::this_thread::sleep_for(std::chrono::seconds(60));
+                    continue;
+                }
+                
+                return response;
+            } else {
+                TushareResponse response;
+                response.code = -1;
+                response.msg = "HTTP 请求失败: " + http_response.error_message;
+                LOG_ERROR(response.msg);
+                return response;
             }
-            
-            return response;
-        } else {
+        } catch (const std::exception& e) {
             TushareResponse response;
             response.code = -1;
-            response.msg = "HTTP 请求失败: " + http_response.error_message;
-            LOG_ERROR(response.msg);
+            response.msg = "API 调用异常: " + std::string(e.what());
+            LOG_ERROR("Tushare API 调用异常 [" + api_name + "]: " + std::string(e.what()));
             return response;
         }
     }
