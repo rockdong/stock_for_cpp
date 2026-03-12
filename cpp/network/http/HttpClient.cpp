@@ -90,13 +90,7 @@ HttpResponse HttpClient::get(const std::string& path,
             
             // 在超时或请求失败时打印详细信息
             LOG_ERROR("GET " + path + " 失败: " + error_detail);
-            LOG_ERROR("错误类型: " + std::to_string((int)res.error()) + " - 详细信息已记录");
-            
-            // 如果有部分响应内容，也打印出来
-            if (!res->body.empty()) {
-                LOG_ERROR("部分响应内容: " + res->body.substr(0, 500) + 
-                         (res->body.length() > 500 ? "..." : ""));
-            }
+            LOG_ERROR("错误类型: " + std::to_string((int)res.error()));
         }
         
         return response;
@@ -136,13 +130,7 @@ HttpResponse HttpClient::post(const std::string& path,
             
             // 在超时或请求失败时打印详细信息
             LOG_ERROR("POST " + path + " 失败: " + error_detail);
-            LOG_ERROR("错误类型: " + std::to_string((int)res.error()) + " - 详细信息已记录");
-            
-            // 如果有部分响应内容，也打印出来
-            if (!res->body.empty()) {
-                LOG_ERROR("部分响应内容: " + res->body.substr(0, 500) + 
-                         (res->body.length() > 500 ? "..." : ""));
-            }
+            LOG_ERROR("错误类型: " + std::to_string((int)res.error()));
         }
         
         return response;
