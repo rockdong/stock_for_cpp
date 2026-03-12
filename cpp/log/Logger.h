@@ -68,5 +68,25 @@ inline void init() {
 
 } // namespace logger
 
+/**
+ * @brief 便捷的日志宏定义
+ */
+#define LOG_TRACE(msg)    logger::getLogger()->trace(msg)
+#define LOG_DEBUG(msg)    logger::getLogger()->debug(msg)
+#define LOG_INFO(msg)     logger::getLogger()->info(msg)
+#define LOG_WARN(msg)     logger::getLogger()->warn(msg)
+#define LOG_ERROR(msg)    logger::getLogger()->error(msg)
+#define LOG_CRITICAL(msg) logger::getLogger()->critical(msg)
+
+/**
+ * @brief 带日志器名称的日志宏定义
+ */
+#define LOG_TRACE_N(name, msg)    logger::getLogger(name)->trace(msg)
+#define LOG_DEBUG_N(name, msg)    logger::getLogger(name)->debug(msg)
+#define LOG_INFO_N(name, msg)     logger::getLogger(name)->info(msg)
+#define LOG_WARN_N(name, msg)     logger::getLogger(name)->warn(msg)
+#define LOG_ERROR_N(name, msg)    logger::getLogger(name)->error(msg)
+#define LOG_CRITICAL_N(name, msg) logger::getLogger(name)->critical(msg)
+
 #endif // LOGGER_H
 
