@@ -1,4 +1,4 @@
-const { searchStocks, findStockByTsCode, findAllStocks, findStocksByIndustry, findAnalysisResults, findAllAnalysisResults, findLatestAnalysisResults } = require('./database');
+const { searchStocks, findStockByTsCode, findAllStocks, findStocksByIndustry, findAnalysisResults, findAllAnalysisResults, findLatestAnalysisResults, getAnalysisProgress } = require('./database');
 
 function formatStockAsTable(stocks) {
   if (!stocks || stocks.length === 0) {
@@ -53,6 +53,50 @@ function formatLatestAnalysisAsTable(results) {
   return `📊 最新分析结果（${tradeDate}，共 ${results.length} 条）：\n\n${header}\n${separator}\n${rows.join('\n')}`;
 }
 
+function formatProgress(progress) {
+  if (!progress) {
+    return '无法获取分析进度';
+  }
+
+  const statusEmoji = {
+    'idle': '⚪ 空闲',
+    'running': '🔄 运行中',
+    'completed': '✅ 已完成',
+  };
+
+  const status = statusEmoji[progress.status] || progress.status;
+  const total = progress.total || 0;
+  const completed = progress.completed || 0;
+  const failed = progress.failed || 0;
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  
+  const filled = Math.round(percent / 5);
+  const empty = 20 - filled;
+  const bar = '█'.repeat(filled) + '░'.repeat(empty);
+
+  let elapsed = '';
+  if (progress.started_at) {
+    const start = new Date(progress.started_at);
+    const now = progress.status === 'running' ? new Date() : new Date(progress.updated_at);
+    const diffMs = now - start;
+    const minutes = Math.floor(diffMs / 60000);
+    const seconds = Math.floor((diffMs % 60000) / 1000);
+    elapsed = `${minutes}分${seconds}秒`;
+  }
+
+  let result = `📊 分析进度\n\n`;
+  result += `状态: ${status}\n`;
+  result += `进度: ${completed} / ${total} (${percent}%)\n`;
+  result += `成功: ${completed - failed}  失败: ${failed}\n`;
+  if (progress.started_at) {
+    result += `开始时间: ${progress.started_at}\n`;
+    result += `已运行: ${elapsed}\n`;
+  }
+  result += `\n[${bar}] ${percent}%`;
+
+  return result;
+}
+
 function getReply(messageText) {
   const text = messageText.trim();
 
@@ -68,6 +112,7 @@ function getReply(messageText) {
 - 分析 <代码>：查询分析结果
 - 分析列表：显示所有分析结果
 - 分析结果：显示最近一天的分析结果
+- 分析进度：显示当前分析进度
 
 示例：
 - 股票 000001
@@ -76,7 +121,8 @@ function getReply(messageText) {
 - 行业 银行
 - 分析 000001
 - 分析列表
-- 分析结果`;
+- 分析结果
+- 分析进度`;
   }
 
   if (text === 'hello' || text === '你好') {
@@ -108,6 +154,11 @@ function getReply(messageText) {
   if (text === '分析结果') {
     const results = findLatestAnalysisResults();
     return formatLatestAnalysisAsTable(results);
+  }
+
+  if (text === '分析进度') {
+    const progress = getAnalysisProgress();
+    return formatProgress(progress);
   }
 
   if (text.startsWith('分析 ')) {

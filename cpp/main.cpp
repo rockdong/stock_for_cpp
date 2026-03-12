@@ -313,6 +313,28 @@ void analyzeStock(
 }
 
 /**
+ * @brief 更新分析进度
+ * @param total 总数（-1 表示不更新）
+ * @param completed 已完成（-1 表示不更新）
+ * @param failed 失败数（-1 表示不更新）
+ * @param status 状态（空表示不更新）
+ */
+void updateProgress(int total = -1, int completed = -1, int failed = -1, const std::string& status = "") {
+    auto& conn = data::Connection::getInstance();
+    if (!conn.isConnected()) return;
+    
+    std::string sql = "UPDATE analysis_progress SET updated_at = CURRENT_TIMESTAMP";
+    if (total >= 0) sql += ", total = " + std::to_string(total);
+    if (completed >= 0) sql += ", completed = " + std::to_string(completed);
+    if (failed >= 0) sql += ", failed = " + std::to_string(failed);
+    if (!status.empty()) sql += ", status = '" + status + "'";
+    if (status == "running") sql += ", started_at = CURRENT_TIMESTAMP";
+    sql += " WHERE id = 1";
+    
+    conn.execute(sql);
+}
+
+/**
  * @brief 执行批量分析（多线程版本）
  * @param stockList 股票列表
  * @param dataSource 数据源
@@ -329,6 +351,9 @@ void performBatchAnalysis(
     LOG_INFO("开始批量分析，共 " + std::to_string(stockList.size()) + " 只股票");
     LOG_INFO("========================================");
     
+    int total = static_cast<int>(stockList.size());
+    updateProgress(total, 0, 0, "running");
+    
     unsigned int threadCount = std::thread::hardware_concurrency();
     if (threadCount == 0) threadCount = 4;
     LOG_INFO("使用 " + std::to_string(threadCount) + " 个线程并发处理");
@@ -337,29 +362,34 @@ void performBatchAnalysis(
     
     std::atomic<int> successCount(0);
     std::atomic<int> failCount(0);
+    std::atomic<int> lastReportedProgress(0);
     
-    // 为了遵守 Tushare API 每分钟 500 次的调用限制，计算线程间的延迟
-    // 假设每只股票需要调用 3 次 API（日线、周线、月线），500 次/分钟 = 8.33 次/秒
-    // 安全起见，每秒最多调用 3 次，即每秒分析不超过 1 只股票
-    const int delay_between_tasks = 300; // 300ms，确保每秒不超过 3 次调用
+    const int delay_between_tasks = 300;
     
     for (const auto& stock : stockList) {
-        pool.enqueue([&]() {
+        pool.enqueue([&, stock]() {
             try {
                 auto localDataSource = network::DataSourceFactory::createFromConfig();
                 analyzeStock(stock, localDataSource, strategyManager, analysisResultDao);
-                successCount++;
+                int completed = successCount.fetch_add(1) + 1 + failCount.load();
+                if (completed - lastReportedProgress.load() >= 10) {
+                    updateProgress(-1, completed, failCount.load());
+                    lastReportedProgress = completed;
+                }
             } catch (const std::exception& e) {
                 LOG_ERROR("分析失败: " + stock.ts_code + " - " + std::string(e.what()));
-                failCount++;
+                int failed = failCount.fetch_add(1) + 1;
+                int completed = successCount.load() + failed;
+                updateProgress(-1, completed, failed);
             }
         });
         
-        // 在任务间添加延迟以控制 API 调用频率
         std::this_thread::sleep_for(std::chrono::milliseconds(delay_between_tasks));
     }
     
     pool.wait();
+    
+    updateProgress(-1, successCount.load(), failCount.load(), "completed");
     
     LOG_INFO("========================================");
     LOG_INFO("批量分析完成");

@@ -251,6 +251,28 @@ function findLatestAnalysisResults() {
   }
 }
 
+/**
+ * 查询分析进度
+ * @returns {object|null} 进度信息
+ */
+function getAnalysisProgress() {
+  if (!db) initDatabase();
+  if (!db) return null;
+  
+  try {
+    const stmt = db.prepare(`
+      SELECT total, completed, failed, status, started_at, updated_at
+      FROM analysis_progress
+      WHERE id = 1
+    `);
+    
+    return stmt.get() || null;
+  } catch (error) {
+    console.error('查询分析进度失败:', error.message);
+    return null;
+  }
+}
+
 module.exports = {
   initDatabase,
   findStockByTsCode,
@@ -261,5 +283,6 @@ module.exports = {
   findAnalysisResults,
   findAllAnalysisResults,
   findLatestAnalysisResults,
+  getAnalysisProgress,
   closeDatabase,
 };

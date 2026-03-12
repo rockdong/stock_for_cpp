@@ -219,6 +219,28 @@ bool Connection::createTables() {
         return false;
     }
     
+    // 创建分析进度表
+    std::string createAnalysisProgressTable = R"(
+        CREATE TABLE IF NOT EXISTS analysis_progress (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            total INTEGER DEFAULT 0,
+            completed INTEGER DEFAULT 0,
+            failed INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'idle',
+            started_at DATETIME,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    )";
+    
+    LOG_INFO("创建 analysis_progress 表");
+    if (!executeInternal(createAnalysisProgressTable)) {
+        LOG_ERROR("创建 analysis_progress 表失败");
+        return false;
+    }
+    
+    // 初始化进度表（如果为空）
+    executeInternal("INSERT OR IGNORE INTO analysis_progress (id, status) VALUES (1, 'idle')");
+    
     // 创建索引
     executeInternal("CREATE INDEX IF NOT EXISTS idx_stocks_ts_code ON stocks(ts_code)");
     executeInternal("CREATE INDEX IF NOT EXISTS idx_prices_stock_date ON prices(stock_id, trade_date)");
