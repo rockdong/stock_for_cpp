@@ -73,7 +73,7 @@ bool ChartDataDAO::save(const ChartData& data) {
         
         std::string jsonData = toJson(data.candles);
         
-        (*db)(sqlpp::insert_or_replace_into(table).set(
+        (*db)(sqlpp::sqlite3::insert_or_replace_into(table).set(
             table.tsCode = data.ts_code,
             table.freq = data.freq,
             table.analysisDate = data.analysis_date,
