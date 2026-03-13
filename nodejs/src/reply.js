@@ -1,4 +1,5 @@
-const { searchStocks, findStockByTsCode, findAllStocks, findStocksByIndustry, findAnalysisResults, findAllAnalysisResults, findLatestAnalysisResults, getAnalysisProgress } = require('./database');
+const { searchStocks, findStockByTsCode, findAllStocks, findStocksByIndustry, findAnalysisResults, findAllAnalysisResults, findLatestAnalysisResults, getAnalysisProgress, getChartData } = require('./database');
+const { generateChart } = require('./chartGenerator');
 
 function formatStockAsTable(stocks) {
   if (!stocks || stocks.length === 0) {
@@ -113,6 +114,7 @@ function getReply(messageText) {
 - 分析列表：显示所有分析结果
 - 分析结果：显示最近一天的分析结果
 - 分析进度：显示当前分析进度
+- 图表 <代码> [频率]：生成K线图
 
 示例：
 - 股票 000001
@@ -122,7 +124,9 @@ function getReply(messageText) {
 - 分析 000001
 - 分析列表
 - 分析结果
-- 分析进度`;
+- 分析进度
+- 图表 000001.SZ
+- 图表 000001.SZ w`;
   }
 
   if (text === 'hello' || text === '你好') {
@@ -183,6 +187,64 @@ function getReply(messageText) {
 请输入股票代码：
 - 分析 000001（查询单只股票）
 - 分析列表（查看所有）`;
+  }
+
+  if (text.startsWith('图表 ')) {
+    const parts = text.substring(3).trim().split(/\s+/);
+    const tsCode = parts[0];
+    const freq = parts[1] || 'd';
+    
+    if (!tsCode) {
+      return `📊 图表查询
+
+请输入股票代码：
+- 图表 000001.SZ（日线图）
+- 图表 000001.SZ w（周线图）
+- 图表 000001.SZ m（月线图）`;
+    }
+    
+    const normalizedCode = tsCode.includes('.') ? tsCode : tsCode + '.SZ';
+    const validFreqs = ['d', 'w', 'm'];
+    const normalizedFreq = validFreqs.includes(freq.toLowerCase()) ? freq.toLowerCase() : 'd';
+    
+    const chartData = getChartData(normalizedCode, normalizedFreq);
+    
+    if (!chartData) {
+      return `❌ 未找到 ${normalizedCode} 的图表数据
+
+可能的原因：
+1. 该股票尚未分析
+2. 股票代码不正确
+3. 数据库中没有对应频率的数据
+
+请确认股票代码格式如：000001.SZ`;
+    }
+    
+    try {
+      const imageBuffer = generateChart(chartData);
+      return {
+        type: 'image',
+        buffer: imageBuffer,
+        text: `📊 ${normalizedCode} ${normalizedFreq === 'd' ? '日线' : normalizedFreq === 'w' ? '周线' : '月线'}图`
+      };
+    } catch (error) {
+      console.error('生成图表失败:', error);
+      return `❌ 生成图表失败: ${error.message}`;
+    }
+  }
+
+  if (text === '图表') {
+    return `📊 K线图查询
+
+请输入股票代码：
+- 图表 000001.SZ（日线图）
+- 图表 000001.SZ w（周线图）
+- 图表 000001.SZ m（月线图）
+
+说明：
+- 日线：显示最近10个交易日
+- 周线：显示最近10周
+- 月线：显示最近10个月`;
   }
 
   return `🤖 收到消息：${text}

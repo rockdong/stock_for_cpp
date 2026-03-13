@@ -241,6 +241,25 @@ bool Connection::createTables() {
     // 初始化进度表（如果为空）
     executeInternal("INSERT OR IGNORE INTO analysis_progress (id, status) VALUES (1, 'idle')");
     
+    // 创建图表数据表
+    std::string createChartDataTable = R"(
+        CREATE TABLE IF NOT EXISTS chart_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts_code TEXT NOT NULL,
+            freq TEXT NOT NULL,
+            analysis_date TEXT NOT NULL,
+            data TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(ts_code, freq, analysis_date)
+        )
+    )";
+    
+    LOG_INFO("创建 chart_data 表");
+    if (!executeInternal(createChartDataTable)) {
+        LOG_ERROR("创建 chart_data 表失败");
+        return false;
+    }
+    
     // 创建索引
     executeInternal("CREATE INDEX IF NOT EXISTS idx_stocks_ts_code ON stocks(ts_code)");
     executeInternal("CREATE INDEX IF NOT EXISTS idx_prices_stock_date ON prices(stock_id, trade_date)");
@@ -249,6 +268,7 @@ bool Connection::createTables() {
     executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_strategy ON analysis_results(strategy_name)");
     executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_date ON analysis_results(trade_date)");
     executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_label ON analysis_results(label)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_chart_data_lookup ON chart_data(ts_code, freq, analysis_date)");
     
     LOG_INFO("数据库表创建成功");
     return true;

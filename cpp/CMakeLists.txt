@@ -188,6 +188,7 @@ add_library(data_lib STATIC
     data/database/StockDAO.cpp
     data/database/PriceDAO.cpp
     data/database/AnalysisResultDAO.cpp
+    data/database/ChartDataDAO.cpp
     data/cache/MemoryCache.cpp
     data/file/CSVReader.cpp
     data/file/CSVWriter.cpp

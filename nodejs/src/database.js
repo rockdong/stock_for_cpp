@@ -273,6 +273,49 @@ function getAnalysisProgress() {
   }
 }
 
+/**
+ * 查询图表数据
+ * @param {string} tsCode - 股票代码
+ * @param {string} freq - 频率 (d/w/m)，默认 'd'
+ * @returns {object|null} 图表数据或 null
+ */
+function getChartData(tsCode, freq = 'd') {
+  if (!db) initDatabase();
+  if (!db) return null;
+  
+  try {
+    const stmt = db.prepare(`
+      SELECT ts_code, freq, analysis_date, data, updated_at
+      FROM chart_data
+      WHERE ts_code = ? AND freq = ?
+      ORDER BY analysis_date DESC
+      LIMIT 1
+    `);
+    
+    const result = stmt.get(tsCode, freq);
+    if (!result) return null;
+    
+    let candles = [];
+    try {
+      candles = JSON.parse(result.data);
+    } catch (e) {
+      console.error('解析图表数据失败:', e.message);
+      return null;
+    }
+    
+    return {
+      ts_code: result.ts_code,
+      freq: result.freq,
+      analysis_date: result.analysis_date,
+      candles: candles,
+      updated_at: result.updated_at
+    };
+  } catch (error) {
+    console.error('查询图表数据失败:', error.message);
+    return null;
+  }
+}
+
 module.exports = {
   initDatabase,
   findStockByTsCode,
@@ -284,5 +327,6 @@ module.exports = {
   findAllAnalysisResults,
   findLatestAnalysisResults,
   getAnalysisProgress,
+  getChartData,
   closeDatabase,
 };

@@ -1,6 +1,21 @@
 const { getReply } = require('./reply');
 const config = require('./config');
 
+async function uploadImage(imageBuffer) {
+  try {
+    const response = await config.client.im.image.create({
+      data: {
+        image_type: 'message',
+        image: imageBuffer,
+      },
+    });
+    return response.data.image_key;
+  } catch (error) {
+    console.error('上传图片失败:', error);
+    throw error;
+  }
+}
+
 async function handleMessage(event) {
   const message = event.message;
   const messageId = message.message_id;
@@ -17,20 +32,38 @@ async function handleMessage(event) {
   
   console.log(`收到消息 from ${senderId?.open_id}: ${textContent}`);
   
-  const replyText = getReply(textContent);
+  const replyData = getReply(textContent);
   
   try {
-    await config.client.im.message.create({
-      params: {
-        receive_id_type: 'chat_id',
-      },
-      data: {
-        receive_id: chatId,
-        msg_type: 'text',
-        content: JSON.stringify({ text: replyText }),
-      },
-    });
-    console.log('回复成功');
+    if (replyData && replyData.type === 'image' && replyData.buffer) {
+      const imageKey = await uploadImage(replyData.buffer);
+      
+      await config.client.im.message.create({
+        params: {
+          receive_id_type: 'chat_id',
+        },
+        data: {
+          receive_id: chatId,
+          msg_type: 'image',
+          content: JSON.stringify({ image_key: imageKey }),
+        },
+      });
+      console.log('图片回复成功');
+    } else {
+      const replyText = typeof replyData === 'string' ? replyData : replyData.text || '无法处理';
+      
+      await config.client.im.message.create({
+        params: {
+          receive_id_type: 'chat_id',
+        },
+        data: {
+          receive_id: chatId,
+          msg_type: 'text',
+          content: JSON.stringify({ text: replyText }),
+        },
+      });
+      console.log('回复成功');
+    }
   } catch (error) {
     console.error('回复失败:', error);
   }

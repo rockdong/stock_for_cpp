@@ -88,6 +88,11 @@ jobs:
       with:
         node-version: '20'
 
+    - name: 🔧 安装 canvas 系统依赖
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+
     - name: 📦 安装 Node.js 依赖
       working-directory: nodejs
       run: npm install
@@ -140,9 +145,6 @@ jobs:
           PORT=3000
           DB_PATH=../stock.db
           EOF
-
-      - name: 🔧 设置 Docker Buildx
-        run: chmod +x cpp/build/stock_for_cpp
 
       - name: 🔧 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
