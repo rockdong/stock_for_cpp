@@ -204,11 +204,13 @@ target_include_directories(data_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/config
     ${CMAKE_CURRENT_SOURCE_DIR}/network
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/sqlpp11/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include
 )
 
 target_link_libraries(data_lib PUBLIC
     sqlpp11::sqlpp11
     sqlite3
+    nlohmann_json::nlohmann_json
     core_lib
     log_lib
     config_lib
