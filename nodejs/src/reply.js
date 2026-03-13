@@ -40,18 +40,28 @@ function formatAnalysisAsTable(results) {
 
 function formatLatestAnalysisAsTable(results) {
   if (!results || results.length === 0) {
-    return '未找到分析结果';
+    return ['未找到分析结果'];
   }
 
-  const tradeDate = results[0].trade_date;
-  const header = '| 股票代码 | 股票名称 | 分析日期 | opt |';
-  const separator = '|----------|----------|----------|-----|';
+  const groups = {};
+  results.forEach(r => {
+    const key = r.strategy_name;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
 
-  const rows = results.map(r => 
-    `| ${r.ts_code} | ${r.name || '-'} | ${r.trade_date} | ${r.opt || '-'} |`
-  );
+  return Object.entries(groups).map(([strategy, items]) => {
+    const tradeDate = items[0].trade_date;
+    const header = '| 代码 | 名称 | opt |';
+    const separator = '|------|------|-----|';
 
-  return `📊 最新分析结果（${tradeDate}，共 ${results.length} 条）：\n\n${header}\n${separator}\n${rows.join('\n')}`;
+    const rows = items.map(r => {
+      const shortCode = r.ts_code.split('.')[0];
+      return `| ${shortCode} | ${r.name || '-'} | ${r.opt || '-'} |`;
+    });
+
+    return `📊 ${strategy}（${tradeDate}，共 ${items.length} 条）\n\n${header}\n${separator}\n${rows.join('\n')}`;
+  });
 }
 
 function formatProgress(progress) {
@@ -157,7 +167,11 @@ function getReply(messageText) {
 
   if (text === '分析结果') {
     const results = findLatestAnalysisResults();
-    return formatLatestAnalysisAsTable(results);
+    const messages = formatLatestAnalysisAsTable(results);
+    if (messages.length === 1 && typeof messages[0] === 'string') {
+      return messages[0];
+    }
+    return messages;
   }
 
   if (text === '分析进度') {

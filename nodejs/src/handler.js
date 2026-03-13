@@ -35,7 +35,32 @@ async function handleMessage(event) {
   const replyData = getReply(textContent);
   
   try {
-    if (replyData && replyData.type === 'image' && replyData.buffer) {
+    if (Array.isArray(replyData)) {
+      for (const msg of replyData) {
+        if (msg && msg.type === 'image' && msg.buffer) {
+          const imageKey = await uploadImage(msg.buffer);
+          await config.client.im.message.create({
+            params: { receive_id_type: 'chat_id' },
+            data: {
+              receive_id: chatId,
+              msg_type: 'image',
+              content: JSON.stringify({ image_key: imageKey }),
+            },
+          });
+        } else {
+          const replyText = typeof msg === 'string' ? msg : msg.text || '无法处理';
+          await config.client.im.message.create({
+            params: { receive_id_type: 'chat_id' },
+            data: {
+              receive_id: chatId,
+              msg_type: 'text',
+              content: JSON.stringify({ text: replyText }),
+            },
+          });
+        }
+      }
+      console.log(`发送 ${replyData.length} 条消息成功`);
+    } else if (replyData && replyData.type === 'image' && replyData.buffer) {
       const imageKey = await uploadImage(replyData.buffer);
       
       await config.client.im.message.create({
