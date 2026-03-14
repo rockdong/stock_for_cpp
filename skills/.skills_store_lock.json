@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-browser-core": {
+      "name": "Agent Browser Core",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=agent-browser-core",
+      "source": "skillhub",
+      "version": "1.0.1"
+    },
+    "frontend-design": {
+      "name": "Frontend Design",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=frontend-design",
+      "source": "skillhub",
+      "version": "1.0.0"
+    },
+    "github-integration": {
+      "name": "Github",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=github-integration",
+      "source": "skillhub",
+      "version": "1.0.0"
+    },
+    "cognitive-memory": {
+      "name": "Cognitive Memory",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=cognitive-memory",
+      "source": "skillhub",
+      "version": "1.0.8"
+    }
+  }
+}
