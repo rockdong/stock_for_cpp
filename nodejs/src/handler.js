@@ -20,6 +20,7 @@ async function handleCardAction(event) {
   const action = event.action;
   const value = JSON.parse(action.value || '{}');
   const openId = event.operator?.open_id;
+  const openMessageId = event.open_message_id;
   
   console.log('卡片按钮点击:', value);
   
@@ -41,6 +42,26 @@ async function handleCardAction(event) {
       } catch (error) {
         console.error('发送图表失败:', error);
       }
+    }
+  } else if (value.action === 'refresh') {
+    try {
+      const { getProgressCard } = require('./reply');
+      const progressCard = getProgressCard();
+      
+      await config.client.im.message.patch({
+        path: {
+          message_id: openMessageId,
+        },
+        params: {
+          receive_id_type: 'open_id',
+        },
+        data: {
+          content: JSON.stringify(progressCard.card),
+        },
+      });
+      console.log('进度刷新成功');
+    } catch (error) {
+      console.error('刷新进度失败:', error);
     }
   }
 }

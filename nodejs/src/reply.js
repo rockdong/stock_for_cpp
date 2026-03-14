@@ -181,6 +181,11 @@ function formatProgressCard(progress) {
   return buildInteractiveCard('📊 分析进度', content, buttons, progress.status === 'running' ? 'green' : 'blue');
 }
 
+function getProgressCard() {
+  const progress = getAnalysisProgress();
+  return formatProgressCard(progress);
+}
+
 function buildHelpCard() {
   return buildRichTextCard('📖 股票分析机器人 - 帮助指南', [
     { type: 'div', content: '**🔍 查询功能**\n• 股票 <代码/名称> - 查询股票\n• 股票列表 - 查看所有股票\n• 行业 <行业名> - 按行业筛选' },
@@ -332,4 +337,4 @@ function getChartForCard(tsCode, freq) {
   }
 }
 
-module.exports = { getReply, getChartForCard };
+module.exports = { getReply, getChartForCard, getProgressCard };
