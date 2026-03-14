@@ -5,6 +5,8 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./data/stock.db:/app/stock.db
+      - ./nodejs/.env:/app/nodejs/.env:ro
+      - ./nodejs/secret.key:/app/nodejs/secret.key:ro
     ports:
       - "3000:3000"
     environment:
@@ -30,7 +32,7 @@ services:
       - SQLITE_DATABASE=stock.db
     restart: unless-stopped
     profiles:
-      - tools
+      - db
 
   dozzle:
     image: amir20/dozzle:latest
