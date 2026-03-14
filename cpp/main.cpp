@@ -287,9 +287,21 @@ void analyzeStock(
             // 计算分析日期
             std::string analysisDate = calculateAnalysisDate();
             
-            // 计算并保存图表数据
+            // 计算并保存图表数据（仅当有买入信号时）
             try {
-                if (data.size() >= 17) {
+                // 检查是否有买入信号
+                bool hasBuySignal = false;
+                for (const auto& pair : strategyResults) {
+                    if (pair.second.has_value()) {
+                        auto result = *pair.second;
+                        if (result.opt == "buy") {
+                            hasBuySignal = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (hasBuySignal && data.size() >= 17) {
                     std::vector<double> closePrices;
                     for (const auto& d : data) {
                         closePrices.push_back(d.close);
