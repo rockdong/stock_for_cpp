@@ -35,6 +35,19 @@ async function handleMessage(event) {
   const replyData = getReply(textContent);
   
   try {
+    if (replyData && replyData.msg_type === 'interactive') {
+      await config.client.im.message.create({
+        params: { receive_id_type: 'chat_id' },
+        data: {
+          receive_id: chatId,
+          msg_type: 'interactive',
+          content: JSON.stringify(replyData.card),
+        },
+      });
+      console.log('卡片消息发送成功');
+      return;
+    }
+
     if (Array.isArray(replyData)) {
       for (const msg of replyData) {
         if (msg && msg.type === 'image' && msg.buffer) {

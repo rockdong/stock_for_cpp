@@ -1,46 +1,59 @@
 const { searchStocks, findStockByTsCode, findAllStocks, findStocksByIndustry, findAnalysisResults, findAllAnalysisResults, findLatestAnalysisResults, getAnalysisProgress, getChartData } = require('./database');
 const { generateChart } = require('./chartGenerator');
+const { buildRichTextCard, buildInteractiveCard, buildTextMessage } = require('./messageBuilder');
 
-function formatStockAsTable(stocks) {
+function formatStockAsCard(stocks) {
   if (!stocks || stocks.length === 0) {
-    return '未找到相关股票信息';
+    return buildRichTextCard('🔍 股票查询结果', [
+      { type: 'div', content: '❌ 未找到相关股票信息' }
+    ], 'grey');
   }
 
-  const header = '| 代码 | 名称 | 行业 | 市场 | 交易所 |';
-  const separator = '|------|------|------|------|--------|';
+  const sections = [
+    { type: 'div', content: `📊 共找到 **${stocks.length}** 只股票` },
+    { type: 'hr' }
+  ];
 
-  const rows = stocks.map(s => 
-    `| ${s.ts_code} | ${s.name} | ${s.industry || '-'} | ${s.market || '-'} | ${s.exchange || '-'} |`
-  );
-
-  return `📊 股票查询结果（共 ${stocks.length} 条）：\n\n${header}\n${separator}\n${rows.join('\n')}`;
-}
-
-function formatAnalysisAsTable(results) {
-  if (!results || results.length === 0) {
-    return '未找到分析结果';
-  }
-
-  const labelEmoji = {
-    'BUY': '🟢 买入',
-    'SELL': '🔴 卖出',
-    'HOLD': '⚪ 持有',
-  };
-
-  const header = '| 代码 | 名称 | 策略 | 日期 | 信号 |';
-  const separator = '|------|------|------|------|------|';
-
-  const rows = results.map(r => {
-    const label = labelEmoji[r.label] || r.label;
-    return `| ${r.ts_code} | ${r.name || '-'} | ${r.strategy_name} | ${r.trade_date} | ${label} |`;
+  stocks.forEach(s => {
+    sections.push({
+      type: 'div',
+      content: `🏦 **${s.name}**\n\`${s.ts_code}\` | ${s.industry || '-'} | ${s.market || '-'} | ${s.exchange || '-'}`
+    });
   });
 
-  return `📈 分析结果（共 ${results.length} 条）：\n\n${header}\n${separator}\n${rows.join('\n')}`;
+  return buildRichTextCard('🔍 股票查询结果', sections, 'blue');
 }
 
-function formatLatestAnalysisAsTable(results) {
+function formatAnalysisAsCard(results) {
   if (!results || results.length === 0) {
-    return ['未找到分析结果'];
+    return buildRichTextCard('📈 分析结果', [
+      { type: 'div', content: '❌ 未找到分析结果' }
+    ], 'grey');
+  }
+
+  const labelText = { 'BUY': '🟢 买入', 'SELL': '🔴 卖出', 'HOLD': '⚪ 持有' };
+
+  const sections = [
+    { type: 'div', content: `📊 共 ${results.length} 条分析结果` },
+    { type: 'hr' }
+  ];
+
+  results.forEach(r => {
+    const label = labelText[r.label] || r.label;
+    sections.push({
+      type: 'div',
+      content: `${label} **${r.name || r.ts_code}**\n策略: ${r.strategy_name} | 日期: ${r.trade_date}`
+    });
+  });
+
+  return buildRichTextCard('📈 分析结果', sections, 'blue');
+}
+
+function formatLatestAnalysisAsCards(results) {
+  if (!results || results.length === 0) {
+    return buildRichTextCard('📊 最新分析结果', [
+      { type: 'div', content: '❌ 未找到分析结果' }
+    ], 'grey');
   }
 
   const groups = {};
@@ -50,40 +63,34 @@ function formatLatestAnalysisAsTable(results) {
     groups[key].push(r);
   });
 
-  return Object.entries(groups).map(([strategy, items]) => {
+  const sections = [];
+  Object.entries(groups).forEach(([strategy, items]) => {
     const tradeDate = items[0].trade_date;
-    const header = '| 代码 | 名称 | opt |';
-    const separator = '|------|------|-----|';
-
-    const rows = items.map(r => {
+    sections.push({ type: 'div', content: `📊 **${strategy}** (${tradeDate}, ${items.length}条)` });
+    items.forEach(r => {
       const shortCode = r.ts_code.split('.')[0];
-      return `| ${shortCode} | ${r.name || '-'} | ${r.opt || '-'} |`;
+      sections.push({ type: 'div', content: `• ${shortCode} | ${r.name || '-'} | opt: ${r.opt || '-'}` });
     });
-
-    return `📊 ${strategy}（${tradeDate}，共 ${items.length} 条）\n\n${header}\n${separator}\n${rows.join('\n')}`;
+    sections.push({ type: 'hr' });
   });
+
+  sections.pop();
+  return buildRichTextCard('📊 最新分析结果', sections, 'blue');
 }
 
-function formatProgress(progress) {
+function formatProgressCard(progress) {
   if (!progress) {
-    return '无法获取分析进度';
+    return buildRichTextCard('📊 分析进度', [
+      { type: 'div', content: '❌ 无法获取分析进度' }
+    ], 'grey');
   }
 
-  const statusEmoji = {
-    'idle': '⚪ 空闲',
-    'running': '🔄 运行中',
-    'completed': '✅ 已完成',
-  };
-
-  const status = statusEmoji[progress.status] || progress.status;
+  const statusText = { 'idle': '⚪ 空闲', 'running': '🔄 运行中', 'completed': '✅ 已完成' };
+  const status = statusText[progress.status] || progress.status;
   const total = progress.total || 0;
   const completed = progress.completed || 0;
   const failed = progress.failed || 0;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-  
-  const filled = Math.round(percent / 5);
-  const empty = 20 - filled;
-  const bar = '█'.repeat(filled) + '░'.repeat(empty);
 
   let elapsed = '';
   if (progress.started_at) {
@@ -95,112 +102,96 @@ function formatProgress(progress) {
     elapsed = `${minutes}分${seconds}秒`;
   }
 
-  let result = `📊 分析进度\n\n`;
-  result += `状态: ${status}\n`;
-  result += `进度: ${completed} / ${total} (${percent}%)\n`;
-  result += `成功: ${completed - failed}  失败: ${failed}\n`;
-  if (progress.started_at) {
-    result += `开始时间: ${progress.started_at}\n`;
-    result += `已运行: ${elapsed}\n`;
-  }
-  result += `\n[${bar}] ${percent}%`;
+  const progressBar = '█'.repeat(Math.round(percent / 5)) + '░'.repeat(20 - Math.round(percent / 5));
 
-  return result;
+  const content = `**状态:** ${status}\n\n` +
+    `**进度:** ${completed} / ${total} (${percent}%)\n` +
+    `\`${progressBar}\` ${percent}%\n\n` +
+    `✅ 成功: ${completed - failed}  |  ❌ 失败: ${failed}` +
+    (progress.started_at ? `\n\n⏱️ 已运行: ${elapsed}` : '');
+
+  const buttons = progress.status === 'running' ? [
+    { text: '🔄 刷新', type: 'primary', action_id: 'refresh_progress', value: { action: 'refresh' } }
+  ] : [
+    { text: '🔄 刷新', type: 'primary', action_id: 'refresh_progress', value: { action: 'refresh' } }
+  ];
+
+  return buildInteractiveCard('📊 分析进度', content, buttons, progress.status === 'running' ? 'green' : 'blue');
+}
+
+function buildHelpCard() {
+  return buildRichTextCard('📖 股票分析机器人 - 帮助指南', [
+    { type: 'div', content: '**🔍 查询功能**\n• 股票 <代码/名称> - 查询股票\n• 股票列表 - 查看所有股票\n• 行业 <行业名> - 按行业筛选' },
+    { type: 'hr' },
+    { type: 'div', content: '**📊 分析功能**\n• 分析 <代码> - 查询分析结果\n• 分析列表 - 查看所有结果\n• 分析结果 - 查看最新结果\n• 分析进度 - 查看运行状态' },
+    { type: 'hr' },
+    { type: 'div', content: '**📈 图表功能**\n• 图表 <代码> [周期] - 生成K线\n\n**周期:** d=日线, w=周线, m=月线' }
+  ], 'blue');
+}
+
+function buildQueryPrompt(title, examples) {
+  return buildRichTextCard(title, [
+    { type: 'div', content: examples }
+  ], 'grey');
 }
 
 function getReply(messageText) {
   const text = messageText.trim();
 
   if (text === '帮助') {
-    return `📖 帮助信息
-
-支持的操作：
-- 帮助：显示此帮助信息
-- hello：测试连接
-- 股票 <代码/名称>：查询股票信息
-- 股票列表：显示所有股票
-- 行业 <行业名>：按行业查询
-- 分析 <代码>：查询分析结果
-- 分析列表：显示所有分析结果
-- 分析结果：显示最近一天的分析结果
-- 分析进度：显示当前分析进度
-- 图表 <代码> [频率]：生成K线图
-
-示例：
-- 股票 000001
-- 股票 平安银行
-- 股票列表
-- 行业 银行
-- 分析 000001
-- 分析列表
-- 分析结果
-- 分析进度
-- 图表 000001.SZ
-- 图表 000001.SZ w`;
+    return buildHelpCard();
   }
 
   if (text === 'hello' || text === '你好') {
-    return '👋 你好！我是股票分析机器人，已连接成功！';
+    return buildRichTextCard('👋 欢迎', [
+      { type: 'div', content: '你好！我是股票分析机器人，已连接成功！' }
+    ], 'green');
   }
 
   if (text === '股票列表') {
     const stocks = findAllStocks(20);
-    return formatStockAsTable(stocks);
+    return formatStockAsCard(stocks);
   }
 
   if (text.startsWith('股票 ')) {
     const keyword = text.substring(3).trim();
     const stocks = searchStocks(keyword, 10);
-    return formatStockAsTable(stocks);
+    return formatStockAsCard(stocks);
   }
 
   if (text.startsWith('行业 ')) {
     const industry = text.substring(3).trim();
     const stocks = findStocksByIndustry(industry, 20);
-    return formatStockAsTable(stocks);
+    return formatStockAsCard(stocks);
   }
 
   if (text === '分析列表') {
     const results = findAllAnalysisResults(20);
-    return formatAnalysisAsTable(results);
+    return formatAnalysisAsCard(results);
   }
 
   if (text === '分析结果') {
     const results = findLatestAnalysisResults();
-    const messages = formatLatestAnalysisAsTable(results);
-    if (messages.length === 1 && typeof messages[0] === 'string') {
-      return messages[0];
-    }
-    return messages;
+    return formatLatestAnalysisAsCards(results);
   }
 
   if (text === '分析进度') {
     const progress = getAnalysisProgress();
-    return formatProgress(progress);
+    return formatProgressCard(progress);
   }
 
   if (text.startsWith('分析 ')) {
     const keyword = text.substring(3).trim();
     const results = findAnalysisResults(keyword, null, 20);
-    return formatAnalysisAsTable(results);
+    return formatAnalysisAsCard(results);
   }
 
   if (text === '股票') {
-    return `📈 股票查询
-
-请输入股票代码或名称：
-- 股票 000001（代码查询）
-- 股票 平安银行（名称查询）
-- 股票列表（查看所有）
-- 行业 银行（按行业）`;
+    return buildQueryPrompt('📈 股票查询', '请输入股票代码或名称：\n• 股票 000001\n• 股票 平安银行\n• 股票列表\n• 行业 银行');
   }
 
   if (text === '分析') {
-    return `📊 分析结果查询
-
-请输入股票代码：
-- 分析 000001（查询单只股票）
-- 分析列表（查看所有）`;
+    return buildQueryPrompt('📊 分析结果查询', '请输入股票代码：\n• 分析 000001\n• 分析列表');
   }
 
   if (text.startsWith('图表 ')) {
@@ -209,12 +200,7 @@ function getReply(messageText) {
     const freq = parts[1] || 'd';
     
     if (!tsCode) {
-      return `📊 图表查询
-
-请输入股票代码：
-- 图表 000001.SZ（日线图）
-- 图表 000001.SZ w（周线图）
-- 图表 000001.SZ m（月线图）`;
+      return buildQueryPrompt('📊 图表查询', '请输入股票代码：\n• 图表 000001.SZ (日线)\n• 图表 000001.SZ w (周线)\n• 图表 000001.SZ m (月线)');
     }
     
     const normalizedCode = tsCode.includes('.') ? tsCode : tsCode + '.SZ';
@@ -224,14 +210,11 @@ function getReply(messageText) {
     const chartData = getChartData(normalizedCode, normalizedFreq);
     
     if (!chartData) {
-      return `❌ 未找到 ${normalizedCode} 的图表数据
-
-可能的原因：
-1. 该股票尚未分析
-2. 股票代码不正确
-3. 数据库中没有对应频率的数据
-
-请确认股票代码格式如：000001.SZ`;
+      return buildRichTextCard('❌ 图表查询失败', [
+        { type: 'div', content: `未找到 **${normalizedCode}** 的图表数据` },
+        { type: 'hr' },
+        { type: 'div', content: '可能原因：\n1. 该股票尚未分析\n2. 股票代码不正确\n3. 数据库中没有对应频率的数据' }
+      ], 'red');
     }
     
     try {
@@ -243,27 +226,21 @@ function getReply(messageText) {
       };
     } catch (error) {
       console.error('生成图表失败:', error);
-      return `❌ 生成图表失败: ${error.message}`;
+      return buildRichTextCard('❌ 图表生成失败', [
+        { type: 'div', content: `错误: ${error.message}` }
+      ], 'red');
     }
   }
 
   if (text === '图表') {
-    return `📊 K线图查询
-
-请输入股票代码：
-- 图表 000001.SZ（日线图）
-- 图表 000001.SZ w（周线图）
-- 图表 000001.SZ m（月线图）
-
-说明：
-- 日线：显示最近10个交易日
-- 周线：显示最近10周
-- 月线：显示最近10个月`;
+    return buildQueryPrompt('📊 K线图查询', '请输入股票代码：\n• 图表 000001.SZ (日线)\n• 图表 000001.SZ w (周线)\n• 图表 000001.SZ m (月线)\n\n说明：\n日线-最近10个交易日\n周线-最近10周\n月线-最近10个月');
   }
 
-  return `🤖 收到消息：${text}
-
-输入"帮助"查看可用命令。`;
+  return buildRichTextCard('🤖 收到消息', [
+    { type: 'div', content: `收到: ${text}` },
+    { type: 'hr' },
+    { type: 'div', content: '输入"帮助"查看可用命令' }
+  ], 'grey');
 }
 
 module.exports = { getReply };
