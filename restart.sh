@@ -23,8 +23,8 @@ if [ "$ALL_SERVICES" = true ]; then
     echo "启动所有服务（包括 tools）..."
     docker-compose --profile tools up -d
 else
-    echo "启动主服务..."
-    docker-compose up -d
+    echo "只启动数据库服务..."
+    docker-compose up -d db
 fi
 
 echo "完成！"
