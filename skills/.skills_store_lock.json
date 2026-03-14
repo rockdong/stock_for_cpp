@@ -24,6 +24,18 @@
       "zip_url": "https://lightmake.site/api/v1/download?slug=cognitive-memory",
       "source": "skillhub",
       "version": "1.0.8"
+    },
+    "docker-essentials": {
+      "name": "Docker Essentials",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=docker-essentials",
+      "source": "skillhub",
+      "version": "1.0.0"
+    },
+    "openspec": {
+      "name": "OpenSpec",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=openspec",
+      "source": "skillhub",
+      "version": "1.0.0"
     }
   }
 }

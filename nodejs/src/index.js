@@ -12,21 +12,17 @@ async function main() {
   
   const client = new lark.Client(baseConfig);
   
-  const eventDispatcher = new lark.EventDispatcher({
-    async handler(ctx, event) {
-      if (event.header?.event_type === 'card.action.trigger') {
-        console.log('卡片按钮点击事件:', JSON.stringify(event));
-        await handleCardAction(event.event);
-        return;
-      }
-      if (event.header?.event_type === 'im.message.receive_v1') {
-        console.log('收到消息:', JSON.stringify(event));
-        const message = event.event?.message;
-        if (message && message.message_type === 'text') {
-          await handleMessage(event.event);
-        }
+  const eventDispatcher = new lark.EventDispatcher({}).register({
+    'im.message.receive_v1': async (data) => {
+      console.log('收到消息:', JSON.stringify(data));
+      const message = data.message;
+      if (message && message.message_type === 'text') {
+        await handleMessage(data);
       }
     }
+  }).on('card.action.trigger', async (data) => {
+    console.log('卡片按钮点击事件:', JSON.stringify(data));
+    await handleCardAction(data);
   });
   
   const wsClient = new lark.WSClient({
