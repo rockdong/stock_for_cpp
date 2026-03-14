@@ -1,6 +1,7 @@
 const lark = require('@larksuiteoapi/node-sdk');
 const config = require('./config');
 const { handleMessage } = require('./handler');
+const { handleCardAction } = require('./handler');
 
 async function main() {
   console.log('启动飞书机器人（WebSocket 长连接模式）...');
@@ -19,6 +20,10 @@ async function main() {
       if (message && message.message_type === 'text') {
         await handleMessage(data);
       }
+    },
+    'card.action.trigger': async (data) => {
+      console.log('卡片按钮点击:', JSON.stringify(data));
+      await handleCardAction(data);
     }
   });
   

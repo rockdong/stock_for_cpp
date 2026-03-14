@@ -63,19 +63,81 @@ function formatLatestAnalysisAsCards(results) {
     groups[key].push(r);
   });
 
-  const sections = [];
+  const elements = [];
   Object.entries(groups).forEach(([strategy, items]) => {
     const tradeDate = items[0].trade_date;
-    sections.push({ type: 'div', content: `📊 **${strategy}** (${tradeDate}, ${items.length}条)` });
+    elements.push({
+      tag: 'div',
+      text: { tag: 'lark_md', content: `📊 **${strategy}** (${tradeDate}, ${items.length}条)` }
+    });
+    
     items.forEach(r => {
       const shortCode = r.ts_code.split('.')[0];
-      sections.push({ type: 'div', content: `• ${shortCode} | ${r.name || '-'} | opt: ${r.opt || '-'}` });
+      elements.push({
+        tag: 'div',
+        text: { tag: 'lark_md', content: `• ${shortCode} | ${r.name || '-'} | opt: ${r.opt || '-'}` }
+      });
+      
+      const buttons = buildChartButtons(r.ts_code, r.opt);
+      if (buttons.length > 0) {
+        elements.push({
+          tag: 'action',
+          actions: buttons
+        });
+      }
     });
-    sections.push({ type: 'hr' });
+    
+    elements.push({ tag: 'hr' });
   });
 
-  sections.pop();
-  return buildRichTextCard('📊 最新分析结果', sections, 'blue');
+  elements.pop();
+  
+  return {
+    msg_type: 'interactive',
+    card: {
+      config: { wide_screen_mode: true },
+      header: {
+        title: { tag: 'plain_text', content: '📊 最新分析结果' },
+        template: 'blue'
+      },
+      elements: elements
+    }
+  };
+}
+
+function buildChartButtons(tsCode, opt) {
+  const buttons = [];
+  const optStr = opt || '';
+  
+  if (optStr.includes('☀️')) {
+    buttons.push({
+      tag: 'button',
+      text: { tag: 'plain_text', content: '日线' },
+      type: 'primary',
+      action_id: 'chart_d',
+      value: JSON.stringify({ action: 'chart', ts_code: tsCode, freq: 'd' })
+    });
+  }
+  if (optStr.includes('⭐')) {
+    buttons.push({
+      tag: 'button',
+      text: { tag: 'plain_text', content: '周线' },
+      type: 'default',
+      action_id: 'chart_w',
+      value: JSON.stringify({ action: 'chart', ts_code: tsCode, freq: 'w' })
+    });
+  }
+  if (optStr.includes('🌙')) {
+    buttons.push({
+      tag: 'button',
+      text: { tag: 'plain_text', content: '月线' },
+      type: 'default',
+      action_id: 'chart_m',
+      value: JSON.stringify({ action: 'chart', ts_code: tsCode, freq: 'm' })
+    });
+  }
+  
+  return buttons;
 }
 
 function formatProgressCard(progress) {
@@ -243,4 +305,31 @@ function getReply(messageText) {
   ], 'grey');
 }
 
-module.exports = { getReply };
+function getChartForCard(tsCode, freq) {
+  const validFreqs = ['d', 'w', 'm'];
+  const normalizedFreq = validFreqs.includes(freq?.toLowerCase()) ? freq.toLowerCase() : 'd';
+  
+  const chartData = getChartData(tsCode, normalizedFreq);
+  
+  if (!chartData) {
+    return buildRichTextCard('❌ 图表查询失败', [
+      { type: 'div', content: `未找到 **${tsCode}** 的图表数据` }
+    ], 'red');
+  }
+  
+  try {
+    const imageBuffer = generateChart(chartData);
+    return {
+      type: 'image',
+      buffer: imageBuffer,
+      text: `📊 ${tsCode} ${normalizedFreq === 'd' ? '日线' : normalizedFreq === 'w' ? '周线' : '月线'}图`
+    };
+  } catch (error) {
+    console.error('生成图表失败:', error);
+    return buildRichTextCard('❌ 图表生成失败', [
+      { type: 'div', content: `错误: ${error.message}` }
+    ], 'red');
+  }
+}
+
+module.exports = { getReply, getChartForCard };

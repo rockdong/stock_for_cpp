@@ -1,4 +1,4 @@
-const { getReply } = require('./reply');
+const { getReply, getChartForCard } = require('./reply');
 const config = require('./config');
 
 async function uploadImage(imageBuffer) {
@@ -13,6 +13,35 @@ async function uploadImage(imageBuffer) {
   } catch (error) {
     console.error('上传图片失败:', error);
     throw error;
+  }
+}
+
+async function handleCardAction(event) {
+  const action = event.action;
+  const value = JSON.parse(action.value || '{}');
+  const openId = event.operator?.open_id;
+  
+  console.log('卡片按钮点击:', value);
+  
+  if (value.action === 'chart') {
+    const replyData = getChartForCard(value.ts_code, value.freq);
+    
+    if (replyData && replyData.type === 'image' && replyData.buffer) {
+      try {
+        const imageKey = await uploadImage(replyData.buffer);
+        await config.client.im.message.create({
+          params: { receive_id_type: 'open_id' },
+          data: {
+            receive_id: openId,
+            msg_type: 'image',
+            content: JSON.stringify({ image_key: imageKey }),
+          },
+        });
+        console.log('图表图片发送成功');
+      } catch (error) {
+        console.error('发送图表失败:', error);
+      }
+    }
   }
 }
 
@@ -107,4 +136,4 @@ async function handleMessage(event) {
   }
 }
 
-module.exports = { handleMessage };
+module.exports = { handleMessage, handleCardAction };
