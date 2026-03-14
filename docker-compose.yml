@@ -7,6 +7,7 @@ services:
       - ./data/stock.db:/app/stock.db
       - ./nodejs/.env:/app/nodejs/.env:ro
       - ./nodejs/secret.key:/app/nodejs/secret.key:ro
+      - ./nodejs/src:/app/nodejs/src:ro
     ports:
       - "3000:3000"
     environment:
