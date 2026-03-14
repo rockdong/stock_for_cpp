@@ -116,6 +116,7 @@ add_library(core_lib STATIC
     core/strategies/EMA17BreakoutStrategy.cpp
     core/strategies/EMAConvergenceStrategy.cpp
     core/strategies/EMA25Greater17PriceMatchStrategy.cpp
+    core/strategies/EMA25CrossoverStrategy.cpp
 )
 
 target_include_directories(core_lib PUBLIC
