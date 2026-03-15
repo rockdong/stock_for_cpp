@@ -93,6 +93,12 @@ function formatLatestAnalysisAsCards(results) {
 
   elements.pop();
   
+  elements.push({ tag: 'hr' });
+  elements.push({
+    tag: 'div',
+    text: { tag: 'lark_md', content: '💡 发送「图表 代码 d/w/m」查看对应周期图表' }
+  });
+  
   return {
     msg_type: 'interactive',
     card: {
