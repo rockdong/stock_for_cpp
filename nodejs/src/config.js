@@ -1,4 +1,3 @@
-const lark = require('@larksuiteoapi/node-sdk');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
@@ -47,20 +46,12 @@ function loadConfig() {
 // 加载配置
 loadConfig();
 
-const client = new lark.Client({
-  appId: process.env.APP_ID,
-  appSecret: process.env.APP_SECRET,
-  appType: lark.AppType.SelfBuild,
-  domain: lark.Domain.Feishu,
-});
-
 const config = {
   appId: process.env.APP_ID,
   appSecret: process.env.APP_SECRET,
   encryptKey: process.env.ENCRYPT_KEY,
   verificationToken: process.env.VERIFICATION_TOKEN,
   port: parseInt(process.env.PORT) || 3000,
-  client,
   dbPath: process.env.DB_PATH || '../stock.db',
 };
 
