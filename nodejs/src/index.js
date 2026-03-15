@@ -1,6 +1,6 @@
 const lark = require('@larksuiteoapi/node-sdk');
 const config = require('./config');
-const { handleMessage, handleCardAction } = require('./handler');
+const { handleMessage } = require('./handler');
 const logger = require('./logger');
 
 async function main() {
@@ -21,9 +21,6 @@ async function main() {
         await handleMessage(data);
       }
     }
-  }).on('card.action.trigger', async (data) => {
-    logger.debug('卡片按钮点击事件: ' + JSON.stringify(data));
-    await handleCardAction(data);
   });
   
   const wsClient = new lark.WSClient({
