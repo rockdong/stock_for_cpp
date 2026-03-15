@@ -1,6 +1,6 @@
 const lark = require('@larksuiteoapi/node-sdk');
 const config = require('./config');
-const { handleMessage } = require('./handler');
+const { handleMessage, handleCardAction } = require('./handler');
 const logger = require('./logger');
 
 async function main() {
@@ -20,6 +20,10 @@ async function main() {
       if (message && message.message_type === 'text') {
         await handleMessage(data);
       }
+    },
+    'card.action.trigger': async (data) => {
+      logger.debug('收到卡片回调: ' + JSON.stringify(data));
+      await handleCardAction(data);
     }
   });
   
