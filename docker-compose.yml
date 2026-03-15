@@ -5,15 +5,16 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./data/stock.db:/app/stock.db
-      - ./nodejs/.env:/app/nodejs/.env:ro
-      - ./nodejs/secret.key:/app/nodejs/secret.key:ro
-      - ./nodejs/src:/app/nodejs/src:ro
     ports:
       - "3000:3000"
     environment:
       - TZ=Asia/Shanghai
       - LOG_LEVEL=INFO
       - NODE_ENV=development
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
