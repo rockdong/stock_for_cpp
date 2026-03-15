@@ -49,20 +49,17 @@ async function handleCardAction(event) {
       const { getProgressCard } = require('./reply');
       const progressCard = getProgressCard();
       
-      await config.client.im.message.patch({
-        path: {
-          message_id: openMessageId,
-        },
-        params: {
-          receive_id_type: 'open_id',
-        },
+      await config.client.im.message.create({
+        params: { receive_id_type: 'open_id' },
         data: {
+          receive_id: openId,
+          msg_type: 'interactive',
           content: JSON.stringify(progressCard.card),
         },
       });
-      logger.info('进度刷新成功');
+      logger.info('进度刷新消息发送成功');
     } catch (error) {
-      logger.error('刷新进度失败: ' + error.message);
+      logger.error('发送进度刷新消息失败: ' + error.message);
     }
   }
 }

@@ -149,9 +149,19 @@ function buildChartButtons(tsCode, opt) {
 
 function formatProgressCard(progress) {
   if (!progress) {
-    return buildRichTextCard('📊 分析进度', [
-      { type: 'div', content: '❌ 无法获取分析进度' }
-    ], 'grey');
+    return {
+      msg_type: 'interactive',
+      card: {
+        config: { wide_screen_mode: true },
+        header: {
+          title: { tag: 'plain_text', content: '📊 分析进度' },
+          template: 'grey'
+        },
+        elements: [
+          { tag: 'div', text: { tag: 'lark_md', content: '❌ 无法获取分析进度' } }
+        ]
+      }
+    };
   }
 
   const statusText = { 'idle': '⚪ 空闲', 'running': '🔄 运行中', 'completed': '✅ 已完成' };
@@ -179,11 +189,32 @@ function formatProgressCard(progress) {
     `✅ 成功: ${completed - failed}  |  ❌ 失败: ${failed}` +
     (progress.started_at ? `\n\n⏱️ 已运行: ${elapsed}` : '');
 
-  return buildRichTextCard('📊 分析进度', [
-    { type: 'div', content: content },
-    { type: 'hr' },
-    { type: 'div', content: '💡 发送「分析进度」查看最新状态' }
-  ], progress.status === 'running' ? 'green' : 'blue');
+  return {
+    msg_type: 'interactive',
+    card: {
+      config: { wide_screen_mode: true },
+      header: {
+        title: { tag: 'plain_text', content: '📊 分析进度' },
+        template: progress.status === 'running' ? 'green' : 'blue'
+      },
+      elements: [
+        { tag: 'div', text: { tag: 'lark_md', content: content } },
+        { tag: 'hr' },
+        {
+          tag: 'action',
+          actions: [
+            {
+              tag: 'button',
+              text: { tag: 'plain_text', content: '🔄 刷新' },
+              type: 'primary',
+              action_id: 'refresh_progress',
+              value: JSON.stringify({ action: 'refresh' })
+            }
+          ]
+        }
+      ]
+    }
+  };
 }
 
 function getProgressCard() {
