@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
 const Encryptor = require('./utils/encryptor');
+const logger = require('./logger');
 
 // 加载配置并自动解密
 function loadConfig() {
@@ -33,7 +34,7 @@ function loadConfig() {
                 // 设置环境变量
                 process.env[varName] = decryptedValue;
               } catch (error) {
-                console.error(`Config: 解密 ${varName} 失败:`, error.message);
+                logger.error(`Config: 解密 ${varName} 失败: ` + error.message);
               }
             }
           }

@@ -7,6 +7,7 @@ LABEL description="Stock for C++ Application with Feishu Bot"
 # 设置时区
 ENV TZ=Asia/Shanghai
 ENV DEBIAN_FRONTEND=noninteractive
+ENV LOG_LEVEL=INFO
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
@@ -66,6 +67,7 @@ RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
 # 创建应用目录
 RUN mkdir -p /app
+RUN mkdir -p /app/logs/nodejs
 
 # 设置工作目录
 WORKDIR /app

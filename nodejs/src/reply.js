@@ -1,6 +1,7 @@
 const { searchStocks, findStockByTsCode, findAllStocks, findStocksByIndustry, findAnalysisResults, findAllAnalysisResults, findLatestAnalysisResults, getAnalysisProgress, getChartData } = require('./database');
 const { generateChart } = require('./chartGenerator');
 const { buildRichTextCard, buildInteractiveCard, buildTextMessage } = require('./messageBuilder');
+const logger = require('./logger');
 
 function formatStockAsCard(stocks) {
   if (!stocks || stocks.length === 0) {
@@ -292,7 +293,7 @@ function getReply(messageText) {
         text: `📊 ${normalizedCode} ${normalizedFreq === 'd' ? '日线' : normalizedFreq === 'w' ? '周线' : '月线'}图`
       };
     } catch (error) {
-      console.error('生成图表失败:', error);
+      logger.error('生成图表失败: ' + error.message);
       return buildRichTextCard('❌ 图表生成失败', [
         { type: 'div', content: `错误: ${error.message}` }
       ], 'red');
@@ -330,7 +331,7 @@ function getChartForCard(tsCode, freq) {
       text: `📊 ${tsCode} ${normalizedFreq === 'd' ? '日线' : normalizedFreq === 'w' ? '周线' : '月线'}图`
     };
   } catch (error) {
-    console.error('生成图表失败:', error);
+    logger.error('生成图表失败: ' + error.message);
     return buildRichTextCard('❌ 图表生成失败', [
       { type: 'div', content: `错误: ${error.message}` }
     ], 'red');
