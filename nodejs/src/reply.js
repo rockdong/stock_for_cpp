@@ -179,13 +179,11 @@ function formatProgressCard(progress) {
     `✅ 成功: ${completed - failed}  |  ❌ 失败: ${failed}` +
     (progress.started_at ? `\n\n⏱️ 已运行: ${elapsed}` : '');
 
-  const buttons = progress.status === 'running' ? [
-    { text: '🔄 刷新', type: 'primary', action_id: 'refresh_progress', value: { action: 'refresh' } }
-  ] : [
-    { text: '🔄 刷新', type: 'primary', action_id: 'refresh_progress', value: { action: 'refresh' } }
-  ];
-
-  return buildInteractiveCard('📊 分析进度', content, buttons, progress.status === 'running' ? 'green' : 'blue');
+  return buildRichTextCard('📊 分析进度', [
+    { type: 'div', content: content },
+    { type: 'hr' },
+    { type: 'div', content: '💡 发送「分析进度」查看最新状态' }
+  ], progress.status === 'running' ? 'green' : 'blue');
 }
 
 function getProgressCard() {
