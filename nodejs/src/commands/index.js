@@ -1,5 +1,12 @@
 const logger = require('../logger');
 
+// 导入所有命令模块（触发 register）
+require('./stock');
+require('./analysis');
+require('./chart');
+require('./progress');
+require('./help');
+
 const commands = new Map();
 const commandsList = [];
 
