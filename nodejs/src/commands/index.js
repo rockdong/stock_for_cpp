@@ -1,12 +1,5 @@
 const logger = require('../logger');
 
-// 导入所有命令模块（触发 register）
-require('./stock');
-require('./analysis');
-require('./chart');
-require('./progress');
-require('./help');
-
 const commands = new Map();
 const commandsList = [];
 
@@ -38,3 +31,10 @@ module.exports = {
   route,
   getCommandsList,
 };
+
+// 导出完成后才加载命令模块（避免循环依赖）
+require('./stock');
+require('./analysis');
+require('./chart');
+require('./progress');
+require('./help');
