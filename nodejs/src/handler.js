@@ -71,6 +71,12 @@ async function handleMessage(event) {
     return;
   }
   
+  // 支持多卡片发送
+  if (replyData.multiple && replyData.cards) {
+    await messageService.sendMultipleCards(chatId, replyData.cards);
+    return;
+  }
+  
   if (replyData.msg_type === 'interactive') {
     await messageService.sendCard(chatId, replyData.card);
   } else if (replyData.type === 'image' && replyData.buffer) {

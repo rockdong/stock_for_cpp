@@ -75,6 +75,28 @@ class MessageService {
       return { success: false, error };
     }
   }
+
+  async sendMultipleCards(receiveId, cards, idType = 'chat_id') {
+    const results = [];
+    for (const card of cards) {
+      try {
+        await this.client.im.message.create({
+          params: { receive_id_type: idType },
+          data: {
+            receive_id: receiveId,
+            msg_type: 'interactive',
+            content: JSON.stringify(card.card || card),
+          },
+        });
+        results.push({ success: true });
+      } catch (error) {
+        logger.error('发送卡片失败: ' + error.message);
+        results.push({ success: false, error });
+      }
+    }
+    logger.info(`发送 ${cards.length} 张卡片完成`);
+    return results;
+  }
 }
 
 const messageService = new MessageService();

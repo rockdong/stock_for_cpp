@@ -10,7 +10,12 @@ function handleAnalysis(text) {
   
   if (text === '分析结果') {
     const results = findLatestAnalysisResults();
-    return formatLatestAnalysis(results);
+    const formatted = formatLatestAnalysis(results);
+    // 如果返回的是多卡片格式
+    if (formatted.summary && formatted.groups) {
+      return { multiple: true, cards: [formatted.summary, ...formatted.groups] };
+    }
+    return formatted;
   }
   
   if (text.startsWith('分析 ')) {
