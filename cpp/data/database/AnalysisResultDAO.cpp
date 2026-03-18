@@ -1,6 +1,8 @@
 #include "AnalysisResultDAO.h"
 #include "Connection.h"
 #include "Logger.h"
+#include "StringUtil.h"
+#include <set>
 
 namespace data {
 
@@ -47,9 +49,6 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
         AnalysisResultTable results;
         auto db = conn.getDb();
         
-        // 业务规则：
-        // - 如果同一只股票、同一分析日期、同一策略的记录已存在，则追加 opt 和 freq
-        // - 如果不存在，则插入一条新记录
         int existingId = -1;
         for (const auto& row : (*db)(
                  sqlpp::select(results.id)
@@ -62,40 +61,49 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
         }
 
         if (existingId >= 0) {
-            // 更新已有记录：追加 opt 和 freq 字段（使用 "|" 分隔）
             std::string newOptToken = mapOptToEmoji(result.opt);
-            std::string newOpt = newOptToken;
-            std::string newFreq = result.freq;
+            std::string oldOpt;
+            std::string oldFreq;
             
             for (const auto& row : (*db)(
                      sqlpp::select(results.opt, results.freq)
                          .from(results)
                          .where(results.id == existingId)
                          .limit(1u))) {
-                // 追加 opt
                 if (!row.opt.is_null()) {
-                    std::string oldOpt = row.opt.value();
-                    if (!oldOpt.empty()) {
-                        newOpt = oldOpt + "|" + newOptToken;
-                    }
+                    oldOpt = row.opt.value();
                 }
-                // 追加 freq
                 if (!row.freq.is_null()) {
-                    std::string oldFreq = row.freq.value();
-                    if (!oldFreq.empty()) {
-                        newFreq = oldFreq + "|" + result.freq;
-                    }
+                    oldFreq = row.freq.value();
                 }
             }
-
-            (*db)(sqlpp::update(results)
-                      .set(results.opt = newOpt, results.freq = newFreq)
-                      .where(results.id == existingId));
-            LOG_DEBUG("追加分析结果成功: " + result.ts_code + " - " +
-                      result.strategy_name + " - " + result.trade_date +
-                      " - freq=" + newFreq + " - opt=" + newOpt);
+            
+            std::set<std::string> optSet = utils::StringUtil::splitToSet(oldOpt, "|");
+            std::set<std::string> freqSet = utils::StringUtil::splitToSet(oldFreq, "|");
+            
+            bool needUpdate = false;
+            if (optSet.insert(newOptToken).second) {
+                needUpdate = true;
+            }
+            if (freqSet.insert(result.freq).second) {
+                needUpdate = true;
+            }
+            
+            if (needUpdate) {
+                std::string newOpt = utils::StringUtil::join(optSet, "|");
+                std::string newFreq = utils::StringUtil::join(freqSet, "|");
+                
+                (*db)(sqlpp::update(results)
+                          .set(results.opt = newOpt, results.freq = newFreq)
+                          .where(results.id == existingId));
+                LOG_DEBUG("追加分析结果: " + result.ts_code + " - " +
+                          result.strategy_name + " - " + result.trade_date +
+                          " - freq=" + newFreq + " - opt=" + newOpt);
+            } else {
+                LOG_DEBUG("跳过重复分析结果: " + result.ts_code + " - " +
+                          result.strategy_name + " - " + result.trade_date);
+            }
         } else {
-            // 插入新记录
             std::string emojiOpt = mapOptToEmoji(result.opt);
         (*db)(sqlpp::insert_into(results).set(
             results.tsCode = result.ts_code,
@@ -104,7 +112,7 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
             results.label = result.label,
                 results.opt = emojiOpt,
                 results.freq = result.freq));
-            LOG_DEBUG("插入分析结果成功: " + result.ts_code + " - " +
+            LOG_DEBUG("插入分析结果: " + result.ts_code + " - " +
                       result.strategy_name + " - " + result.trade_date +
                       " - freq=" + result.freq);
         }

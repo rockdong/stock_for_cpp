@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 #include <algorithm>
 #include <cctype>
 #include <sstream>
@@ -89,6 +90,22 @@ public:
      * @return 连接后的字符串
      */
     static std::string join(const std::vector<std::string>& parts, const std::string& delimiter);
+    
+    /**
+     * @brief 分割字符串到集合（自动去重）
+     * @param str 输入字符串
+     * @param delimiter 分隔符
+     * @return 分割后的字符串集合
+     */
+    static std::set<std::string> splitToSet(const std::string& str, const std::string& delimiter);
+    
+    /**
+     * @brief 连接字符串集合
+     * @param parts 字符串集合
+     * @param delimiter 分隔符
+     * @return 连接后的字符串
+     */
+    static std::string join(const std::set<std::string>& parts, const std::string& delimiter);
     
     // ==================== 大小写转换 ====================
     

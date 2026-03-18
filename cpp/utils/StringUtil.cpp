@@ -1,4 +1,5 @@
 #include "StringUtil.h"
+#include <set>
 #include <stdexcept>
 #include <iomanip>
 
@@ -85,6 +86,37 @@ std::string StringUtil::join(const std::vector<std::string>& parts, const std::s
             oss << delimiter;
         }
         oss << parts[i];
+    }
+    return oss.str();
+}
+
+std::set<std::string> StringUtil::splitToSet(const std::string& str, const std::string& delimiter) {
+    std::set<std::string> result;
+    if (str.empty()) {
+        return result;
+    }
+    
+    std::vector<std::string> parts = split(str, delimiter, true);
+    for (const auto& part : parts) {
+        result.insert(part);
+    }
+    
+    return result;
+}
+
+std::string StringUtil::join(const std::set<std::string>& parts, const std::string& delimiter) {
+    if (parts.empty()) {
+        return "";
+    }
+    
+    std::ostringstream oss;
+    bool first = true;
+    for (const auto& part : parts) {
+        if (!first) {
+            oss << delimiter;
+        }
+        oss << part;
+        first = false;
     }
     return oss.str();
 }
