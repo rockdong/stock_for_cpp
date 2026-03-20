@@ -4,8 +4,7 @@ services:
       - ./nodejs:/app/nodejs
       - ./logs:/app/logs
     env_file:
-      - ./cpp/.env
-      - ./nodejs/.env
+      - ./env/.env
     environment:
       - TZ=Asia/Shanghai
       - LOG_LEVEL=DEBUG
