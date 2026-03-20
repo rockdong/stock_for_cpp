@@ -107,6 +107,9 @@ add_library(core_lib STATIC
     core/Strategy.cpp
     core/StrategyFactory.cpp
     core/StrategyManager.cpp
+    core/PredictionHistory.cpp
+    core/AccuracyAnalyzer.cpp
+    core/ParameterOptimizer.cpp
     core/strategies/MACrossStrategy.cpp
     core/strategies/MACDStrategy.cpp
     core/strategies/RSIStrategy.cpp
@@ -126,11 +129,13 @@ target_include_directories(core_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${CMAKE_CURRENT_SOURCE_DIR}/analysis/indicators
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ta-lib/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include
 )
 
 target_link_libraries(core_lib PUBLIC
     utils_lib
     analysis_lib
+    nlohmann_json::nlohmann_json
 )
 
 # 添加日志库
