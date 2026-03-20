@@ -130,21 +130,6 @@ jobs:
       - name: 🔑 设置可执行权限
         run: chmod +x cpp/build/stock_for_cpp
 
-      - name: 📝 创建临时 .env 文件（C++）
-        run: |
-          echo "" >> cpp/.env
-          echo "DATA_SOURCE_API_KEY=${{ secrets.DATA_SOURCE_API_KEY }}" >> cpp/.env
-
-      - name: 📝 创建临时 .env 文件（Node.js）
-        run: |
-          cat > nodejs/.env << EOF
-          FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}
-          FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
-          FEISHU_VERIFICATION_TOKEN=${{ secrets.FEISHU_VERIFICATION_TOKEN }}
-          PORT=3000
-          DB_PATH=../stock.db
-          EOF
-
       - name: 🔧 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
 
