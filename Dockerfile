@@ -81,9 +81,9 @@ COPY --chown=appuser:appgroup nodejs/ /app/nodejs/
 # 安装 Node.js 依赖
 RUN cd /app/nodejs && npm install --production
 
-# 复制包含敏感信息的 .env 文件
-COPY --chown=appuser:appgroup cpp/.env /app/.env
-COPY --chown=appuser:appgroup nodejs/.env /app/nodejs/.env
+# 创建默认 .env 文件（运行时通过 docker-compose env_file 覆盖）
+RUN touch /app/.env && touch /app/nodejs/.env
+RUN chown appuser:appgroup /app/.env /app/nodejs/.env
 
 # 复制启动脚本
 COPY --chown=appuser:appgroup docker-entrypoint.sh /usr/local/bin/

@@ -1,0 +1,14 @@
+services:
+  stock-analysis:
+    volumes:
+      - ./nodejs:/app/nodejs
+      - ./logs:/app/logs
+    env_file:
+      - ./cpp/.env
+      - ./nodejs/.env
+    environment:
+      - TZ=Asia/Shanghai
+      - LOG_LEVEL=DEBUG
+      - NODE_ENV=development
+    command: >
+      bash -c "cd /app/nodejs && npm install --production 2>/dev/null && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"
