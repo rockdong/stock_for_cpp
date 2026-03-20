@@ -2,11 +2,11 @@ name: 🚀 构建并发布 Docker 镜像
 
 on:
   push:
-    branches: [ "v2" ]
+    branches: [ "master" ]
     tags:
       - 'v*.*.*'
   pull_request:
-    branches: [ "v2" ]
+    branches: [ "master" ]
   workflow_dispatch:
 
 env:
@@ -138,10 +138,9 @@ jobs:
       - name: 📝 创建临时 .env 文件（Node.js）
         run: |
           cat > nodejs/.env << EOF
-          APP_ID=${{ secrets.FEISHU_APP_ID }}
-          APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
-          ENCRYPT_KEY=${{ secrets.FEISHU_ENCRYPT_KEY }}
-          VERIFICATION_TOKEN=${{ secrets.FEISHU_VERIFICATION_TOKEN }}
+          FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_VERIFICATION_TOKEN=${{ secrets.FEISHU_VERIFICATION_TOKEN }}
           PORT=3000
           DB_PATH=../stock.db
           EOF
