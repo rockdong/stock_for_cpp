@@ -2,6 +2,7 @@ services:
   stock-analysis:
     image: rockdong13/stock_for_cpp:v2
     container_name: stock-analysis-dev
+    platform: linux/amd64
     volumes:
       - ./logs:/app/logs
     ports:
