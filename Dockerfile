@@ -1,17 +1,14 @@
 FROM ubuntu:24.04
 
-# 元数据标签
 LABEL authors="workspace"
 LABEL description="Stock for C++ Application with Feishu Bot"
 
-# 设置时区
 ENV TZ=Asia/Shanghai
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LOG_LEVEL=INFO
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# 安装运行时依赖 (C++)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-0 \
     libssl3 \
@@ -26,14 +23,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgif-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 Node.js
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 supervisor 
 RUN apt-get update && apt-get install -y --no-install-recommends supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3 \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # 创建 supervisor 配置 
