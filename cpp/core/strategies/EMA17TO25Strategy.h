@@ -19,6 +19,8 @@ namespace core {
  * 参数：
  * - fast_period: 快线周期（默认 17）
  * - slow_period: 慢线周期（默认 25）
+ * - trend_days: 趋势判断窗口天数（默认 3）
+ * - min_confidence: 最小置信度阈值（默认 0）
  */
 class EMA17TO25Strategy : public StrategyBase {
 public:
@@ -33,7 +35,7 @@ public:
 
 private:
     /**
-     * @brief 检测上升趋势
+     * @brief 检测上升趋势（窗口化）
      * @param ema EMA 数据
      * @return 是否为上升趋势
      */
@@ -54,6 +56,17 @@ private:
      * @return 是否发生死叉
      */
     bool isDeathCross(const std::vector<double>& fastEMA, const std::vector<double>& slowEMA) const;
+    
+    /**
+     * @brief 计算置信度
+     * @param fastEMA 快线 EMA
+     * @param slowEMA 慢线 EMA
+     * @return 置信度（0-100）
+     */
+    double calculateConfidence(
+        const std::vector<double>& fastEMA,
+        const std::vector<double>& slowEMA
+    ) const;
 };
 
 } // namespace core

@@ -6,6 +6,31 @@
 namespace core {
 
 /**
+ * @brief 信号强度枚举
+ * 
+ * 用于表示交易信号的质量等级
+ */
+enum class SignalStrength {
+    WEAK,       // 弱信号：置信度 < 40
+    MEDIUM,     // 中等信号：置信度 40-69
+    STRONG      // 强信号：置信度 >= 70
+};
+
+/**
+ * @brief 将信号强度转换为字符串
+ * @param strength 信号强度枚举值
+ * @return 字符串表示
+ */
+inline std::string strengthToString(SignalStrength strength) {
+    switch (strength) {
+        case SignalStrength::WEAK: return "WEAK";
+        case SignalStrength::MEDIUM: return "MEDIUM";
+        case SignalStrength::STRONG: return "STRONG";
+        default: return "UNKNOWN";
+    }
+}
+
+/**
  * @brief 分析结果（核心数据结构）
  * 
  * 记录策略分析的结果，用于：
@@ -25,6 +50,11 @@ struct AnalysisResult {
     std::string opt;            // 操作类型（buy/sell/hold）
     std::string freq;           // 频率（d=日线, w=周线, m=月线）
     
+    // 新增字段：信号强度评估
+    SignalStrength strength = SignalStrength::MEDIUM;  // 信号强度
+    double confidence = 50.0;                          // 置信度（0-100）
+    std::string risk_warning;                          // 风险提示
+    
     AnalysisResult() = default;
     
     AnalysisResult(
@@ -40,6 +70,9 @@ struct AnalysisResult {
       , label(label)
       , opt(opt)
       , freq(freq)
+      , strength(SignalStrength::MEDIUM)
+      , confidence(50.0)
+      , risk_warning("")
     {}
     
     /**

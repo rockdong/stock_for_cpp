@@ -111,6 +111,25 @@ protected:
         const std::string& opt = "",
         const std::string& freq = "d"
     ) const;
+    
+    /**
+     * @brief 创建分析结果（带信号强度）
+     */
+    AnalysisResult createResult(
+        const std::string& tsCode,
+        const std::string& tradeDate,
+        const std::string& label,
+        SignalStrength strength,
+        double confidence,
+        const std::string& riskWarning = "",
+        const std::string& opt = "",
+        const std::string& freq = "d"
+    ) const;
+    
+    /**
+     * @brief 根据置信度评估信号强度
+     */
+    SignalStrength evaluateStrength(double confidence) const;
 };
 
 } // namespace core

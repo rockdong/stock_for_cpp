@@ -12,6 +12,9 @@ std::string AnalysisResult::toString() const {
         << ", label=" << label
         << ", opt=" << opt
         << ", freq=" << freq
+        << ", strength=" << strengthToString(strength)
+        << ", confidence=" << confidence
+        << ", risk_warning=" << risk_warning
         << "}";
     return oss.str();
 }

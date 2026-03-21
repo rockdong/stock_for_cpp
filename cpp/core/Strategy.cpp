@@ -48,5 +48,32 @@ AnalysisResult StrategyBase::createResult(
     return AnalysisResult(tsCode, name_, tradeDate, label, opt, freq);
 }
 
+AnalysisResult StrategyBase::createResult(
+    const std::string& tsCode,
+    const std::string& tradeDate,
+    const std::string& label,
+    SignalStrength strength,
+    double confidence,
+    const std::string& riskWarning,
+    const std::string& opt,
+    const std::string& freq
+) const {
+    AnalysisResult result(tsCode, name_, tradeDate, label, opt, freq);
+    result.strength = strength;
+    result.confidence = confidence;
+    result.risk_warning = riskWarning;
+    return result;
+}
+
+SignalStrength StrategyBase::evaluateStrength(double confidence) const {
+    if (confidence >= 70.0) {
+        return SignalStrength::STRONG;
+    } else if (confidence >= 40.0) {
+        return SignalStrength::MEDIUM;
+    } else {
+        return SignalStrength::WEAK;
+    }
+}
+
 } // namespace core
 

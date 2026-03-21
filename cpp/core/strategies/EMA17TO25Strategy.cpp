@@ -4,6 +4,7 @@
 
 #include "EMA17TO25Strategy.h"
 #include <iostream>
+#include <algorithm>
 #include "../../analysis/indicators/EMA.h"
 
 namespace core {
@@ -11,11 +12,11 @@ namespace core {
 EMA17TO25Strategy::EMA17TO25Strategy(const std::map<std::string, double>& params)
     : StrategyBase("EMA17TO25", "EMA17/EMA25交叉策略")
 {
-    // 设置默认参数
     setParameter("fast_period", 17);
     setParameter("slow_period", 25);
+    setParameter("trend_days", 3);
+    setParameter("min_confidence", 0);
     
-    // 应用用户参数
     setParameters(params);
 }
 
@@ -25,20 +26,18 @@ std::optional<AnalysisResult> EMA17TO25Strategy::analyze(
 ) {
     int fastPeriod = static_cast<int>(getParameter("fast_period", 17));
     int slowPeriod = static_cast<int>(getParameter("slow_period", 25));
+    double minConfidence = getParameter("min_confidence", 0);
     
-    // 检查数据是否足够
     if (!hasEnoughData(data, slowPeriod + 2)) {
         return std::nullopt;
     }
     
-    // 提取收盘价
     std::vector<double> closes;
     closes.reserve(data.size());
     for (const auto& d : data) {
         closes.push_back(d.close);
     }
 
-    // DEBUG编译才打印：使用 cout 打印最后 5 个元素的收盘价 和 日期，用于调试
     #ifdef DEBUG
     std::cout << "--------------------------------" << std::endl;
     for (size_t i = 0; i < 5; i++) {
@@ -47,28 +46,37 @@ std::optional<AnalysisResult> EMA17TO25Strategy::analyze(
     std::cout << "--------------------------------" << std::endl;
     #endif
 
-    // 使用 analysis 模块的 EMA 计算方法
     auto fastEMA = analysis::EMA::compute(closes, fastPeriod);
     auto slowEMA = analysis::EMA::compute(closes, slowPeriod);
     
-    // 获取最新交易日期
     std::string tradeDate = data.back().trade_date;
 
-    // 分别判断两条线的走势都是向上的，如果不是返回nullopt
     if (!isUpTrend(fastEMA) || !isUpTrend(slowEMA)) {
         return std::nullopt;
     }
 
-    // 判断最后两天的 ema17 和 ema25 的交叉情况
     if (isGoldenCross(fastEMA, slowEMA)) {
-        return createResult(tsCode, tradeDate, "买入");
+        double confidence = calculateConfidence(fastEMA, slowEMA);
+        
+        if (confidence < minConfidence) {
+            return std::nullopt;
+        }
+        
+        SignalStrength strength = evaluateStrength(confidence);
+        return createResult(tsCode, tradeDate, "买入", strength, confidence, "", "buy");
     }
 
     return std::nullopt;
 }
 
 bool EMA17TO25Strategy::isUpTrend(const std::vector<double>& ema) const {
-    for (size_t i = 1; i < ema.size(); i++) {
+    int trendDays = static_cast<int>(getParameter("trend_days", 3));
+    
+    if (trendDays <= 0 || ema.size() < static_cast<size_t>(trendDays + 1)) {
+        return false;
+    }
+    
+    for (size_t i = ema.size() - trendDays; i < ema.size(); i++) {
         if (ema[i] <= ema[i - 1]) {
             return false;
         }
@@ -109,8 +117,37 @@ bool EMA17TO25Strategy::isDeathCross(const std::vector<double>& fastEMA, const s
     
     size_t idx = fastEMA.size() - 1;
     
-    // 当前：快线 < 慢线，前一天：快线 >= 慢线
     return fastEMA[idx] < slowEMA[idx] && fastEMA[idx - 1] >= slowEMA[idx - 1];
+}
+
+double EMA17TO25Strategy::calculateConfidence(
+    const std::vector<double>& fastEMA,
+    const std::vector<double>& slowEMA
+) const {
+    if (fastEMA.empty() || slowEMA.empty()) {
+        return 50.0;
+    }
+    
+    int trendDays = static_cast<int>(getParameter("trend_days", 3));
+    double trendScore = 0.0;
+    
+    if (fastEMA.size() >= static_cast<size_t>(trendDays)) {
+        int upDays = 0;
+        for (size_t i = fastEMA.size() - trendDays; i < fastEMA.size(); i++) {
+            if (fastEMA[i] > fastEMA[i - 1]) upDays++;
+        }
+        trendScore = (static_cast<double>(upDays) / trendDays) * 40.0;
+    }
+    
+    double crossScore = 30.0;
+    
+    double spreadScore = 30.0;
+    if (slowEMA.back() > 0) {
+        double spread = (fastEMA.back() - slowEMA.back()) / slowEMA.back();
+        spreadScore = std::min(spread * 1000, 30.0);
+    }
+    
+    return trendScore + crossScore + spreadScore;
 }
 
 } // namespace core
