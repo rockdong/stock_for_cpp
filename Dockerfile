@@ -46,6 +46,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip3 install --break-system-packages sqlite-web
 
+RUN curl -sSL "https://github.com/amir20/dozzle/releases/latest/download/dozzle_linux_amd64" -o /usr/local/bin/dozzle && \
+    chmod +x /usr/local/bin/dozzle
+
 # 创建 supervisor 配置 
 RUN mkdir -p /var/log/supervisor
 RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
@@ -82,12 +85,12 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo '[program:log-server]' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'command=python3 -m http.server 8888 --directory /app/logs' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'directory=/app/logs' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '[program:dozzle]' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=/usr/local/bin/dozzle --addr :8888 --base /logs' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'directory=/app' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
-    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'user=root' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/supervisord.conf

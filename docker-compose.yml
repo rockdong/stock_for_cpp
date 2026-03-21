@@ -3,6 +3,8 @@ services:
     image: rockdong13/stock_for_cpp:master
     container_name: stock-analysis-dev
     platform: linux/amd64
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "3000:3000"
       - "8080:8080"
@@ -11,6 +13,7 @@ services:
       - ./env/.env
     environment:
       - TZ=Asia/Shanghai
+      - DOZZLE_HOSTNAME=stock-analysis
     ulimits:
       nofile:
         soft: 65536
