@@ -1,195 +1,235 @@
-# 股票分析工具
+# 股票分析系统
 
-基于C++开发的高性能股票数据分析和可视化工具。
+基于 C++ 开发的高性能股票数据分析系统，集成飞书机器人推送服务，支持多种技术策略分析和买点预测。
 
 ## 功能特性
 
-- 实时股票数据获取
-- 技术指标计算
-- K线图绘制
-- 历史数据回测
-- 自定义策略回测
+### 核心功能
+- 🚀 **高性能分析引擎** - C++ 实现的技术指标计算
+- 📊 **多策略支持** - EMA 交叉、MACD、RSI、布林带等
+- 🤖 **飞书机器人** - 实时推送分析结果到飞书群
+- 📈 **买点预测** - EMA17/EMA25 黄金交叉预测
+- 🔄 **自适应学习** - 根据历史结果自动优化预测参数
+- ⏰ **定时调度** - 自动执行每日分析任务
 
-## 安装方法
+### 支持的策略
+| 策略 | 说明 |
+|------|------|
+| EMA25_GREATER_17_PRICE_MATCH | EMA25 > EMA17 价格匹配 |
+| EMA17TO25 | EMA17/EMA25 黄金交叉 |
+| EMA17_BREAKOUT | EMA17 突破策略 |
+| EMA_CONVERGENCE | EMA 收敛策略 |
+| EMA25_CROSSOVER | EMA25 交叉策略 |
+
+## 快速开始
+
+### Docker 部署（推荐）
 
 ```bash
-# 克隆项目源码
-git clone https://github.com/your-repo/stock-analyzer.git
+# 1. 克隆项目
+git clone https://github.com/rockdong/stock_for_cpp.git
+cd stock_for_cpp
 
-# 编译安装
-cd stock-analyzer
-mkdir build
-cd build
+# 2. 配置环境变量
+cp env/.env.example env/.env
+vim env/.env  # 填写 Tushare API Key 和飞书配置
+
+# 3. 启动服务
+docker-compose up -d
+
+# 4. 查看日志
+docker-compose logs -f stock-analysis
+```
+
+### 本地编译
+
+```bash
+# 安装依赖
+# macOS
+brew install cmake sqlite3 openssl
+
+# Ubuntu
+sudo apt-get install build-essential cmake libsqlite3-dev libssl-dev
+
+# 编译
+cd cpp
+mkdir build && cd build
 cmake ..
-make -j4
+make -j$(nproc)
+
+# 运行
+./stock_for_cpp
 ```
 
 ## 项目结构
 
 ```
 stock_for_cpp/
-├── src/                 # C++源文件
-├── include/             # 头文件
-├── data/                # 数据文件目录
-├── docs/                # 项目文档
-├── tests/               # 测试代码
-├── CMakeLists.txt       # 编译配置
-└── README.md            # 项目说明文档
+├── cpp/                        # C++ 分析引擎
+│   ├── main.cpp               # 主程序入口
+│   ├── core/                  # 核心业务模块
+│   │   ├── strategies/        # 策略实现
+│   │   ├── PredictionHistory.h    # 预测历史管理
+│   │   ├── AccuracyAnalyzer.h     # 准确率分析
+│   │   └── ParameterOptimizer.h   # 参数优化器
+│   ├── analysis/              # 技术指标计算
+│   ├── network/               # 数据获取
+│   ├── data/                  # 数据存储
+│   ├── scheduler/             # 任务调度
+│   └── utils/                 # 工具类
+├── nodejs/                    # 飞书推送服务
+│   └── src/
+│       ├── index.js           # 服务入口
+│       ├── feishu.js          # 飞书 API
+│       └── config.js          # 配置管理
+├── env/                       # 环境变量配置
+│   └── .env.example           # 配置模板
+├── .github/workflows/         # GitHub Actions CI/CD
+├── docker-compose.yml         # Docker 编排
+├── Dockerfile                 # Docker 镜像构建
+└── README.md
 ```
 
-## 快速使用
+## 配置说明
 
-```cpp
-// 示例代码：加载股票数据并计算技术指标
-#include "stock_analyzer.h"
+### 环境变量配置
 
-int main() {
-    StockAnalyzer analyzer;
-    analyzer.loadData("AAPL");
-    analyzer.calculateIndicators();
-    analyzer.visualize();
-    return 0;
-}
-```
-
-## 使用方法
-
-### 1. 直接编译运行
+复制配置模板并填写实际值：
 
 ```bash
-# 克隆项目
-git clone https://github.com/your-repo/stock-analyzer.git
-cd stock-analyzer
-
-# 创建构建目录
-mkdir build && cd build
-
-# 配置编译选项
-cmake ..
-
-# 编译项目
-make -j$(nproc)
-
-# 运行程序
-./stock_analyzer --symbol AAPL --period 30d
+cp env/.env.example env/.env
 ```
 
-### 2. Docker Compose 启动
+主要配置项：
 
 ```bash
-# 使用预构建镜像启动服务
+# 数据源配置 (Tushare Pro API)
+DATA_SOURCE_URL=http://api.tushare.pro
+DATA_SOURCE_API_KEY=your_tushare_token_here
+
+# 飞书机器人配置
+FEISHU_APP_ID=your_app_id_here
+FEISHU_APP_SECRET=your_app_secret_here
+FEISHU_VERIFICATION_TOKEN=your_verification_token_here
+
+# 策略配置
+STRATEGIES=EMA25_GREATER_17_PRICE_MATCH
+
+# 调度配置
+SCHEDULER_EXECUTE_TIME=20:00
+```
+
+### 策略配置
+
+在 `env/.env` 中配置要启用的策略（逗号分隔）：
+
+```bash
+STRATEGIES=EMA25_GREATER_17_PRICE_MATCH,EMA17TO25,EMA17_BREAKOUT
+```
+
+## Docker 服务
+
+### 服务端口
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| stock-analysis | 3000 | 主分析服务 |
+| sqlite-browser | 8080 | 数据库浏览器（需 `--profile db`） |
+| dozzle | 8888 | 日志监控（需 `--profile tools`） |
+
+### 启动命令
+
+```bash
+# 启动核心服务
 docker-compose up -d
 
-# 启动所有服务（包括辅助工具）
-docker-compose --profile tools up -d
+# 启动所有服务（包括工具）
+docker-compose --profile tools --profile db up -d
 
-# 仅启动核心分析服务
-docker-compose up stock-analysis -d
+# 开发模式（挂载本地代码）
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
-**注意事项**：
-- 确保在运行前配置好 `.env` 文件中的 API 密钥和相关凭证
-- C++ 服务需要 Tushare API 密钥才能获取股票数据
-- Node.js 服务需要飞书机器人配置才能启动聊天机器人功能
+## 买点预测系统
 
-服务端口映射：
-- 主服务：3000 (应用) / 8888 (日志监控) / 8080 (数据库浏览器)
+### 自适应学习机制
 
-### 3. 命令行使用
+系统会根据历史预测结果自动优化参数：
+
+```
+预测信号 → 记录结果 → 收盘验证 → 分析准确率 → 优化参数 → 更新算法
+```
+
+### 触发优化的条件
+- 连续 3 次预测失败
+- 周准确率 < 70%
+- 月准确率 < 80%
+
+### 预测信号输出
+
+预测结果会通过飞书推送，包含股票信息、技术分析、预测结论等。
+
+## 技术栈
+
+### C++ 后端
+- **CMake** - 构建系统
+- **spdlog** - 日志库
+- **nlohmann/json** - JSON 处理
+- **TA-Lib** - 技术指标计算
+- **SQLite** - 数据存储
+- **cpp-httplib** - HTTP 客户端
+
+### Node.js 服务
+- **Node.js 20** - 运行时
+- **lark-api** - 飞书 SDK
+- **dotenv** - 环境变量管理
+
+## 开发指南
+
+### 添加新策略
+
+1. 在 `cpp/core/strategies/` 创建策略类
+2. 继承 `Strategy` 基类
+3. 实现 `analyze()` 方法
+4. 在 `StrategyFactory` 注册策略
+5. 更新 `CMakeLists.txt`
+
+### 本地开发
 
 ```bash
-# 分析指定股票
-./stock_analyzer --symbol AAPL --period 30d
+# 编译 C++
+cd cpp && mkdir build && cd build && cmake .. && make -j4
 
-# 获取实时数据
-./stock_analyzer --symbol MSFT --live
-
-# 执行回测
-./stock_analyzer --backtest --strategy ma_crossover --symbol TSLA
+# 运行 Node.js 服务
+cd nodejs && npm install && npm start
 ```
 
-### 4. API 使用
+## GitHub Actions
 
-#### 数据获取
-```cpp
-StockData data = StockAPI::getHistoricalData("AAPL", "1y", "1d");
-StockData live_data = StockAPI::getLivePrice("MSFT");
-```
+CI/CD 流程：
+1. 编译 C++ (Ubuntu + macOS)
+2. 构建 Node.js 项目
+3. 构建 Docker 镜像
+4. 推送到 Docker Hub
 
-#### 技术指标计算
-```cpp
-// 计算移动平均线
-auto ma = TechnicalIndicators::calculateMA(data.close_prices, 20);
-
-// 计算RSI
-auto rsi = TechnicalIndicators::calculateRSI(data.close_prices, 14);
-
-// 计算MACD
-auto macd = TechnicalIndicators::calculateMACD(data.close_prices);
-```
-
-#### 策略回测
-```cpp
-BacktestEngine engine;
-engine.loadStrategy("ma_crossover");
-engine.setInitialCapital(10000.0);
-engine.runBacktest(data);
-BacktestResult result = engine.getResult();
-```
-
-### 5. GUI 使用
-
-1. 启动程序：`./stock_analyzer_gui`
-2. 在搜索框输入股票代码（如 AAPL）
-3. 选择时间范围和周期
-4. 选择要显示的技术指标
-5. 点击"开始分析"按钮
-6. 查看生成的图表和回测报告
-
-### 6. 配置文件
-
-```yaml
-api:
-  provider: yahoo
-  key: your_api_key
-  
-data:
-  cache_dir: ./cache
-  refresh_interval: 300  # seconds
-  
-visualization:
-  theme: dark
-  width: 1200
-  height: 800
-```
-
-## 依赖库
-
-- Boost
-- Eigen3
-- RapidJSON
-- Qt5 (GUI部分)
-- SQLite3
-
-## 配置参数
-
-- **数据源**: 支持Yahoo Finance、Alpha Vantage等多种数据API
-- **时间周期**: 日线、小时线、分钟线等多时间周期数据
-- **指标参数**: 移动平均线、RSI、MACD等技术指标
+触发条件：
+- Push 到 `master` 分支
+- 发布 `v*.*.*` 标签
 
 ## 许可证
 
-MIT License - 详见 LICENSE 文件
+MIT License
 
 ## 更新日志
 
+### v2.0.0
+- 新增买点预测系统
+- 添加自适应学习机制
+- 集成飞书机器人推送
+- 优化 Docker 部署流程
+- 简化配置管理（统一 env 目录）
+
 ### v1.0.0
-- 实现基本的数据获取功能
-- 添加了基础的技术指标计算
-- 集成了Qt可视化界面
-
-## 开发计划
-
-- 支持更多数据源
-- 优化回测性能
-- 添加机器学习预测模块
+- 基础技术指标计算
+- 多策略支持
+- 定时任务调度
