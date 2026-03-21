@@ -1,6 +1,6 @@
 services:
   stock-analysis:
-    image: rockdong13/stock_for_cpp:v2
+    image: rockdong13/stock_for_cpp:master
     container_name: stock-analysis-dev
     platform: linux/amd64
     volumes:
