@@ -80,6 +80,16 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '[program:log-server]' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=python3 -m http.server 8888 --directory /app/logs' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'directory=/app/logs' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/supervisord.conf
 
 # 创建非 root 用户
@@ -116,7 +126,7 @@ RUN chown -R appuser:appgroup /app
 # supervisord将以root身份运行并按配置启动各服务
 
 # 暴露端口
-EXPOSE 3000 8080
+EXPOSE 3000 8080 8888
 
 # 启动容器初始化脚本，然后启动supervisor
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

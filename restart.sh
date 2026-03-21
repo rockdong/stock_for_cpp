@@ -4,7 +4,7 @@ echo "停止服务..."
 docker-compose down
 
 echo "启动所有服务..."
-docker-compose --profile tools up -d
+docker-compose up -d
 
 echo ""
 echo "========================================"

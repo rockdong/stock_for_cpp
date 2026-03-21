@@ -6,6 +6,7 @@ services:
     ports:
       - "3000:3000"
       - "8080:8080"
+      - "8888:8888"
     env_file:
       - ./env/.env
     environment:
@@ -21,16 +22,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  dozzle:
-    image: amir20/dozzle:latest
-    container_name: stock-log-monitor
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    ports:
-      - "8888:8080"
-    environment:
-      - DOZZLE_HOSTNAME=stock-analysis
-    restart: unless-stopped
-    profiles:
-      - tools
