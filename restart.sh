@@ -9,7 +9,7 @@ while getopts "a" opt; do
             ;;
         \?)
             echo "用法: $0 [-a]"
-            echo "  -a  启动所有服务（包括 tools）"
+            echo "  -a  启动所有服务（包括 tools 和 db）"
             exit 1
             ;;
     esac
@@ -20,11 +20,11 @@ docker-compose down
 
 echo "启动服务..."
 if [ "$ALL_SERVICES" = true ]; then
-    echo "启动所有服务（包括 tools）..."
-    docker-compose --profile tools up -d
+    echo "启动所有服务..."
+    docker-compose --profile tools --profile db up -d
 else
-    echo "只启动数据库服务..."
-    docker-compose up -d db
+    echo "启动主服务..."
+    docker-compose up -d stock-analysis
 fi
 
 echo "完成！"
