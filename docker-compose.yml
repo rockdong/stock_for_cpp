@@ -3,8 +3,6 @@ services:
     image: rockdong13/stock_for_cpp:master
     container_name: stock-analysis-dev
     platform: linux/amd64
-    volumes:
-      - ./logs:/app/logs
     ports:
       - "3000:3000"
     env_file:
@@ -26,8 +24,6 @@ services:
   sqlite-browser:
     image: coleifer/sqlite-web
     container_name: stock-db-browser
-    volumes:
-      - stock-data:/data
     ports:
       - "8080:8080"
     environment:
@@ -41,7 +37,6 @@ services:
     container_name: stock-log-monitor
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./logs:/logs
     ports:
       - "8888:8080"
     environment:
@@ -49,6 +44,3 @@ services:
     restart: unless-stopped
     profiles:
       - tools
-
-volumes:
-  stock-data:
