@@ -5,6 +5,7 @@ services:
     platform: linux/amd64
     ports:
       - "3000:3000"
+      - "8080:8080"
     env_file:
       - ./env/.env
     environment:
@@ -20,17 +21,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  sqlite-browser:
-    image: coleifer/sqlite-web
-    container_name: stock-db-browser
-    ports:
-      - "8080:8080"
-    environment:
-      - SQLITE_DATABASE=stock.db
-    restart: unless-stopped
-    profiles:
-      - db
 
   dozzle:
     image: amir20/dozzle:latest

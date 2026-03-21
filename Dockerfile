@@ -34,6 +34,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends supervisor \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     python3 \
+    python3-pip \
+    python3-venv \
     libcairo2-dev \
     libpango1.0-dev \
     libjpeg-dev \
@@ -41,6 +43,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librsvg2-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --break-system-packages sqlite-web
 
 # 创建 supervisor 配置 
 RUN mkdir -p /var/log/supervisor
@@ -61,6 +65,16 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo '[program:stock-bot]' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'command=node /app/nodejs/src/index.js' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'directory=/app/nodejs' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '[program:sqlite-web]' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=sqlite_web /app/stock.db --host 0.0.0.0 --port 8080' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'directory=/app' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
@@ -102,7 +116,7 @@ RUN chown -R appuser:appgroup /app
 # supervisord将以root身份运行并按配置启动各服务
 
 # 暴露端口
-EXPOSE 3000
+EXPOSE 3000 8080
 
 # 启动容器初始化脚本，然后启动supervisor
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
