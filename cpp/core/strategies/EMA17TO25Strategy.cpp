@@ -15,7 +15,7 @@ EMA17TO25Strategy::EMA17TO25Strategy(const std::map<std::string, double>& params
     setParameter("fast_period", 17);
     setParameter("slow_period", 25);
     setParameter("trend_days", 3);
-    setParameter("min_confidence", 0);
+    setParameter("min_confidence", 30);
     
     setParameters(params);
 }
@@ -131,9 +131,10 @@ double EMA17TO25Strategy::calculateConfidence(
     int trendDays = static_cast<int>(getParameter("trend_days", 3));
     double trendScore = 0.0;
     
-    if (fastEMA.size() >= static_cast<size_t>(trendDays)) {
+    // 修复：从正确的索引开始，避免越界
+    if (fastEMA.size() >= static_cast<size_t>(trendDays + 1)) {
         int upDays = 0;
-        for (size_t i = fastEMA.size() - trendDays; i < fastEMA.size(); i++) {
+        for (size_t i = fastEMA.size() - trendDays + 1; i < fastEMA.size(); i++) {
             if (fastEMA[i] > fastEMA[i - 1]) upDays++;
         }
         trendScore = (static_cast<double>(upDays) / trendDays) * 40.0;
@@ -144,7 +145,7 @@ double EMA17TO25Strategy::calculateConfidence(
     double spreadScore = 30.0;
     if (slowEMA.back() > 0) {
         double spread = (fastEMA.back() - slowEMA.back()) / slowEMA.back();
-        spreadScore = std::min(spread * 1000, 30.0);
+        spreadScore = std::min(std::max(spread * 1000, 0.0), 30.0);
     }
     
     return trendScore + crossScore + spreadScore;
