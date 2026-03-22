@@ -34,36 +34,27 @@ public:
     bool validateParameters() const override;
 
 private:
-    /**
-     * @brief 检测上升趋势（窗口化）
-     * @param ema EMA 数据
-     * @return 是否为上升趋势
-     */
     bool isUpTrend(const std::vector<double>& ema) const;
     
-    /**
-     * @brief 检测金叉（快线上穿慢线）
-     * @param fastEMA 快线 EMA
-     * @param slowEMA 慢线 EMA
-     * @return 是否发生金叉
-     */
     bool isGoldenCross(const std::vector<double>& fastEMA, const std::vector<double>& slowEMA) const;
     
-    /**
-     * @brief 检测死叉（快线下穿慢线）
-     * @param fastEMA 快线 EMA
-     * @param slowEMA 慢线 EMA
-     * @return 是否发生死叉
-     */
     bool isDeathCross(const std::vector<double>& fastEMA, const std::vector<double>& slowEMA) const;
     
-    /**
-     * @brief 计算置信度
-     * @param fastEMA 快线 EMA
-     * @param slowEMA 慢线 EMA
-     * @return 置信度（0-100）
-     */
     double calculateConfidence(
+        const std::vector<double>& fastEMA,
+        const std::vector<double>& slowEMA
+    ) const;
+    
+    double predictGoldenCrossPrice(
+        double fastEMA,
+        double slowEMA,
+        int fastPeriod,
+        int slowPeriod
+    ) const;
+    
+    double calculatePredictionConfidence(
+        double currentPrice,
+        double predictedPrice,
         const std::vector<double>& fastEMA,
         const std::vector<double>& slowEMA
     ) const;
