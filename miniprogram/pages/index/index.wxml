@@ -1,0 +1,64 @@
+<!--pages/index/index.wxml-->
+<view class="container">
+  <!-- 搜索栏 -->
+  <view class="search-bar" bindtap="goToSearch">
+    <text class="search-icon">🔍</text>
+    <text class="search-placeholder">搜索股票代码或名称...</text>
+  </view>
+
+  <!-- 今日概览 -->
+  <view class="card">
+    <view class="card-header">
+      <text class="card-title">📊 今日概览</text>
+    </view>
+    <view class="overview-stats">
+      <view class="stat-item">
+        <text class="stat-value buy">{{overview.buyCount || 0}}</text>
+        <text class="stat-label">买入</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value sell">{{overview.sellCount || 0}}</text>
+        <text class="stat-label">卖出</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value hold">{{overview.holdCount || 0}}</text>
+        <text class="stat-label">持有</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 自选股列表 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">⭐ 自选股</text>
+      <text class="section-action" bindtap="goToSearch">添加</text>
+    </view>
+
+    <view wx:if="{{watchlist.length === 0}}" class="empty">
+      <text class="empty-icon">📭</text>
+      <text class="empty-text">暂无自选股，点击添加</text>
+    </view>
+
+    <view wx:else class="stock-list">
+      <view 
+        class="stock-card" 
+        wx:for="{{watchlist}}" 
+        wx:key="ts_code"
+        bindtap="goToStockDetail"
+        data-code="{{item.ts_code}}"
+      >
+        <view class="stock-info">
+          <text class="stock-name">{{item.name}}</text>
+          <text class="stock-code">{{item.ts_code}}</text>
+        </view>
+        <view class="stock-price">
+          <text class="price {{item.change >= 0 ? 'up' : 'down'}}">¥{{item.price}}</text>
+          <text class="change {{item.change >= 0 ? 'up' : 'down'}}">{{item.changeText}}</text>
+        </view>
+        <view class="stock-signal">
+          <text class="signal-badge {{item.signalClass}}">{{item.signalText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

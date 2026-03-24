@@ -1,0 +1,89 @@
+<!--pages/analysis/analysis.wxml-->
+<view class="container">
+  <!-- 买入信号 -->
+  <view class="section" wx:if="{{buySignals.length > 0}}">
+    <view class="section-header buy">
+      <text class="section-title">🟢 买入信号 ({{buySignals.length}}只)</text>
+    </view>
+    <view class="signal-list">
+      <view 
+        class="signal-item" 
+        wx:for="{{buySignals}}" 
+        wx:key="ts_code"
+        bindtap="goToStockDetail"
+        data-code="{{item.ts_code}}"
+      >
+        <view class="stock-info">
+          <text class="stock-name">{{item.name}}</text>
+          <text class="stock-code">{{item.ts_code}}</text>
+        </view>
+        <view class="signal-meta">
+          <text class="strategy">{{item.strategy_name}}</text>
+          <text class="freq">{{item.freqText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 卖出信号 -->
+  <view class="section" wx:if="{{sellSignals.length > 0}}">
+    <view class="section-header sell">
+      <text class="section-title">🔴 卖出信号 ({{sellSignals.length}}只)</text>
+    </view>
+    <view class="signal-list">
+      <view 
+        class="signal-item" 
+        wx:for="{{sellSignals}}" 
+        wx:key="ts_code"
+        bindtap="goToStockDetail"
+        data-code="{{item.ts_code}}"
+      >
+        <view class="stock-info">
+          <text class="stock-name">{{item.name}}</text>
+          <text class="stock-code">{{item.ts_code}}</text>
+        </view>
+        <view class="signal-meta">
+          <text class="strategy">{{item.strategy_name}}</text>
+          <text class="freq">{{item.freqText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 持有信号 -->
+  <view class="section" wx:if="{{holdSignals.length > 0}}">
+    <view class="section-header hold">
+      <text class="section-title">⚪ 持有信号 ({{holdSignals.length}}只)</text>
+    </view>
+    <view class="signal-list">
+      <view 
+        class="signal-item" 
+        wx:for="{{holdSignals}}" 
+        wx:key="ts_code"
+        bindtap="goToStockDetail"
+        data-code="{{item.ts_code}}"
+      >
+        <view class="stock-info">
+          <text class="stock-name">{{item.name}}</text>
+          <text class="stock-code">{{item.ts_code}}</text>
+        </view>
+        <view class="signal-meta">
+          <text class="strategy">{{item.strategy_name}}</text>
+          <text class="freq">{{item.freqText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{signals.length === 0 && !loading}}" class="empty">
+    <text class="empty-icon">📭</text>
+    <text class="empty-text">暂无分析信号</text>
+    <text class="empty-hint">请等待分析任务完成</text>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+</view>

@@ -1,0 +1,62 @@
+<!--pages/mine/mine.wxml-->
+<view class="container">
+  <!-- 用户信息 -->
+  <view class="user-card" bindtap="goToLogin" wx:if="{{!userInfo}}">
+    <view class="user-avatar">
+      <text class="avatar-placeholder">👤</text>
+    </view>
+    <view class="user-info">
+      <text class="user-name">点击登录</text>
+      <text class="user-desc">登录后可同步自选股</text>
+    </view>
+  </view>
+
+  <view class="user-card" wx:else>
+    <image class="user-avatar-img" src="{{userInfo.avatarUrl}}" />
+    <view class="user-info">
+      <text class="user-name">{{userInfo.nickName}}</text>
+      <text class="user-desc">已同步 {{watchlistCount}} 只自选股</text>
+    </view>
+  </view>
+
+  <!-- 功能列表 -->
+  <view class="menu-list">
+    <view class="menu-item" bindtap="goToWatchlist">
+      <text class="menu-icon">⭐</text>
+      <text class="menu-text">自选股管理</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    
+    <view class="menu-item" bindtap="goToSubscribe">
+      <text class="menu-icon">🔔</text>
+      <text class="menu-text">推送设置</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    
+    <view class="menu-item" bindtap="clearCache">
+      <text class="menu-icon">🗑️</text>
+      <text class="menu-text">清除缓存</text>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 关于 -->
+  <view class="menu-list">
+    <view class="menu-item" bindtap="goToAbout">
+      <text class="menu-icon">ℹ️</text>
+      <text class="menu-text">关于我们</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    
+    <view class="menu-item" bindtap="goToFeedback">
+      <text class="menu-icon">📝</text>
+      <text class="menu-text">反馈建议</text>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 版本信息 -->
+  <view class="version">
+    <text>版本 1.0.0</text>
+  </view>
+</view>

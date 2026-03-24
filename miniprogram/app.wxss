@@ -1,0 +1,117 @@
+/* app.wxss - 全局样式 */
+
+/* 颜色变量 */
+page {
+  --primary-color: #1AAD19;        /* 微信绿 */
+  --buy-color: #07C160;            /* 买入绿 */
+  --sell-color: #FA5151;           /* 卖出红 */
+  --hold-color: #888888;           /* 持有灰 */
+  
+  --text-primary: #333333;         /* 主文字 */
+  --text-secondary: #666666;       /* 次文字 */
+  --text-tertiary: #999999;        /* 辅助文字 */
+  
+  --bg-white: #FFFFFF;             /* 白色背景 */
+  --bg-gray: #F7F7F7;              /* 灰色背景 */
+  --bg-card: #FFFFFF;              /* 卡片背景 */
+  
+  --border-color: #E5E5E5;         /* 边框颜色 */
+  
+  --radius-sm: 4px;                /* 小圆角 */
+  --radius-md: 8px;                /* 中圆角 */
+  --radius-lg: 12px;               /* 大圆角 */
+  
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+}
+
+/* 基础样式 */
+page {
+  background-color: var(--bg-gray);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* 卡片样式 */
+.card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+/* 分割线 */
+.divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: var(--spacing-md) 0;
+}
+
+/* 按钮样式 */
+.btn-primary {
+  background-color: var(--primary-color);
+  color: #FFFFFF;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: 14px;
+  text-align: center;
+}
+
+.btn-primary:active {
+  opacity: 0.8;
+}
+
+/* 信号标签 */
+.signal-buy {
+  color: var(--buy-color);
+}
+
+.signal-sell {
+  color: var(--sell-color);
+}
+
+.signal-hold {
+  color: var(--hold-color);
+}
+
+/* 涨跌颜色 */
+.up {
+  color: var(--buy-color);
+}
+
+.down {
+  color: var(--sell-color);
+}
+
+/* 加载状态 */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-xl);
+  color: var(--text-tertiary);
+}
+
+/* 空状态 */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  color: var(--text-tertiary);
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-md);
+}
+
+.empty-text {
+  font-size: 14px;
+}

@@ -1,0 +1,117 @@
+<!--pages/stock/stock.wxml-->
+<view class="container">
+  <!-- 股票头部 -->
+  <view class="stock-header">
+    <view class="stock-info">
+      <text class="stock-name">{{stock.name}}</text>
+      <text class="stock-code">{{stock.ts_code}}</text>
+    </view>
+    <view class="stock-price">
+      <text class="price {{stock.change >= 0 ? 'up' : 'down'}}">¥{{stock.price}}</text>
+      <text class="change {{stock.change >= 0 ? 'up' : 'down'}}">{{stock.changeText}}</text>
+    </view>
+  </view>
+
+  <!-- K线图表 -->
+  <view class="card">
+    <view class="chart-tabs">
+      <view 
+        class="tab-item {{freq === 'd' ? 'active' : ''}}" 
+        bindtap="changeFreq" 
+        data-freq="d"
+      >日线</view>
+      <view 
+        class="tab-item {{freq === 'w' ? 'active' : ''}}" 
+        bindtap="changeFreq" 
+        data-freq="w"
+      >周线</view>
+      <view 
+        class="tab-item {{freq === 'm' ? 'active' : ''}}" 
+        bindtap="changeFreq" 
+        data-freq="m"
+      >月线</view>
+    </view>
+    
+    <view class="chart-container">
+      <view wx:if="{{chartLoading}}" class="loading">加载中...</view>
+      <view wx:elif="{{!chartData || chartData.length === 0}}" class="empty">
+        <text class="empty-text">暂无图表数据</text>
+      </view>
+      <view wx:else class="kline-chart" id="klineChart">
+        <!-- K线图区域，后续接入 ECharts -->
+        <text class="chart-placeholder">📈 K线图表</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 分析信号 -->
+  <view class="card">
+    <view class="card-header">
+      <text class="card-title">📊 分析信号</text>
+    </view>
+    
+    <view wx:if="{{!analysis}}" class="empty">
+      <text class="empty-text">暂无分析结果</text>
+    </view>
+    
+    <view wx:else class="signal-card {{analysis.signalClass}}">
+      <view class="signal-header">
+        <text class="signal-icon">{{analysis.signalIcon}}</text>
+        <text class="signal-text">{{analysis.signalText}}信号</text>
+      </view>
+      <view class="signal-detail">
+        <view class="detail-item">
+          <text class="detail-label">策略</text>
+          <text class="detail-value">{{analysis.strategy_name}}</text>
+        </view>
+        <view class="detail-item">
+          <text class="detail-label">触发时间</text>
+          <text class="detail-value">{{analysis.trade_date}}</text>
+        </view>
+        <view class="detail-item" wx:if="{{analysis.target_price}}">
+          <text class="detail-label">目标价</text>
+          <text class="detail-value">¥{{analysis.target_price}}</text>
+        </view>
+        <view class="detail-item" wx:if="{{analysis.stop_loss}}">
+          <text class="detail-label">止损价</text>
+          <text class="detail-value">¥{{analysis.stop_loss}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 技术指标 -->
+  <view class="card">
+    <view class="card-header">
+      <text class="card-title">📈 技术指标</text>
+    </view>
+    <view class="indicators">
+      <view class="indicator-item">
+        <text class="indicator-label">EMA17</text>
+        <text class="indicator-value">{{indicators.ema17 || '--'}}</text>
+      </view>
+      <view class="indicator-item">
+        <text class="indicator-label">EMA25</text>
+        <text class="indicator-value">{{indicators.ema25 || '--'}}</text>
+      </view>
+      <view class="indicator-item">
+        <text class="indicator-label">MACD</text>
+        <text class="indicator-value">{{indicators.macd || '--'}}</text>
+      </view>
+      <view class="indicator-item">
+        <text class="indicator-label">RSI</text>
+        <text class="indicator-value">{{indicators.rsi || '--'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="actions">
+    <button class="btn-subscribe {{isSubscribed ? 'subscribed' : ''}}" bindtap="toggleSubscribe">
+      {{isSubscribed ? '已订阅' : '🔔 订阅提醒'}}
+    </button>
+    <button class="btn-share" open-type="share">
+      📤 分享
+    </button>
+  </view>
+</view>

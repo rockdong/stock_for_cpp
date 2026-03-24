@@ -1,0 +1,194 @@
+/* pages/stock/stock.wxss */
+
+.container {
+  padding: var(--spacing-lg);
+  padding-bottom: 120rpx;
+}
+
+/* 股票头部 */
+.stock-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  background-color: var(--bg-white);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.stock-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stock-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.stock-code {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+.stock-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.price {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.change {
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* 图表标签 */
+.chart-tabs {
+  display: flex;
+  margin-bottom: var(--spacing-md);
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: var(--spacing-sm) 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+}
+
+.tab-item.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.chart-container {
+  height: 300rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kline-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-placeholder {
+  color: var(--text-tertiary);
+  font-size: 16px;
+}
+
+/* 分析信号卡片 */
+.signal-card {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-gray);
+}
+
+.signal-card.signal-buy {
+  background-color: rgba(7, 193, 96, 0.1);
+}
+
+.signal-card.signal-sell {
+  background-color: rgba(250, 81, 81, 0.1);
+}
+
+.signal-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.signal-icon {
+  font-size: 20px;
+  margin-right: var(--spacing-sm);
+}
+
+.signal-text {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.signal-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.detail-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+
+/* 技术指标 */
+.indicators {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.indicator-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.indicator-label {
+  color: var(--text-secondary);
+}
+
+.indicator-value {
+  font-weight: 500;
+}
+
+/* 操作按钮 */
+.actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+.btn-subscribe {
+  flex: 1;
+  background-color: var(--primary-color);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  text-align: center;
+  font-size: 14px;
+}
+
+.btn-subscribe.subscribed {
+  background-color: var(--bg-gray);
+  color: var(--text-secondary);
+}
+
+.btn-share {
+  flex: 1;
+  background-color: var(--bg-gray);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  text-align: center;
+  font-size: 14px;
+}

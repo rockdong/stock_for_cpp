@@ -1,7 +1,12 @@
 const lark = require('@larksuiteoapi/node-sdk');
+const express = require('express');
+const cors = require('cors');
 const config = require('./config');
 const { handleMessage, handleCardAction } = require('./handler');
+const apiRoutes = require('./api');
 const logger = require('./logger');
+
+const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
 async function main() {
   logger.info('启动飞书机器人（WebSocket 长连接模式）...');
@@ -19,6 +24,18 @@ async function main() {
   
   const client = new lark.Client(baseConfig);
   
+  // 启动 HTTP API 服务（供微信小程序调用）
+  const httpApp = express();
+  httpApp.use(cors());
+  httpApp.use(express.json());
+  httpApp.use('/api', apiRoutes);
+  
+  httpApp.listen(HTTP_PORT, () => {
+    logger.info(`HTTP API 服务已启动，端口: ${HTTP_PORT}`);
+    logger.info(`API 文档: http://localhost:${HTTP_PORT}/api/stocks`);
+  });
+  
+  // 飞书 WebSocket 连接
   const eventDispatcher = new lark.EventDispatcher({}).register({
     'im.message.receive_v1': async (data) => {
       logger.info('收到消息事件');
