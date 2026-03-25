@@ -226,8 +226,180 @@ router.post('/user/subscribe', (req, res) => {
 });
 
 router.delete('/user/subscribe/:code', (req, res) => {
-  // TODO: 实现取消订阅逻辑
   res.json({ success: true, message: '取消成功' });
+});
+
+router.get('/analysis/process', (req, res) => {
+  try {
+    const db = getDb();
+    const { ts_code, strategy, start_date, end_date, signal, limit = 100 } = req.query;
+    
+    let sql = `
+      SELECT * FROM analysis_process_records
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (ts_code) {
+      sql += ' AND ts_code = ?';
+      params.push(ts_code);
+    }
+    if (strategy) {
+      sql += ' AND strategy_name = ?';
+      params.push(strategy);
+    }
+    if (start_date) {
+      sql += ' AND trade_date >= ?';
+      params.push(start_date);
+    }
+    if (end_date) {
+      sql += ' AND trade_date <= ?';
+      params.push(end_date);
+    }
+    if (signal) {
+      sql += ' AND signal = ?';
+      params.push(signal.toUpperCase());
+    }
+    
+    sql += ' ORDER BY created_at DESC LIMIT ?';
+    params.push(parseInt(limit));
+    
+    const records = db.prepare(sql).all(...params);
+    res.json({ success: true, data: records });
+  } catch (err) {
+    logger.error('获取分析过程记录失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/analysis/process/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDb();
+    
+    const record = db.prepare(`
+      SELECT * FROM analysis_process_records WHERE id = ?
+    `).get(id);
+    
+    if (!record) {
+      return res.status(404).json({ success: false, error: '记录不存在' });
+    }
+    
+    res.json({ success: true, data: record });
+  } catch (err) {
+    logger.error('获取分析过程记录详情失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/analysis/process/chart/:ts_code', (req, res) => {
+  try {
+    const { ts_code } = req.params;
+    const { strategy, freq = 'd', limit = 50 } = req.query;
+    const db = getDb();
+    
+    let sql = `
+      SELECT time, open, high, low, close, volume, ema17, ema25, macd, rsi, signal
+      FROM analysis_process_records
+      WHERE ts_code = ?
+    `;
+    const params = [ts_code];
+    
+    if (strategy) {
+      sql += ' AND strategy_name = ?';
+      params.push(strategy);
+    }
+    if (freq) {
+      sql += ' AND freq = ?';
+      params.push(freq);
+    }
+    
+    sql += ' ORDER BY time ASC LIMIT ?';
+    params.push(parseInt(limit));
+    
+    const chartData = db.prepare(sql).all(...params);
+    res.json({ success: true, data: chartData });
+  } catch (err) {
+    logger.error('获取分析图表数据失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/analysis/process', (req, res) => {
+  try {
+    const db = getDb();
+    const record = req.body;
+    
+    const stmt = db.prepare(`
+      INSERT INTO analysis_process_records 
+      (ts_code, stock_name, strategy_name, trade_date, freq, signal, 
+       time, open, high, low, close, volume, ema17, ema25, macd, rsi)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    const result = stmt.run(
+      record.ts_code,
+      record.stock_name,
+      record.strategy_name,
+      record.trade_date,
+      record.freq || 'd',
+      record.signal || 'NONE',
+      record.time,
+      record.open,
+      record.high,
+      record.low,
+      record.close,
+      record.volume,
+      record.ema17,
+      record.ema25,
+      record.macd,
+      record.rsi
+    );
+    
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (err) {
+    logger.error('写入分析过程记录失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.delete('/analysis/process/expired', (req, res) => {
+  try {
+    const db = getDb();
+    
+    const result = db.prepare(`
+      DELETE FROM analysis_process_records 
+      WHERE expires_at < datetime('now')
+    `).run();
+    
+    res.json({ 
+      success: true, 
+      deleted: result.changes,
+      message: `清理了 ${result.changes} 条过期记录` 
+    });
+  } catch (err) {
+    logger.error('清理过期记录失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/analysis/process/strategies', (req, res) => {
+  try {
+    const db = getDb();
+    
+    const strategies = db.prepare(`
+      SELECT DISTINCT strategy_name FROM analysis_process_records
+      ORDER BY strategy_name
+    `).all();
+    
+    res.json({ 
+      success: true, 
+      data: strategies.map(s => s.strategy_name) 
+    });
+  } catch (err) {
+    logger.error('获取策略列表失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 module.exports = router;

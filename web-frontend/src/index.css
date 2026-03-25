@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --buy-color: #07C160;
+  --sell-color: #FA5151;
+  --hold-color: #888888;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}
