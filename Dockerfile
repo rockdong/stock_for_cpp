@@ -72,6 +72,16 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '[program:web-frontend]' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'command=npm run preview -- --host 0.0.0.0 --port 5173' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'directory=/app/web-frontend' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo '[program:sqlite-web]' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'command=sqlite_web /app/stock.db --host 0.0.0.0 --port 8080' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'directory=/app' >> /etc/supervisor/conf.d/supervisord.conf && \
@@ -98,8 +108,14 @@ COPY --chown=appuser:appgroup cpp/build/stock_for_cpp /app/stock_for_cpp
 # 复制 Node.js 文件
 COPY --chown=appuser:appgroup nodejs/ /app/nodejs/
 
+# 复制 Web 前端文件
+COPY --chown=appuser:appgroup web-frontend/ /app/web-frontend/
+
 # 安装 Node.js 依赖
 RUN cd /app/nodejs && npm install --production
+
+# 安装 Web 前端依赖并构建
+RUN cd /app/web-frontend && npm install && npm run build
 
 # 创建默认 .env 文件（运行时通过 docker-compose env_file 覆盖）
 RUN touch /app/.env && touch /app/nodejs/.env
@@ -116,7 +132,7 @@ RUN chown -R appuser:appgroup /app
 # supervisord将以root身份运行并按配置启动各服务
 
 # 暴露端口
-EXPOSE 3000 8080
+EXPOSE 3000 5173 8080
 
 # 启动容器初始化脚本，然后启动supervisor
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
