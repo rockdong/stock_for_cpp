@@ -35,6 +35,11 @@ export default function RecordTable({ records, onSelect }: RecordTableProps) {
     return labels[freq] || freq
   }
 
+  const getLastClose = (data: AnalysisProcessRecord['data']) => {
+    if (!data || data.length === 0) return null
+    return data[data.length - 1]?.close
+  }
+
   if (records.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
@@ -72,7 +77,7 @@ export default function RecordTable({ records, onSelect }: RecordTableProps) {
               <td className="px-4 py-3 text-sm text-gray-900">{record.strategy_name}</td>
               <td className="px-4 py-3 text-sm text-gray-900">{getFreqLabel(record.freq)}</td>
               <td className="px-4 py-3 text-sm">{getSignalBadge(record.signal)}</td>
-              <td className="px-4 py-3 text-sm text-gray-900">{record.close?.toFixed(2)}</td>
+              <td className="px-4 py-3 text-sm text-gray-900">{getLastClose(record.data)?.toFixed(2)}</td>
               <td className="px-4 py-3 text-sm">
                 <button className="text-blue-500 hover:text-blue-700">
                   查看图表

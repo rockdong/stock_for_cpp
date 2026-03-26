@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import AnalysisFilter from '../../components/Filter/AnalysisFilter'
 import RecordTable from '../../components/Table/RecordTable'
 import CandlestickChart from '../../components/Chart/CandlestickChart'
+import ProgressBadge from '../../components/Progress/ProgressBadge'
 import { analysisApi } from '../../services/api'
 import { AnalysisProcessRecord, ChartDataPoint, FilterParams } from '../../types/analysis'
 
@@ -30,14 +31,20 @@ export default function AnalysisPage() {
 
   const handleSelectRecord = async (record: AnalysisProcessRecord) => {
     setSelectedRecord(record)
+    
+    if (record.data && record.data.length > 0) {
+      setChartData(record.data)
+      return
+    }
+    
     setChartLoading(true)
     try {
-      const data = await analysisApi.getChartData(
+      const response = await analysisApi.getChartData(
         record.ts_code,
         record.strategy_name,
         record.freq
       )
-      setChartData(data)
+      setChartData(response.data || [])
     } catch (error) {
       console.error('加载图表数据失败:', error)
     } finally {
@@ -49,8 +56,13 @@ export default function AnalysisPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-gray-900">分析过程数据展示</h1>
-          <p className="text-sm text-gray-500 mt-1">查看 C++ 分析引擎的过程数据和结果</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">分析过程数据展示</h1>
+              <p className="text-sm text-gray-500 mt-1">查看 C++ 分析引擎的过程数据和结果</p>
+            </div>
+            <ProgressBadge />
+          </div>
         </div>
       </header>
 
@@ -60,12 +72,12 @@ export default function AnalysisPage() {
         {selectedRecord && (
           <div className="mb-6">
             <div className="bg-white rounded-lg shadow p-4 mb-4">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-lg font-semibold">
                     {selectedRecord.stock_name} ({selectedRecord.ts_code})
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 mt-1">
                     策略: {selectedRecord.strategy_name} | 
                     周期: {selectedRecord.freq === 'd' ? '日线' : selectedRecord.freq === 'w' ? '周线' : '月线'} |
                     日期: {selectedRecord.trade_date}

@@ -11,6 +11,8 @@
 - 📈 **买点预测** - EMA17/EMA25 黄金交叉预测
 - 🔄 **自适应学习** - 根据历史结果自动优化预测参数
 - ⏰ **定时调度** - 自动执行每日分析任务
+- 🌐 **Web 前端** - 分析过程数据可视化展示
+- 📱 **微信小程序** - 移动端查看分析结果
 
 ### 支持的策略
 | 策略 | 说明 |
@@ -75,13 +77,24 @@ stock_for_cpp/
 │   ├── analysis/              # 技术指标计算
 │   ├── network/               # 数据获取
 │   ├── data/                  # 数据存储
+│   │   └── database/          # 数据库访问
+│   │       └── migrations/    # 数据库迁移脚本
 │   ├── scheduler/             # 任务调度
 │   └── utils/                 # 工具类
-├── nodejs/                    # 飞书推送服务
+├── nodejs/                    # 飞书推送服务 + REST API
 │   └── src/
 │       ├── index.js           # 服务入口
+│       ├── api.js             # REST API
 │       ├── feishu.js          # 飞书 API
 │       └── config.js          # 配置管理
+├── web-frontend/              # Web 前端
+│   ├── src/
+│   │   ├── components/        # 组件
+│   │   ├── pages/             # 页面
+│   │   ├── services/          # API 服务
+│   │   └── types/             # TypeScript 类型
+│   └── package.json
+├── miniprogram/               # 微信小程序
 ├── env/                       # 环境变量配置
 │   └── .env.example           # 配置模板
 ├── .github/workflows/         # GitHub Actions CI/CD
@@ -133,8 +146,9 @@ STRATEGIES=EMA25_GREATER_17_PRICE_MATCH,EMA17TO25,EMA17_BREAKOUT
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| stock-analysis | 3000 | 主分析服务 |
-| sqlite-browser | 8080 | 数据库浏览器（需 `--profile db`） |
+| stock-analysis | 3000 | 主分析服务 / REST API |
+| web-frontend | 5173 | Web 前端（分析过程展示） |
+| sqlite-browser | 8080 | 数据库浏览器 |
 | dozzle | 8888 | 日志监控（需 `--profile tools`） |
 
 ### 启动命令

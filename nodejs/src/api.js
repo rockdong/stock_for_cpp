@@ -235,7 +235,9 @@ router.get('/analysis/process', (req, res) => {
     const { ts_code, strategy, start_date, end_date, signal, limit = 100 } = req.query;
     
     let sql = `
-      SELECT * FROM analysis_process_records
+      SELECT id, ts_code, stock_name, strategy_name, trade_date, freq, signal, 
+             data, created_at, expires_at
+      FROM analysis_process_records
       WHERE 1=1
     `;
     const params = [];
@@ -265,7 +267,13 @@ router.get('/analysis/process', (req, res) => {
     params.push(parseInt(limit));
     
     const records = db.prepare(sql).all(...params);
-    res.json({ success: true, data: records });
+    
+    const parsedRecords = records.map(record => ({
+      ...record,
+      data: record.data ? JSON.parse(record.data) : []
+    }));
+    
+    res.json({ success: true, data: parsedRecords });
   } catch (err) {
     logger.error('获取分析过程记录失败:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -278,14 +286,22 @@ router.get('/analysis/process/:id', (req, res) => {
     const db = getDb();
     
     const record = db.prepare(`
-      SELECT * FROM analysis_process_records WHERE id = ?
+      SELECT id, ts_code, stock_name, strategy_name, trade_date, freq, signal, 
+             data, created_at, expires_at
+      FROM analysis_process_records WHERE id = ?
     `).get(id);
     
     if (!record) {
       return res.status(404).json({ success: false, error: '记录不存在' });
     }
     
-    res.json({ success: true, data: record });
+    res.json({ 
+      success: true, 
+      data: {
+        ...record,
+        data: record.data ? JSON.parse(record.data) : []
+      }
+    });
   } catch (err) {
     logger.error('获取分析过程记录详情失败:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -295,11 +311,12 @@ router.get('/analysis/process/:id', (req, res) => {
 router.get('/analysis/process/chart/:ts_code', (req, res) => {
   try {
     const { ts_code } = req.params;
-    const { strategy, freq = 'd', limit = 50 } = req.query;
+    const { strategy, freq = 'd' } = req.query;
     const db = getDb();
     
     let sql = `
-      SELECT time, open, high, low, close, volume, ema17, ema25, macd, rsi, signal
+      SELECT id, ts_code, stock_name, strategy_name, trade_date, freq, signal, 
+             data, created_at
       FROM analysis_process_records
       WHERE ts_code = ?
     `;
@@ -309,16 +326,31 @@ router.get('/analysis/process/chart/:ts_code', (req, res) => {
       sql += ' AND strategy_name = ?';
       params.push(strategy);
     }
-    if (freq) {
-      sql += ' AND freq = ?';
-      params.push(freq);
+    sql += ' AND freq = ?';
+    params.push(freq);
+    
+    sql += ' ORDER BY trade_date DESC LIMIT 1';
+    
+    const record = db.prepare(sql).get(...params);
+    
+    if (!record) {
+      return res.json({ success: true, data: [] });
     }
     
-    sql += ' ORDER BY time ASC LIMIT ?';
-    params.push(parseInt(limit));
-    
-    const chartData = db.prepare(sql).all(...params);
-    res.json({ success: true, data: chartData });
+    const chartData = record.data ? JSON.parse(record.data) : [];
+    res.json({ 
+      success: true, 
+      data: chartData,
+      record: {
+        id: record.id,
+        ts_code: record.ts_code,
+        stock_name: record.stock_name,
+        strategy_name: record.strategy_name,
+        trade_date: record.trade_date,
+        freq: record.freq,
+        signal: record.signal
+      }
+    });
   } catch (err) {
     logger.error('获取分析图表数据失败:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -330,30 +362,24 @@ router.post('/analysis/process', (req, res) => {
     const db = getDb();
     const record = req.body;
     
+    const dataJson = Array.isArray(record.data) 
+      ? JSON.stringify(record.data) 
+      : (typeof record.data === 'string' ? record.data : '[]');
+    
     const stmt = db.prepare(`
-      INSERT INTO analysis_process_records 
-      (ts_code, stock_name, strategy_name, trade_date, freq, signal, 
-       time, open, high, low, close, volume, ema17, ema25, macd, rsi)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO analysis_process_records 
+      (ts_code, stock_name, strategy_name, trade_date, freq, signal, data)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
     const result = stmt.run(
       record.ts_code,
-      record.stock_name,
+      record.stock_name || '',
       record.strategy_name,
       record.trade_date,
       record.freq || 'd',
       record.signal || 'NONE',
-      record.time,
-      record.open,
-      record.high,
-      record.low,
-      record.close,
-      record.volume,
-      record.ema17,
-      record.ema25,
-      record.macd,
-      record.rsi
+      dataJson
     );
     
     res.json({ success: true, id: result.lastInsertRowid });

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { AnalysisProcessRecord, ChartDataPoint, FilterParams } from '../types/analysis'
+import { AnalysisProcessRecord, ChartResponse, FilterParams, AnalysisProgress } from '../types/analysis'
 
 const api = axios.create({
   baseURL: '/api',
@@ -17,15 +17,20 @@ export const analysisApi = {
     return response.data.data
   },
 
-  getChartData: async (tsCode: string, strategy?: string, freq?: string): Promise<ChartDataPoint[]> => {
+  getChartData: async (tsCode: string, strategy?: string, freq?: string): Promise<ChartResponse> => {
     const response = await api.get(`/analysis/process/chart/${tsCode}`, {
       params: { strategy, freq }
     })
-    return response.data.data
+    return response.data
   },
 
   getStrategies: async (): Promise<string[]> => {
     const response = await api.get('/analysis/process/strategies')
+    return response.data.data
+  },
+
+  getProgress: async (): Promise<AnalysisProgress> => {
+    const response = await api.get('/analysis/progress')
     return response.data.data
   }
 }

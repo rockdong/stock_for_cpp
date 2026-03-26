@@ -1,14 +1,9 @@
 import { useState, useEffect } from 'react'
 import { analysisApi } from '../../services/api'
+import { FilterParams } from '../../types/analysis'
 
 interface FilterProps {
-  onFilter: (params: {
-    ts_code?: string
-    strategy?: string
-    start_date?: string
-    end_date?: string
-    signal?: string
-  }) => void
+  onFilter: (params: FilterParams) => void
 }
 
 export default function AnalysisFilter({ onFilter }: FilterProps) {
@@ -27,9 +22,9 @@ export default function AnalysisFilter({ onFilter }: FilterProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const params: Record<string, string> = {}
+    const params: FilterParams = {}
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) params[key] = value
+      if (value) params[key as keyof FilterParams] = value
     })
     onFilter(params)
   }
