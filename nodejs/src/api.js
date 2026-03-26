@@ -195,7 +195,20 @@ router.get('/analysis/progress', (req, res) => {
       SELECT * FROM analysis_progress ORDER BY id DESC LIMIT 1
     `).get();
     
-    res.json({ success: true, data: progress || { status: 'idle' } });
+    const defaultProgress = {
+      id: 1,
+      total: 0,
+      completed: 0,
+      failed: 0,
+      status: 'idle',
+      started_at: null,
+      updated_at: new Date().toISOString()
+    };
+    
+    res.json({ 
+      success: true, 
+      data: progress || defaultProgress
+    });
   } catch (err) {
     logger.error('获取分析进度失败:', err);
     res.status(500).json({ success: false, error: err.message });

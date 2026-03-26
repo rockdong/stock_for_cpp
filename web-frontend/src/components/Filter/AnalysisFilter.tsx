@@ -41,29 +41,29 @@ export default function AnalysisFilter({ onFilter }: FilterProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-4 mb-6">
+    <form onSubmit={handleSubmit} className="bg-secondary rounded-2xl p-5 mb-6 border border-border">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-muted mb-2">
             股票代码
           </label>
           <input
             type="text"
             value={filters.ts_code}
             onChange={e => setFilters({ ...filters, ts_code: e.target.value })}
-            placeholder="如: 000001.SZ"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="000001.SZ"
+            className="w-full px-4 py-2.5 bg-primary border border-border rounded-xl text-text placeholder-muted/50 focus:outline-none focus:ring-2 focus:ring-cta/50 focus:border-cta transition-colors"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-muted mb-2">
             策略
           </label>
           <select
             value={filters.strategy}
             onChange={e => setFilters({ ...filters, strategy: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2.5 bg-primary border border-border rounded-xl text-text focus:outline-none focus:ring-2 focus:ring-cta/50 focus:border-cta transition-colors cursor-pointer"
           >
             <option value="">全部策略</option>
             {strategies.map(s => (
@@ -73,37 +73,37 @@ export default function AnalysisFilter({ onFilter }: FilterProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-muted mb-2">
             开始日期
           </label>
           <input
             type="date"
             value={filters.start_date}
             onChange={e => setFilters({ ...filters, start_date: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2.5 bg-primary border border-border rounded-xl text-text focus:outline-none focus:ring-2 focus:ring-cta/50 focus:border-cta transition-colors"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-muted mb-2">
             结束日期
           </label>
           <input
             type="date"
             value={filters.end_date}
             onChange={e => setFilters({ ...filters, end_date: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2.5 bg-primary border border-border rounded-xl text-text focus:outline-none focus:ring-2 focus:ring-cta/50 focus:border-cta transition-colors"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-medium text-muted mb-2">
             信号类型
           </label>
           <select
             value={filters.signal}
             onChange={e => setFilters({ ...filters, signal: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2.5 bg-primary border border-border rounded-xl text-text focus:outline-none focus:ring-2 focus:ring-cta/50 focus:border-cta transition-colors cursor-pointer"
           >
             <option value="">全部信号</option>
             <option value="BUY">买入</option>
@@ -114,17 +114,17 @@ export default function AnalysisFilter({ onFilter }: FilterProps) {
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-4">
+      <div className="flex justify-end gap-3 mt-5">
         <button
           type="button"
           onClick={handleReset}
-          className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+          className="px-5 py-2.5 text-muted bg-primary rounded-xl hover:bg-primary/80 transition-colors cursor-pointer"
         >
           重置
         </button>
         <button
           type="submit"
-          className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
+          className="px-5 py-2.5 text-white bg-cta rounded-xl hover:bg-cta/90 transition-colors cursor-pointer font-medium"
         >
           查询
         </button>
