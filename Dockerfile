@@ -65,6 +65,7 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
     echo '[program:stock-bot]' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'command=node /app/nodejs/src/index.js' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'directory=/app/nodejs' >> /etc/supervisor/conf.d/supervisord.conf && \
+    echo 'environment=DB_PATH=/app/stock.db' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
     echo 'user=appuser' >> /etc/supervisor/conf.d/supervisord.conf && \
