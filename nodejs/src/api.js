@@ -134,6 +134,37 @@ router.get('/analysis/signals', (req, res) => {
 });
 
 /**
+ * GET /api/analysis/progress - 获取分析进度
+ * 注意：此路由必须在 /analysis/:code 之前定义，否则 :code 会匹配 "progress"
+ */
+router.get('/analysis/progress', (req, res) => {
+  try {
+    const db = getDb();
+    const progress = db.prepare(`
+      SELECT * FROM analysis_progress ORDER BY id DESC LIMIT 1
+    `).get();
+    
+    const defaultProgress = {
+      id: 1,
+      total: 0,
+      completed: 0,
+      failed: 0,
+      status: 'idle',
+      started_at: null,
+      updated_at: new Date().toISOString()
+    };
+    
+    res.json({ 
+      success: true, 
+      data: progress || defaultProgress
+    });
+  } catch (err) {
+    logger.error('获取分析进度失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/analysis/:code - 获取单股分析结果
  */
 router.get('/analysis/:code', (req, res) => {
@@ -181,36 +212,6 @@ router.get('/charts/:code', (req, res) => {
     res.json({ success: true, data: chartData.reverse() });
   } catch (err) {
     logger.error('获取K线数据失败:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-/**
- * GET /api/analysis/progress - 获取分析进度
- */
-router.get('/analysis/progress', (req, res) => {
-  try {
-    const db = getDb();
-    const progress = db.prepare(`
-      SELECT * FROM analysis_progress ORDER BY id DESC LIMIT 1
-    `).get();
-    
-    const defaultProgress = {
-      id: 1,
-      total: 0,
-      completed: 0,
-      failed: 0,
-      status: 'idle',
-      started_at: null,
-      updated_at: new Date().toISOString()
-    };
-    
-    res.json({ 
-      success: true, 
-      data: progress || defaultProgress
-    });
-  } catch (err) {
-    logger.error('获取分析进度失败:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
