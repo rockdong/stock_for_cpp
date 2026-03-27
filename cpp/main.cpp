@@ -17,6 +17,7 @@
 #include "StockDAO.h"
 #include "AnalysisResultDAO.h"
 #include "ChartDataDAO.h"
+#include "AnalysisProcessRecordDAO.h"
 
 // 网络层
 #include "DataSourceFactory.h"
@@ -258,7 +259,8 @@ void analyzeStock(
     std::shared_ptr<network::IDataSource> dataSource,
     core::StrategyManager& strategyManager,
     data::AnalysisResultDAO& analysisResultDao,
-    data::ChartDataDAO& chartDataDao
+    data::ChartDataDAO& chartDataDao,
+    data::AnalysisProcessRecordDAO& processRecordDao
 ) {
     LOG_INFO("开始分析: " + stock.ts_code + " (" + stock.name + ")");
     
@@ -373,6 +375,53 @@ void analyzeStock(
     if (!results.empty()) {
         int saved = analysisResultDao.batchInsert(results);
         LOG_INFO("保存 " + std::to_string(saved) + " 条分析结果");
+        
+        // 保存分析过程数据
+        for (const auto& result : results) {
+            if (result.label == "买入") {
+                data::AnalysisProcessRecord processRecord;
+                processRecord.ts_code = result.ts_code;
+                processRecord.stock_name = stock.name;
+                processRecord.strategy_name = result.strategy_name;
+                processRecord.trade_date = result.trade_date;
+                processRecord.freq = result.freq;
+                processRecord.signal = "BUY";
+                
+                // 获取该股票的数据用于填充 data 字段
+                try {
+                    auto data = dataSource->getQuoteData(stock.ts_code, "", "", result.freq);
+                    if (data.size() >= 10) {
+                        auto closePrices = std::vector<double>();
+                        for (const auto& d : data) closePrices.push_back(d.close);
+                        auto ema17Values = analysis::EMA::compute(closePrices, 17);
+                        auto ema25Values = analysis::EMA::compute(closePrices, 25);
+                        
+                        size_t startIdx = data.size() >= 10 ? data.size() - 10 : 0;
+                        for (size_t j = startIdx; j < data.size(); ++j) {
+                            data::ProcessDataPoint point;
+                            point.time = data[j].trade_date;
+                            point.open = data[j].open;
+                            point.high = data[j].high;
+                            point.low = data[j].low;
+                            point.close = data[j].close;
+                            point.volume = data[j].volume;
+                            
+                            size_t emaIdx = j - startIdx;
+                            if (emaIdx + (ema17Values.size() - (data.size() - startIdx)) < ema17Values.size()) {
+                                point.ema17 = ema17Values[emaIdx + (ema17Values.size() - (data.size() - startIdx))];
+                            }
+                            if (emaIdx + (ema25Values.size() - (data.size() - startIdx)) < ema25Values.size()) {
+                                point.ema25 = ema25Values[emaIdx + (ema25Values.size() - (data.size() - startIdx))];
+                            }
+                            
+                            processRecord.data.push_back(point);
+                        }
+                    }
+                } catch (...) {}
+                
+                processRecordDao.upsert(processRecord);
+            }
+        }
     }
 }
 
@@ -410,7 +459,8 @@ void performBatchAnalysis(
     std::shared_ptr<network::IDataSource> dataSource,
     core::StrategyManager& strategyManager,
     data::AnalysisResultDAO& analysisResultDao,
-    data::ChartDataDAO& chartDataDao
+    data::ChartDataDAO& chartDataDao,
+    data::AnalysisProcessRecordDAO& processRecordDao
 ) {
     LOG_INFO("========================================");
     LOG_INFO("开始批量分析，共 " + std::to_string(stockList.size()) + " 只股票");
@@ -435,7 +485,7 @@ void performBatchAnalysis(
         pool.enqueue([&, stock]() {
             try {
                 auto localDataSource = network::DataSourceFactory::createFromConfig();
-                analyzeStock(stock, localDataSource, strategyManager, analysisResultDao, chartDataDao);
+                analyzeStock(stock, localDataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
                 int completed = successCount.fetch_add(1) + 1 + failCount.load();
                 if (completed - lastReportedProgress.load() >= 10) {
                     updateProgress(-1, completed, failCount.load());
@@ -519,6 +569,7 @@ int main(int argc, char* argv[]) {
         data::StockDAO stockDao;
         data::AnalysisResultDAO analysisResultDao;
         data::ChartDataDAO chartDataDao;
+        data::AnalysisProcessRecordDAO processRecordDao;
         auto dataSource = network::DataSourceFactory::createFromConfig();
         auto& strategyManager = core::StrategyManager::getInstance();
         
@@ -529,16 +580,16 @@ int main(int argc, char* argv[]) {
         if (options.onceMode) {
             // 单次执行模式
             LOG_INFO("执行单次分析...");
-            performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao);
+            performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
         } else {
             // 定时执行模式 - 首次启动先执行一次
             LOG_INFO("首次启动，立即执行一次分析...");
-            performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao);
+            performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
             
             LOG_INFO("启动定时调度模式，执行时间: " + options.executeTime);
             
             scheduler::Scheduler sched(options.executeTime, [&]() {
-                performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao);
+                performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
             });
             
             g_scheduler = &sched;

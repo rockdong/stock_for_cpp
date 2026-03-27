@@ -13,7 +13,7 @@ package-lock.json
 .pnp.js
 
 # Data
-data/
+/data/
 *.db
 *.sqlite
 *.sqlite3
