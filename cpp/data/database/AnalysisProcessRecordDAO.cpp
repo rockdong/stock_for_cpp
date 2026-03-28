@@ -8,15 +8,12 @@ namespace data {
 
 namespace {
     template<typename Row>
-    AnalysisProcessRecord buildRecordFromRow(const Row& row) {
-        AnalysisProcessRecord record;
+    StockProcessRecord buildRecordFromRow(const Row& row) {
+        StockProcessRecord record;
         record.id = row.id;
         record.ts_code = row.tsCode;
         record.stock_name = row.stockName.is_null() ? "" : row.stockName.value();
-        record.strategy_name = row.strategyName;
         record.trade_date = row.tradeDate;
-        record.freq = row.freq.is_null() ? "d" : row.freq.value();
-        record.signal = row.signal.is_null() ? "NONE" : row.signal.value();
         
         std::string dataJson = row.data;
         if (!dataJson.empty()) {
@@ -30,7 +27,7 @@ namespace {
     }
 }
 
-bool AnalysisProcessRecordDAO::insert(const AnalysisProcessRecord& record) {
+bool StockProcessRecordDAO::upsert(const StockProcessRecord& record) {
     auto& conn = Connection::getInstance();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
@@ -38,49 +35,17 @@ bool AnalysisProcessRecordDAO::insert(const AnalysisProcessRecord& record) {
     }
 
     try {
-        AnalysisProcessRecordTable table;
-        auto db = conn.getDb();
-        
-        (*db)(sqlpp::insert_into(table).set(
-            table.tsCode = record.ts_code,
-            table.stockName = record.stock_name,
-            table.strategyName = record.strategy_name,
-            table.tradeDate = record.trade_date,
-            table.freq = record.freq,
-            table.signal = record.signal,
-            table.data = record.dataToJson()
-        ));
-        
-        LOG_DEBUG("插入过程记录: " + record.ts_code + " - " + record.strategy_name);
-        return true;
-    } catch (const std::exception& e) {
-        LOG_ERROR("插入过程记录失败: " + std::string(e.what()));
-        return false;
-    }
-}
-
-bool AnalysisProcessRecordDAO::upsert(const AnalysisProcessRecord& record) {
-    auto& conn = Connection::getInstance();
-    if (!conn.isConnected()) {
-        LOG_ERROR("数据库未连接");
-        return false;
-    }
-
-    try {
-        AnalysisProcessRecordTable table;
+        StockProcessRecordTable table;
         auto db = conn.getDb();
         
         (*db)(sqlpp::sqlite3::insert_or_replace_into(table).set(
             table.tsCode = record.ts_code,
             table.stockName = record.stock_name,
-            table.strategyName = record.strategy_name,
             table.tradeDate = record.trade_date,
-            table.freq = record.freq,
-            table.signal = record.signal,
             table.data = record.dataToJson()
         ));
         
-        LOG_DEBUG("Upsert过程记录: " + record.ts_code + " - " + record.strategy_name);
+        LOG_DEBUG("Upsert过程记录: " + record.ts_code);
         return true;
     } catch (const std::exception& e) {
         LOG_ERROR("Upsert过程记录失败: " + std::string(e.what()));
@@ -88,115 +53,9 @@ bool AnalysisProcessRecordDAO::upsert(const AnalysisProcessRecord& record) {
     }
 }
 
-std::optional<AnalysisProcessRecord> AnalysisProcessRecordDAO::findById(int id) {
-    auto& conn = Connection::getInstance();
-    if (!conn.isConnected()) {
-        LOG_ERROR("数据库未连接");
-        return std::nullopt;
-    }
-
-    try {
-        AnalysisProcessRecordTable table;
-        auto db = conn.getDb();
-        
-        for (const auto& row : (*db)(sqlpp::select(all_of(table))
-                                     .from(table)
-                                     .where(table.id == id))) {
-            return buildRecordFromRow(row);
-        }
-        
-        return std::nullopt;
-    } catch (const std::exception& e) {
-        LOG_ERROR("查询过程记录失败: " + std::string(e.what()));
-        return std::nullopt;
-    }
-}
-
-std::vector<AnalysisProcessRecord> AnalysisProcessRecordDAO::findByTsCode(const std::string& ts_code) {
-    auto& conn = Connection::getInstance();
-    std::vector<AnalysisProcessRecord> results;
-    
-    if (!conn.isConnected()) {
-        LOG_ERROR("数据库未连接");
-        return results;
-    }
-
-    try {
-        AnalysisProcessRecordTable table;
-        auto db = conn.getDb();
-        
-        for (const auto& row : (*db)(sqlpp::select(all_of(table))
-                                     .from(table)
-                                     .where(table.tsCode == ts_code)
-                                     .order_by(table.createdAt.desc()))) {
-            results.push_back(buildRecordFromRow(row));
-        }
-        
-        return results;
-    } catch (const std::exception& e) {
-        LOG_ERROR("查询过程记录失败: " + std::string(e.what()));
-        return results;
-    }
-}
-
-std::vector<AnalysisProcessRecord> AnalysisProcessRecordDAO::findByStrategy(const std::string& strategy_name) {
-    auto& conn = Connection::getInstance();
-    std::vector<AnalysisProcessRecord> results;
-    
-    if (!conn.isConnected()) {
-        LOG_ERROR("数据库未连接");
-        return results;
-    }
-
-    try {
-        AnalysisProcessRecordTable table;
-        auto db = conn.getDb();
-        
-        for (const auto& row : (*db)(sqlpp::select(all_of(table))
-                                     .from(table)
-                                     .where(table.strategyName == strategy_name)
-                                     .order_by(table.createdAt.desc()))) {
-            results.push_back(buildRecordFromRow(row));
-        }
-        
-        return results;
-    } catch (const std::exception& e) {
-        LOG_ERROR("查询过程记录失败: " + std::string(e.what()));
-        return results;
-    }
-}
-
-std::vector<AnalysisProcessRecord> AnalysisProcessRecordDAO::findBySignal(const std::string& signal) {
-    auto& conn = Connection::getInstance();
-    std::vector<AnalysisProcessRecord> results;
-    
-    if (!conn.isConnected()) {
-        LOG_ERROR("数据库未连接");
-        return results;
-    }
-
-    try {
-        AnalysisProcessRecordTable table;
-        auto db = conn.getDb();
-        
-        for (const auto& row : (*db)(sqlpp::select(all_of(table))
-                                     .from(table)
-                                     .where(table.signal == signal)
-                                     .order_by(table.createdAt.desc()))) {
-            results.push_back(buildRecordFromRow(row));
-        }
-        
-        return results;
-    } catch (const std::exception& e) {
-        LOG_ERROR("查询过程记录失败: " + std::string(e.what()));
-        return results;
-    }
-}
-
-std::optional<AnalysisProcessRecord> AnalysisProcessRecordDAO::findLatest(
+std::optional<StockProcessRecord> StockProcessRecordDAO::findByTsCode(
     const std::string& ts_code,
-    const std::string& strategy_name,
-    const std::string& freq
+    const std::string& trade_date
 ) {
     auto& conn = Connection::getInstance();
     if (!conn.isConnected()) {
@@ -205,29 +64,36 @@ std::optional<AnalysisProcessRecord> AnalysisProcessRecordDAO::findLatest(
     }
 
     try {
-        AnalysisProcessRecordTable table;
+        StockProcessRecordTable table;
         auto db = conn.getDb();
         
-        for (const auto& row : (*db)(sqlpp::select(all_of(table))
-                                     .from(table)
-                                     .where(table.tsCode == ts_code 
-                                            and table.strategyName == strategy_name
-                                            and table.freq == freq)
-                                     .order_by(table.tradeDate.desc())
-                                     .limit(1u))) {
-            return buildRecordFromRow(row);
+        if (!trade_date.empty()) {
+            for (const auto& row : (*db)(sqlpp::select(all_of(table))
+                                         .from(table)
+                                         .where(table.tsCode == ts_code and table.tradeDate == trade_date)
+                                         .limit(1u))) {
+                return buildRecordFromRow(row);
+            }
+        } else {
+            for (const auto& row : (*db)(sqlpp::select(all_of(table))
+                                         .from(table)
+                                         .where(table.tsCode == ts_code)
+                                         .order_by(table.tradeDate.desc())
+                                         .limit(1u))) {
+                return buildRecordFromRow(row);
+            }
         }
         
         return std::nullopt;
     } catch (const std::exception& e) {
-        LOG_ERROR("查询最新过程记录失败: " + std::string(e.what()));
+        LOG_ERROR("查询过程记录失败: " + std::string(e.what()));
         return std::nullopt;
     }
 }
 
-std::vector<AnalysisProcessRecord> AnalysisProcessRecordDAO::findAll(int limit) {
+std::vector<StockProcessRecord> StockProcessRecordDAO::findAll(int limit) {
     auto& conn = Connection::getInstance();
-    std::vector<AnalysisProcessRecord> results;
+    std::vector<StockProcessRecord> results;
     
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
@@ -235,7 +101,7 @@ std::vector<AnalysisProcessRecord> AnalysisProcessRecordDAO::findAll(int limit) 
     }
 
     try {
-        AnalysisProcessRecordTable table;
+        StockProcessRecordTable table;
         auto db = conn.getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(table))
@@ -253,7 +119,38 @@ std::vector<AnalysisProcessRecord> AnalysisProcessRecordDAO::findAll(int limit) 
     }
 }
 
-bool AnalysisProcessRecordDAO::remove(int id) {
+std::vector<StockProcessRecord> StockProcessRecordDAO::findByDateRange(
+    const std::string& start_date,
+    const std::string& end_date
+) {
+    auto& conn = Connection::getInstance();
+    std::vector<StockProcessRecord> results;
+    
+    if (!conn.isConnected()) {
+        LOG_ERROR("数据库未连接");
+        return results;
+    }
+
+    try {
+        StockProcessRecordTable table;
+        auto db = conn.getDb();
+        
+        for (const auto& row : (*db)(sqlpp::select(all_of(table))
+                                     .from(table)
+                                     .where(table.tradeDate >= start_date 
+                                            and table.tradeDate <= end_date)
+                                     .order_by(table.tradeDate.desc()))) {
+            results.push_back(buildRecordFromRow(row));
+        }
+        
+        return results;
+    } catch (const std::exception& e) {
+        LOG_ERROR("查询过程记录失败: " + std::string(e.what()));
+        return results;
+    }
+}
+
+bool StockProcessRecordDAO::remove(const std::string& ts_code) {
     auto& conn = Connection::getInstance();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
@@ -261,12 +158,12 @@ bool AnalysisProcessRecordDAO::remove(int id) {
     }
 
     try {
-        AnalysisProcessRecordTable table;
+        StockProcessRecordTable table;
         auto db = conn.getDb();
         
-        (*db)(sqlpp::remove_from(table).where(table.id == id));
+        (*db)(sqlpp::remove_from(table).where(table.tsCode == ts_code));
         
-        LOG_DEBUG("删除过程记录成功: ID=" + std::to_string(id));
+        LOG_DEBUG("删除过程记录成功: " + ts_code);
         return true;
     } catch (const std::exception& e) {
         LOG_ERROR("删除过程记录失败: " + std::string(e.what()));
@@ -274,7 +171,7 @@ bool AnalysisProcessRecordDAO::remove(int id) {
     }
 }
 
-int AnalysisProcessRecordDAO::count() {
+int StockProcessRecordDAO::count() {
     auto& conn = Connection::getInstance();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
@@ -282,7 +179,7 @@ int AnalysisProcessRecordDAO::count() {
     }
 
     try {
-        AnalysisProcessRecordTable table;
+        StockProcessRecordTable table;
         auto db = conn.getDb();
         
         for (const auto& row : (*db)(sqlpp::select(sqlpp::count(table.id))

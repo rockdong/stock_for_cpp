@@ -1,5 +1,5 @@
-#ifndef DATA_ANALYSIS_PROCESS_RECORD_DAO_H
-#define DATA_ANALYSIS_PROCESS_RECORD_DAO_H
+#ifndef DATA_STOCK_PROCESS_RECORD_DAO_H
+#define DATA_STOCK_PROCESS_RECORD_DAO_H
 
 #include <string>
 #include <vector>
@@ -8,36 +8,32 @@
 
 namespace data {
 
-class AnalysisProcessRecordDAO {
+class StockProcessRecordDAO {
 public:
-    AnalysisProcessRecordDAO() = default;
-    ~AnalysisProcessRecordDAO() = default;
+    StockProcessRecordDAO() = default;
+    ~StockProcessRecordDAO() = default;
 
-    bool insert(const AnalysisProcessRecord& record);
-    
-    bool upsert(const AnalysisProcessRecord& record);
+    bool upsert(const StockProcessRecord& record);
 
-    std::optional<AnalysisProcessRecord> findById(int id);
-
-    std::vector<AnalysisProcessRecord> findByTsCode(const std::string& ts_code);
-
-    std::vector<AnalysisProcessRecord> findByStrategy(const std::string& strategy_name);
-
-    std::vector<AnalysisProcessRecord> findBySignal(const std::string& signal);
-
-    std::optional<AnalysisProcessRecord> findLatest(
+    std::optional<StockProcessRecord> findByTsCode(
         const std::string& ts_code,
-        const std::string& strategy_name,
-        const std::string& freq = "d"
+        const std::string& trade_date = ""
     );
 
-    std::vector<AnalysisProcessRecord> findAll(int limit = 100);
+    std::vector<StockProcessRecord> findAll(int limit = 100);
 
-    bool remove(int id);
+    std::vector<StockProcessRecord> findByDateRange(
+        const std::string& start_date,
+        const std::string& end_date
+    );
+
+    bool remove(const std::string& ts_code);
 
     int count();
 };
 
+using AnalysisProcessRecordDAO = StockProcessRecordDAO;
+
 } // namespace data
 
-#endif // DATA_ANALYSIS_PROCESS_RECORD_DAO_H
+#endif // DATA_STOCK_PROCESS_RECORD_DAO_H

@@ -7,7 +7,7 @@
 
 namespace data {
 
-namespace AnalysisProcessRecordTable_ {
+namespace StockProcessRecordTable_ {
     struct Id {
         struct _alias_t {
             static constexpr const char _literal[] = "id";
@@ -50,20 +50,6 @@ namespace AnalysisProcessRecordTable_ {
         using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
     };
 
-    struct StrategyName {
-        struct _alias_t {
-            static constexpr const char _literal[] = "strategy_name";
-            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
-            template<typename T>
-            struct _member_t {
-                T strategyName;
-                T& operator()() { return strategyName; }
-                const T& operator()() const { return strategyName; }
-            };
-        };
-        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::require_insert>;
-    };
-
     struct TradeDate {
         struct _alias_t {
             static constexpr const char _literal[] = "trade_date";
@@ -76,34 +62,6 @@ namespace AnalysisProcessRecordTable_ {
             };
         };
         using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::require_insert>;
-    };
-
-    struct Freq {
-        struct _alias_t {
-            static constexpr const char _literal[] = "freq";
-            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
-            template<typename T>
-            struct _member_t {
-                T freq;
-                T& operator()() { return freq; }
-                const T& operator()() const { return freq; }
-            };
-        };
-        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
-    };
-
-    struct Signal {
-        struct _alias_t {
-            static constexpr const char _literal[] = "signal";
-            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
-            template<typename T>
-            struct _member_t {
-                T signal;
-                T& operator()() { return signal; }
-                const T& operator()() const { return signal; }
-            };
-        };
-        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
     };
 
     struct Data {
@@ -149,17 +107,14 @@ namespace AnalysisProcessRecordTable_ {
     };
 }
 
-struct AnalysisProcessRecordTable : sqlpp::table_t<AnalysisProcessRecordTable,
-    AnalysisProcessRecordTable_::Id,
-    AnalysisProcessRecordTable_::TsCode,
-    AnalysisProcessRecordTable_::StockName,
-    AnalysisProcessRecordTable_::StrategyName,
-    AnalysisProcessRecordTable_::TradeDate,
-    AnalysisProcessRecordTable_::Freq,
-    AnalysisProcessRecordTable_::Signal,
-    AnalysisProcessRecordTable_::Data,
-    AnalysisProcessRecordTable_::CreatedAt,
-    AnalysisProcessRecordTable_::ExpiresAt>
+struct StockProcessRecordTable : sqlpp::table_t<StockProcessRecordTable,
+    StockProcessRecordTable_::Id,
+    StockProcessRecordTable_::TsCode,
+    StockProcessRecordTable_::StockName,
+    StockProcessRecordTable_::TradeDate,
+    StockProcessRecordTable_::Data,
+    StockProcessRecordTable_::CreatedAt,
+    StockProcessRecordTable_::ExpiresAt>
 {
     struct _alias_t {
         static constexpr const char _literal[] = "analysis_process_records";
@@ -172,6 +127,8 @@ struct AnalysisProcessRecordTable : sqlpp::table_t<AnalysisProcessRecordTable,
         };
     };
 };
+
+using AnalysisProcessRecordTable = StockProcessRecordTable;
 
 } // namespace data
 

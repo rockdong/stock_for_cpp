@@ -159,11 +159,10 @@ router.get('/analysis/progress', (req, res) => {
 router.get('/analysis/process', (req, res) => {
   try {
     const db = getDb();
-    const { ts_code, strategy, start_date, end_date, signal, limit = 100 } = req.query;
+    const { ts_code, start_date, end_date, limit = 100 } = req.query;
     
     let sql = `
-      SELECT id, ts_code, stock_name, strategy_name, trade_date, freq, signal, 
-             data, created_at, expires_at
+      SELECT id, ts_code, stock_name, trade_date, data, created_at, expires_at
       FROM analysis_process_records
       WHERE 1=1
     `;
@@ -173,10 +172,6 @@ router.get('/analysis/process', (req, res) => {
       sql += ' AND ts_code = ?';
       params.push(ts_code);
     }
-    if (strategy) {
-      sql += ' AND strategy_name = ?';
-      params.push(strategy);
-    }
     if (start_date) {
       sql += ' AND trade_date >= ?';
       params.push(start_date);
@@ -184,10 +179,6 @@ router.get('/analysis/process', (req, res) => {
     if (end_date) {
       sql += ' AND trade_date <= ?';
       params.push(end_date);
-    }
-    if (signal) {
-      sql += ' AND signal = ?';
-      params.push(signal.toUpperCase());
     }
     
     sql += ' ORDER BY created_at DESC LIMIT ?';
@@ -197,7 +188,7 @@ router.get('/analysis/process', (req, res) => {
     
     const parsedRecords = records.map(record => ({
       ...record,
-      data: record.data ? JSON.parse(record.data) : []
+      data: record.data ? JSON.parse(record.data) : { strategies: [] }
     }));
     
     res.json({ success: true, data: parsedRecords });
@@ -208,22 +199,9 @@ router.get('/analysis/process', (req, res) => {
 });
 
 router.get('/analysis/process/strategies', (req, res) => {
-  try {
-    const db = getDb();
-    
-    const strategies = db.prepare(`
-      SELECT DISTINCT strategy_name FROM analysis_process_records
-      ORDER BY strategy_name
-    `).all();
-    
-    res.json({ 
-      success: true, 
-      data: strategies.map(s => s.strategy_name) 
-    });
-  } catch (err) {
-    logger.error('获取策略列表失败:', err);
-    res.status(500).json({ success: false, error: err.message });
-  }
+    const strategies = ['EMA17TO25', 'EMA25_CROSSOVER', 'EMA17_BREAKOUT', 'EMA_CONVERGENCE', 
+                        'EMA25_GREATER_17_PRICE_MATCH', 'MACD', 'RSI', 'BOLL', 'MA_CROSS', 'GRID'];
+    res.json({ success: true, data: strategies });
 });
 
 router.get('/analysis/process/chart/:ts_code', (req, res) => {
@@ -232,41 +210,44 @@ router.get('/analysis/process/chart/:ts_code', (req, res) => {
     const { strategy, freq = 'd' } = req.query;
     const db = getDb();
     
-    let sql = `
-      SELECT id, ts_code, stock_name, strategy_name, trade_date, freq, signal, 
-             data, created_at
+    const record = db.prepare(`
+      SELECT id, ts_code, stock_name, trade_date, data, created_at
       FROM analysis_process_records
       WHERE ts_code = ?
-    `;
-    const params = [ts_code];
-    
-    if (strategy) {
-      sql += ' AND strategy_name = ?';
-      params.push(strategy);
-    }
-    sql += ' AND freq = ?';
-    params.push(freq);
-    
-    sql += ' ORDER BY trade_date DESC LIMIT 1';
-    
-    const record = db.prepare(sql).get(...params);
+      ORDER BY trade_date DESC LIMIT 1
+    `).get(ts_code);
     
     if (!record) {
       return res.json({ success: true, data: [] });
     }
     
-    const chartData = record.data ? JSON.parse(record.data) : [];
+    const parsedData = record.data ? JSON.parse(record.data) : { strategies: [] };
+    
+    // Find the requested strategy and freq
+    let candles = [];
+    const strategyLower = strategy ? strategy.toLowerCase() : null;
+    
+    if (parsedData.strategies) {
+      for (const s of parsedData.strategies) {
+        if (!strategyLower || s.name.toLowerCase().includes(strategyLower)) {
+          for (const f of (s.freqs || [])) {
+            if (f.freq === freq) {
+              candles = f.candles || [];
+              break;
+            }
+          }
+        }
+      }
+    }
+    
     res.json({ 
       success: true, 
-      data: chartData,
+      data: candles,
       record: {
         id: record.id,
         ts_code: record.ts_code,
         stock_name: record.stock_name,
-        strategy_name: record.strategy_name,
-        trade_date: record.trade_date,
-        freq: record.freq,
-        signal: record.signal
+        trade_date: record.trade_date
       }
     });
   } catch (err) {
@@ -281,8 +262,7 @@ router.get('/analysis/process/:id', (req, res) => {
     const db = getDb();
     
     const record = db.prepare(`
-      SELECT id, ts_code, stock_name, strategy_name, trade_date, freq, signal, 
-             data, created_at, expires_at
+      SELECT id, ts_code, stock_name, trade_date, data, created_at, expires_at
       FROM analysis_process_records WHERE id = ?
     `).get(id);
     
@@ -294,7 +274,7 @@ router.get('/analysis/process/:id', (req, res) => {
       success: true, 
       data: {
         ...record,
-        data: record.data ? JSON.parse(record.data) : []
+        data: record.data ? JSON.parse(record.data) : { strategies: [] }
       }
     });
   } catch (err) {
@@ -308,23 +288,20 @@ router.post('/analysis/process', (req, res) => {
     const db = getDb();
     const record = req.body;
     
-    const dataJson = Array.isArray(record.data) 
+    const dataJson = typeof record.data === 'object' 
       ? JSON.stringify(record.data) 
-      : (typeof record.data === 'string' ? record.data : '[]');
+      : (typeof record.data === 'string' ? record.data : '{"strategies":[]}');
     
     const stmt = db.prepare(`
       INSERT OR REPLACE INTO analysis_process_records 
-      (ts_code, stock_name, strategy_name, trade_date, freq, signal, data)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (ts_code, stock_name, trade_date, data)
+      VALUES (?, ?, ?, ?)
     `);
     
     const result = stmt.run(
       record.ts_code,
       record.stock_name || '',
-      record.strategy_name,
       record.trade_date,
-      record.freq || 'd',
-      record.signal || 'NONE',
       dataJson
     );
     

@@ -375,53 +375,75 @@ void analyzeStock(
     if (!results.empty()) {
         int saved = analysisResultDao.batchInsert(results);
         LOG_INFO("保存 " + std::to_string(saved) + " 条分析结果");
+    }
+    
+    // 保存分析过程数据（每只股票一条记录，包含所有策略和频率）
+    {
+        data::StockProcessRecord processRecord;
+        processRecord.ts_code = stock.ts_code;
+        processRecord.stock_name = stock.name;
+        processRecord.trade_date = calculateAnalysisDate();
         
-        // 保存分析过程数据
-        for (const auto& result : results) {
-            if (result.label == "买入") {
-                data::AnalysisProcessRecord processRecord;
-                processRecord.ts_code = result.ts_code;
-                processRecord.stock_name = stock.name;
-                processRecord.strategy_name = result.strategy_name;
-                processRecord.trade_date = result.trade_date;
-                processRecord.freq = result.freq;
-                processRecord.signal = "BUY";
+        auto strategies = strategyManager.getStrategies();
+        for (const auto& strategy : strategies) {
+            data::StrategyData strategyData;
+            strategyData.name = strategy->getName();
+            
+            for (const auto& freq : {"d", "w", "m"}) {
+                data::StrategyFreqData freqData;
+                freqData.freq = freq;
+                freqData.signal = "NONE";
                 
-                // 获取该股票的数据用于填充 data 字段
                 try {
-                    auto data = dataSource->getQuoteData(stock.ts_code, "", "", result.freq);
-                    if (data.size() >= 10) {
-                        auto closePrices = std::vector<double>();
-                        for (const auto& d : data) closePrices.push_back(d.close);
-                        auto ema17Values = analysis::EMA::compute(closePrices, 17);
-                        auto ema25Values = analysis::EMA::compute(closePrices, 25);
+                    auto data = dataSource->getQuoteData(stock.ts_code, "", "", freq);
+                    
+                    if (!data.empty()) {
+                        auto result = strategy->analyze(stock.ts_code, data);
+                        if (result.has_value()) {
+                            if (result->label == "买入") freqData.signal = "BUY";
+                            else if (result->label == "卖出") freqData.signal = "SELL";
+                            else freqData.signal = "HOLD";
+                        }
                         
-                        size_t startIdx = data.size() >= 10 ? data.size() - 10 : 0;
-                        for (size_t j = startIdx; j < data.size(); ++j) {
-                            data::ProcessDataPoint point;
-                            point.time = data[j].trade_date;
-                            point.open = data[j].open;
-                            point.high = data[j].high;
-                            point.low = data[j].low;
-                            point.close = data[j].close;
-                            point.volume = data[j].volume;
+                        if (data.size() >= 10) {
+                            std::vector<double> closePrices;
+                            for (const auto& d : data) closePrices.push_back(d.close);
                             
-                            size_t emaIdx = j - startIdx;
-                            if (emaIdx + (ema17Values.size() - (data.size() - startIdx)) < ema17Values.size()) {
-                                point.ema17 = ema17Values[emaIdx + (ema17Values.size() - (data.size() - startIdx))];
-                            }
-                            if (emaIdx + (ema25Values.size() - (data.size() - startIdx)) < ema25Values.size()) {
-                                point.ema25 = ema25Values[emaIdx + (ema25Values.size() - (data.size() - startIdx))];
-                            }
+                            auto ema17Values = analysis::EMA::compute(closePrices, 17);
+                            auto ema25Values = analysis::EMA::compute(closePrices, 25);
                             
-                            processRecord.data.push_back(point);
+                            size_t startIdx = data.size() - 10;
+                            for (size_t j = startIdx; j < data.size(); ++j) {
+                                data::ProcessDataPoint point;
+                                point.time = data[j].trade_date;
+                                point.open = data[j].open;
+                                point.high = data[j].high;
+                                point.low = data[j].low;
+                                point.close = data[j].close;
+                                point.volume = data[j].volume;
+                                
+                                size_t emaIdx = j - startIdx;
+                                size_t emaOffset = ema17Values.size() - 10;
+                                if (emaIdx + emaOffset < ema17Values.size()) {
+                                    point.ema17 = ema17Values[emaIdx + emaOffset];
+                                }
+                                if (emaIdx + emaOffset < ema25Values.size()) {
+                                    point.ema25 = ema25Values[emaIdx + emaOffset];
+                                }
+                                
+                                freqData.candles.push_back(point);
+                            }
                         }
                     }
                 } catch (...) {}
                 
-                processRecordDao.upsert(processRecord);
+                strategyData.freqs.push_back(freqData);
             }
+            
+            processRecord.strategies.push_back(strategyData);
         }
+        
+        processRecordDao.upsert(processRecord);
     }
 }
 
