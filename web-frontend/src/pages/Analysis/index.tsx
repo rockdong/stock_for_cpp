@@ -4,7 +4,7 @@ import RecordTable from '../../components/Table/RecordTable'
 import CandlestickChart from '../../components/Chart/CandlestickChart'
 import ProgressBadge from '../../components/Progress/ProgressBadge'
 import { analysisApi } from '../../services/api'
-import { AnalysisProcessRecord, ChartDataPoint, FilterParams } from '../../types/analysis'
+import { AnalysisProcessRecord, ChartDataPoint, FilterParams, StrategyData, FreqType } from '../../types/analysis'
 
 export default function AnalysisPage() {
   const [records, setRecords] = useState<AnalysisProcessRecord[]>([])
@@ -12,6 +12,8 @@ export default function AnalysisPage() {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const [loading, setLoading] = useState(false)
   const [chartLoading, setChartLoading] = useState(false)
+  const [selectedStrategy, setSelectedStrategy] = useState<string>('')
+  const [selectedFreq, setSelectedFreq] = useState<FreqType>('d')
 
   useEffect(() => {
     loadRecords({})
@@ -29,27 +31,60 @@ export default function AnalysisPage() {
     }
   }
 
+  const getStrategies = (record: AnalysisProcessRecord): StrategyData[] => {
+    return record.data?.strategies || []
+  }
+
+  const getCandles = (record: AnalysisProcessRecord, strategyName: string, freq: FreqType): ChartDataPoint[] => {
+    const strategies = getStrategies(record)
+    const strategy = strategies.find(s => s.name === strategyName)
+    if (!strategy) return []
+    const freqData = strategy.freqs.find(f => f.freq === freq)
+    return freqData?.candles || []
+  }
+
   const handleSelectRecord = async (record: AnalysisProcessRecord) => {
     setSelectedRecord(record)
     
-    if (record.data && record.data.length > 0) {
-      setChartData(record.data)
+    const strategies = getStrategies(record)
+    if (strategies.length === 0) {
+      setChartData([])
       return
     }
+
+    const firstStrategy = strategies[0].name
+    setSelectedStrategy(firstStrategy)
+    setSelectedFreq('d')
     
-    setChartLoading(true)
-    try {
-      const response = await analysisApi.getChartData(
-        record.ts_code,
-        record.strategy_name,
-        record.freq
-      )
-      setChartData(response.data || [])
-    } catch (error) {
-      console.error('加载图表数据失败:', error)
-    } finally {
-      setChartLoading(false)
-    }
+    const candles = getCandles(record, firstStrategy, 'd')
+    setChartData(candles)
+  }
+
+  const handleStrategyChange = (strategyName: string) => {
+    if (!selectedRecord) return
+    setSelectedStrategy(strategyName)
+    const candles = getCandles(selectedRecord, strategyName, selectedFreq)
+    setChartData(candles)
+  }
+
+  const handleFreqChange = (freq: FreqType) => {
+    if (!selectedRecord) return
+    setSelectedFreq(freq)
+    const candles = getCandles(selectedRecord, selectedStrategy, freq)
+    setChartData(candles)
+  }
+
+  const getSignalSummary = (record: AnalysisProcessRecord): string => {
+    const strategies = getStrategies(record)
+    const signals: string[] = []
+    strategies.forEach(s => {
+      s.freqs.forEach(f => {
+        if (f.signal === 'BUY' || f.signal === 'SELL') {
+          signals.push(`${s.name}(${f.freq}): ${f.signal}`)
+        }
+      })
+    })
+    return signals.length > 0 ? signals.slice(0, 3).join(', ') : 'NONE'
   }
 
   return (
@@ -91,7 +126,7 @@ export default function AnalysisPage() {
                       {selectedRecord.stock_name}
                     </h2>
                     <p className="text-sm text-muted">
-                      {selectedRecord.ts_code} · {selectedRecord.strategy_name} · {selectedRecord.freq === 'd' ? '日线' : selectedRecord.freq === 'w' ? '周线' : '月线'}
+                      {selectedRecord.ts_code} · {getSignalSummary(selectedRecord)}
                     </p>
                   </div>
                 </div>
@@ -106,6 +141,27 @@ export default function AnalysisPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
+              </div>
+
+              <div className="flex gap-4 mt-4">
+                <select
+                  value={selectedStrategy}
+                  onChange={(e) => handleStrategyChange(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-primary border border-border text-text text-sm"
+                >
+                  {getStrategies(selectedRecord).map(s => (
+                    <option key={s.name} value={s.name}>{s.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedFreq}
+                  onChange={(e) => handleFreqChange(e.target.value as FreqType)}
+                  className="px-3 py-2 rounded-lg bg-primary border border-border text-text text-sm"
+                >
+                  <option value="d">日线</option>
+                  <option value="w">周线</option>
+                  <option value="m">月线</option>
+                </select>
               </div>
             </div>
 

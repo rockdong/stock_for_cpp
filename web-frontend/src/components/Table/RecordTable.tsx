@@ -1,4 +1,4 @@
-import { AnalysisProcessRecord } from '../../types/analysis'
+import { AnalysisProcessRecord, StrategyData } from '../../types/analysis'
 
 interface RecordTableProps {
   records: AnalysisProcessRecord[]
@@ -21,23 +21,29 @@ export default function RecordTable({ records, onSelect }: RecordTableProps) {
     )
   }
 
-  const getFreqBadge = (freq: string) => {
-    const config: Record<string, { style: string; label: string }> = {
-      d: { style: 'bg-blue-500/20 text-blue-400 border-blue-500/30', label: '日' },
-      w: { style: 'bg-purple-500/20 text-purple-400 border-purple-500/30', label: '周' },
-      m: { style: 'bg-amber-500/20 text-amber-400 border-amber-500/30', label: '月' },
-    }
-    const { style, label } = config[freq] || { style: 'bg-muted/10 text-muted border-muted/20', label: freq }
-    return (
-      <span className={`px-2 py-0.5 rounded text-xs font-medium border ${style}`}>
-        {label}
-      </span>
-    )
+  const getStrategies = (record: AnalysisProcessRecord): StrategyData[] => {
+    return record.data?.strategies || []
   }
 
-  const getLastClose = (data: AnalysisProcessRecord['data']) => {
-    if (!data || data.length === 0) return null
-    return data[data.length - 1]?.close
+  const getSignalSummary = (record: AnalysisProcessRecord): { buy: number; sell: number } => {
+    const strategies = getStrategies(record)
+    let buy = 0, sell = 0
+    strategies.forEach(s => {
+      s.freqs.forEach(f => {
+        if (f.signal === 'BUY') buy++
+        if (f.signal === 'SELL') sell++
+      })
+    })
+    return { buy, sell }
+  }
+
+  const getLastClose = (record: AnalysisProcessRecord): number | null => {
+    const strategies = getStrategies(record)
+    if (strategies.length === 0) return null
+    const firstStrategy = strategies[0]
+    const dailyFreq = firstStrategy.freqs.find(f => f.freq === 'd')
+    if (!dailyFreq || dailyFreq.candles.length === 0) return null
+    return dailyFreq.candles[dailyFreq.candles.length - 1]?.close
   }
 
   if (records.length === 0) {
@@ -61,38 +67,51 @@ export default function RecordTable({ records, onSelect }: RecordTableProps) {
             <tr className="border-b border-border">
               <th className="px-5 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">日期</th>
               <th className="px-5 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">股票</th>
-              <th className="px-5 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">策略</th>
-              <th className="px-5 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">周期</th>
-              <th className="px-5 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">信号</th>
+              <th className="px-5 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">策略数</th>
+              <th className="px-5 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">信号概览</th>
               <th className="px-5 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">收盘价</th>
               <th className="px-5 py-4 text-left text-xs font-medium text-muted uppercase tracking-wider">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {records.map(record => (
-              <tr 
-                key={record.id} 
-                className="hover:bg-primary/50 transition-colors cursor-pointer"
-                onClick={() => onSelect(record)}
-              >
-                <td className="px-5 py-4 text-sm text-text font-medium">{record.trade_date}</td>
-                <td className="px-5 py-4">
-                  <div className="text-sm font-medium text-text">{record.stock_name}</div>
-                  <div className="text-xs text-muted">{record.ts_code}</div>
-                </td>
-                <td className="px-5 py-4 text-sm text-muted">{record.strategy_name}</td>
-                <td className="px-5 py-4">{getFreqBadge(record.freq)}</td>
-                <td className="px-5 py-4">{getSignalBadge(record.signal)}</td>
-                <td className="px-5 py-4 text-sm text-text font-mono">
-                  {getLastClose(record.data)?.toFixed(2) || '-'}
-                </td>
-                <td className="px-5 py-4">
-                  <button className="px-3 py-1.5 text-xs font-medium text-cta bg-cta/10 rounded-lg hover:bg-cta/20 transition-colors cursor-pointer">
-                    查看图表
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {records.map(record => {
+              const { buy, sell } = getSignalSummary(record)
+              return (
+                <tr 
+                  key={record.id} 
+                  className="hover:bg-primary/50 transition-colors cursor-pointer"
+                  onClick={() => onSelect(record)}
+                >
+                  <td className="px-5 py-4 text-sm text-text font-medium">{record.trade_date}</td>
+                  <td className="px-5 py-4">
+                    <div className="text-sm font-medium text-text">{record.stock_name}</div>
+                    <div className="text-xs text-muted">{record.ts_code}</div>
+                  </td>
+                  <td className="px-5 py-4 text-sm text-muted">{getStrategies(record).length}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex gap-2">
+                      {buy > 0 && (
+                        <span className="px-2 py-0.5 text-xs rounded bg-cta/20 text-cta">{buy} 买入</span>
+                      )}
+                      {sell > 0 && (
+                        <span className="px-2 py-0.5 text-xs rounded bg-sell/20 text-sell">{sell} 卖出</span>
+                      )}
+                      {buy === 0 && sell === 0 && (
+                        <span className="text-xs text-muted">无信号</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 text-sm text-text font-mono">
+                    {getLastClose(record)?.toFixed(2) || '-'}
+                  </td>
+                  <td className="px-5 py-4">
+                    <button className="px-3 py-1.5 text-xs font-medium text-cta bg-cta/10 rounded-lg hover:bg-cta/20 transition-colors cursor-pointer">
+                      查看图表
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

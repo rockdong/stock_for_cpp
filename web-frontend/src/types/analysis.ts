@@ -19,23 +19,37 @@ export interface DataPoint {
   low: number
   close: number
   volume: number
-  ema17: number
-  ema25: number
-  macd: number
-  rsi: number
+  ema17?: number
+  ema25?: number
+  macd?: number
+  macd_signal?: number
+  macd_hist?: number
+  rsi?: number
+  boll_upper?: number
+  boll_lower?: number
+}
+
+export interface StrategyFreqData {
+  freq: FreqType
+  signal: SignalType
+  candles: DataPoint[]
+}
+
+export interface StrategyData {
+  name: string
+  freqs: StrategyFreqData[]
 }
 
 export interface AnalysisProcessRecord {
   id: number
   ts_code: string
   stock_name: string
-  strategy_name: string
   trade_date: string
-  freq: FreqType
-  signal: SignalType
-  data: DataPoint[]
+  data: {
+    strategies: StrategyData[]
+  }
   created_at: string
-  expires_at: string
+  expires_at: string | null
 }
 
 export interface ChartDataPoint extends DataPoint {
@@ -44,21 +58,16 @@ export interface ChartDataPoint extends DataPoint {
 
 export interface ChartResponse {
   data: ChartDataPoint[]
-  record: {
+  record?: {
     id: number
     ts_code: string
     stock_name: string
-    strategy_name: string
     trade_date: string
-    freq: FreqType
-    signal: SignalType
   }
 }
 
 export interface FilterParams {
   ts_code?: string
-  strategy?: string
   start_date?: string
   end_date?: string
-  signal?: string
 }
