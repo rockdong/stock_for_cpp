@@ -11,7 +11,6 @@ export default function AnalysisPage() {
   const [selectedRecord, setSelectedRecord] = useState<AnalysisProcessRecord | null>(null)
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const [loading, setLoading] = useState(false)
-  const [chartLoading, setChartLoading] = useState(false)
   const [selectedStrategy, setSelectedStrategy] = useState<string>('')
   const [selectedFreq, setSelectedFreq] = useState<FreqType>('d')
 
@@ -165,14 +164,7 @@ export default function AnalysisPage() {
               </div>
             </div>
 
-            {chartLoading ? (
-              <div className="bg-secondary rounded-2xl p-8 text-center border border-border">
-                <div className="animate-pulse flex flex-col items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary"></div>
-                  <p className="text-muted">加载图表中...</p>
-                </div>
-              </div>
-            ) : chartData.length > 0 ? (
+            {chartData.length > 0 ? (
               <div className="bg-secondary rounded-2xl p-5 border border-border">
                 <div className="flex gap-4 mb-4 text-sm">
                   <div className="flex items-center gap-2">

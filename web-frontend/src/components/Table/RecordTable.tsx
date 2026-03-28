@@ -6,21 +6,6 @@ interface RecordTableProps {
 }
 
 export default function RecordTable({ records, onSelect }: RecordTableProps) {
-  const getSignalBadge = (signal: string) => {
-    const config: Record<string, { style: string; label: string }> = {
-      BUY: { style: 'bg-cta/20 text-cta border-cta/30', label: '买入' },
-      SELL: { style: 'bg-sell/20 text-sell border-sell/30', label: '卖出' },
-      HOLD: { style: 'bg-hold/20 text-hold border-hold/30', label: '持有' },
-      NONE: { style: 'bg-muted/10 text-muted border-muted/20', label: '无信号' },
-    }
-    const { style, label } = config[signal] || config.NONE
-    return (
-      <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${style}`}>
-        {label}
-      </span>
-    )
-  }
-
   const getStrategies = (record: AnalysisProcessRecord): StrategyData[] => {
     return record.data?.strategies || []
   }

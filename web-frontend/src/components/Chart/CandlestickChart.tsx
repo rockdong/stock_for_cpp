@@ -56,10 +56,12 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
       lineWidth: 2,
       title: 'EMA17',
     })
-    const ema17Data: LineData[] = data.map(d => ({
-      time: d.time as any,
-      value: d.ema17,
-    }))
+    const ema17Data: LineData[] = data
+      .filter(d => d.ema17 !== undefined)
+      .map(d => ({
+        time: d.time as any,
+        value: d.ema17!,
+      }))
     ema17Series.setData(ema17Data)
 
     const ema25Series = chart.addLineSeries({
@@ -67,10 +69,12 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
       lineWidth: 2,
       title: 'EMA25',
     })
-    const ema25Data: LineData[] = data.map(d => ({
-      time: d.time as any,
-      value: d.ema25,
-    }))
+    const ema25Data: LineData[] = data
+      .filter(d => d.ema25 !== undefined)
+      .map(d => ({
+        time: d.time as any,
+        value: d.ema25!,
+      }))
     ema25Series.setData(ema25Data)
 
     chart.timeScale().fitContent()
