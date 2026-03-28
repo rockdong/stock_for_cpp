@@ -260,6 +260,26 @@ bool Connection::createTables() {
         return false;
     }
     
+    // 创建分析过程记录表
+    std::string createProcessRecordsTable = R"(
+        CREATE TABLE IF NOT EXISTS analysis_process_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts_code TEXT NOT NULL,
+            stock_name TEXT,
+            trade_date TEXT NOT NULL,
+            data TEXT NOT NULL DEFAULT '{"strategies":[]}',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME,
+            UNIQUE(ts_code, trade_date)
+        )
+    )";
+    
+    LOG_INFO("创建 analysis_process_records 表");
+    if (!executeInternal(createProcessRecordsTable)) {
+        LOG_ERROR("创建 analysis_process_records 表失败");
+        return false;
+    }
+    
     // 创建索引
     executeInternal("CREATE INDEX IF NOT EXISTS idx_stocks_ts_code ON stocks(ts_code)");
     executeInternal("CREATE INDEX IF NOT EXISTS idx_prices_stock_date ON prices(stock_id, trade_date)");
@@ -269,6 +289,8 @@ bool Connection::createTables() {
     executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_date ON analysis_results(trade_date)");
     executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_label ON analysis_results(label)");
     executeInternal("CREATE INDEX IF NOT EXISTS idx_chart_data_lookup ON chart_data(ts_code, freq, analysis_date)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_process_ts_code ON analysis_process_records(ts_code)");
+    executeInternal("CREATE INDEX IF NOT EXISTS idx_process_date ON analysis_process_records(trade_date)");
     
     LOG_INFO("数据库表创建成功");
     return true;
