@@ -148,42 +148,4 @@ std::vector<core::StockData> KLineAggregator::aggregateToMonthly(
     return result;
 }
 
-std::vector<core::StockData> KLineAggregator::aggregatePartial(
-    const std::vector<core::StockData>& dailyData,
-    const std::string& lastWeeklyDate,
-    const std::string& lastMonthlyDate) {
-    
-    if (dailyData.empty()) return {};
-    
-    std::vector<core::StockData> result;
-    
-    std::vector<core::StockData> sortedDaily = dailyData;
-    std::sort(sortedDaily.begin(), sortedDaily.end(),
-        [](const core::StockData& a, const core::StockData& b) {
-            return a.trade_date > b.trade_date;
-        });
-    
-    std::string latestDate = sortedDaily.empty() ? "" : sortedDaily[0].trade_date;
-    
-    if (!lastWeeklyDate.empty() && latestDate > lastWeeklyDate) {
-        std::vector<core::StockData> newDaily;
-        for (const auto& d : sortedDaily) {
-            if (d.trade_date > lastWeeklyDate) {
-                newDaily.push_back(d);
-            }
-        }
-        
-        if (!newDaily.empty()) {
-            std::sort(newDaily.begin(), newDaily.end(),
-                [](const core::StockData& a, const core::StockData& b) {
-                    return a.trade_date < b.trade_date;
-                });
-            auto weekly = aggregateToWeekly(newDaily);
-            result.insert(result.end(), weekly.begin(), weekly.end());
-        }
-    }
-    
-    return result;
-}
-
 }
