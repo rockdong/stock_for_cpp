@@ -159,7 +159,7 @@ router.get('/analysis/progress', (req, res) => {
 router.get('/analysis/process', (req, res) => {
   try {
     const db = getDb();
-    const { ts_code, start_date, end_date, limit = 100 } = req.query;
+    const { ts_code, start_date, end_date, signal, strategy, limit = 100 } = req.query;
     
     let sql = `
       SELECT id, ts_code, stock_name, trade_date, data, created_at, expires_at
@@ -186,10 +186,24 @@ router.get('/analysis/process', (req, res) => {
     
     const records = db.prepare(sql).all(...params);
     
-    const parsedRecords = records.map(record => ({
+    let parsedRecords = records.map(record => ({
       ...record,
       data: record.data ? JSON.parse(record.data) : { strategies: [] }
     }));
+    
+    if (strategy) {
+      parsedRecords = parsedRecords.filter(record => {
+        const strategies = record.data?.strategies || [];
+        return strategies.some(s => s.name === strategy);
+      });
+    }
+    
+    if (signal) {
+      parsedRecords = parsedRecords.filter(record => {
+        const strategies = record.data?.strategies || [];
+        return strategies.some(s => s.freqs.some(f => f.signal === signal));
+      });
+    }
     
     res.json({ success: true, data: parsedRecords });
   } catch (err) {
