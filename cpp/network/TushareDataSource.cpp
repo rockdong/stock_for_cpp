@@ -125,17 +125,55 @@ std::vector<StockData> TushareDataSource::getQuoteData(
         if (response.isSuccess()) {
             auto data = parseStockData(response);
             
-            if ((freq == "w" || freq == "W" || freq == "m" || freq == "M") && data.empty()) {
-                LOG_INFO(freq_name + "数据为空，尝试用日线数据聚合");
-                
+            if (freq == "w" || freq == "W" || freq == "m" || freq == "M") {
                 auto dailyData = getDailyData(ts_code, start_date, end_date);
-                if (!dailyData.empty()) {
+                
+                if (data.empty() && !dailyData.empty()) {
+                    LOG_INFO(freq_name + "数据为空，用日线数据聚合");
                     if (freq == "w" || freq == "W") {
                         data = utils::KLineAggregator::aggregateToWeekly(dailyData);
-                        LOG_INFO("日线聚合成周线: " + std::to_string(data.size()) + " 条");
                     } else {
                         data = utils::KLineAggregator::aggregateToMonthly(dailyData);
-                        LOG_INFO("日线聚合成月线: " + std::to_string(data.size()) + " 条");
+                    }
+                    LOG_INFO("聚合结果: " + std::to_string(data.size()) + " 条");
+                } else if (!data.empty() && !dailyData.empty()) {
+                    std::string lastPeriodDate = data.back().trade_date;
+                    std::string lastDailyDate = dailyData.back().trade_date;
+                    
+                    bool needAggregate = false;
+                    if (freq == "w" || freq == "W") {
+                        std::string lastPeriodWeek = utils::KLineAggregator::getWeekKey(lastPeriodDate);
+                        std::string lastDailyWeek = utils::KLineAggregator::getWeekKey(lastDailyDate);
+                        needAggregate = (lastDailyWeek > lastPeriodWeek);
+                    } else {
+                        std::string lastPeriodMonth = utils::KLineAggregator::getMonthKey(lastPeriodDate);
+                        std::string lastDailyMonth = utils::KLineAggregator::getMonthKey(lastDailyDate);
+                        needAggregate = (lastDailyMonth > lastPeriodMonth);
+                    }
+                    
+                    if (needAggregate) {
+                        LOG_INFO("检测到未完成的" + freq_name + "数据，日线最新: " + lastDailyDate + "，" + freq_name + "最新: " + lastPeriodDate);
+                        
+                        std::vector<core::StockData> newDailyData;
+                        for (const auto& d : dailyData) {
+                            if (d.trade_date > lastPeriodDate) {
+                                newDailyData.push_back(d);
+                            }
+                        }
+                        
+                        if (!newDailyData.empty()) {
+                            std::vector<core::StockData> aggregatedData;
+                            if (freq == "w" || freq == "W") {
+                                aggregatedData = utils::KLineAggregator::aggregateToWeekly(newDailyData);
+                            } else {
+                                aggregatedData = utils::KLineAggregator::aggregateToMonthly(newDailyData);
+                            }
+                            
+                            if (!aggregatedData.empty()) {
+                                LOG_INFO("聚合未完成周期数据: " + std::to_string(aggregatedData.size()) + " 条");
+                                data.insert(data.end(), aggregatedData.begin(), aggregatedData.end());
+                            }
+                        }
                     }
                 }
             }
@@ -145,17 +183,17 @@ std::vector<StockData> TushareDataSource::getQuoteData(
             LOG_ERROR("获取" + freq_name + "数据失败: " + response.msg);
             
             if (freq == "w" || freq == "W" || freq == "m" || freq == "M") {
-                LOG_INFO("尝试用日线数据聚合作为 fallback");
+                LOG_INFO("尝试用日线数据聚合");
                 
                 auto dailyData = getDailyData(ts_code, start_date, end_date);
                 if (!dailyData.empty()) {
                     if (freq == "w" || freq == "W") {
                         auto data = utils::KLineAggregator::aggregateToWeekly(dailyData);
-                        LOG_INFO("日线聚合成周线: " + std::to_string(data.size()) + " 条");
+                        LOG_INFO("聚合结果: " + std::to_string(data.size()) + " 条");
                         return data;
                     } else {
                         auto data = utils::KLineAggregator::aggregateToMonthly(dailyData);
-                        LOG_INFO("日线聚合成月线: " + std::to_string(data.size()) + " 条");
+                        LOG_INFO("聚合结果: " + std::to_string(data.size()) + " 条");
                         return data;
                     }
                 }

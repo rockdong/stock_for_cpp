@@ -15,19 +15,14 @@ public:
     static std::vector<core::StockData> aggregateToMonthly(
         const std::vector<core::StockData>& dailyData);
 
-    static std::vector<core::StockData> aggregatePartial(
-        const std::vector<core::StockData>& dailyData,
-        const std::string& lastWeeklyDate,
-        const std::string& lastMonthlyDate);
+    static std::string getWeekKey(const std::string& date);
+    static std::string getMonthKey(const std::string& date);
 
 private:
     static int getYear(const std::string& date);
     static int getMonth(const std::string& date);
     static int getWeek(const std::string& date);
     static int getDay(const std::string& date);
-    
-    static std::string getWeekKey(const std::string& date);
-    static std::string getMonthKey(const std::string& date);
     
     static core::StockData aggregatePeriod(
         const std::vector<core::StockData>& periodData,
