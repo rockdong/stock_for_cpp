@@ -21,10 +21,6 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
   useEffect(() => {
     if (!chartContainerRef.current || data.length === 0) return
 
-    if (chartRef.current) {
-      chartRef.current.remove()
-    }
-
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: '#ffffff' },
@@ -88,16 +84,21 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
 
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-        })
+        try {
+          chartRef.current.applyOptions({
+            width: chartContainerRef.current.clientWidth,
+          })
+        } catch {}
       }
     }
 
     window.addEventListener('resize', handleResize)
     return () => {
       window.removeEventListener('resize', handleResize)
-      chart.remove()
+      chartRef.current = null
+      try {
+        chart.remove()
+      } catch {}
     }
   }, [data, height])
 
