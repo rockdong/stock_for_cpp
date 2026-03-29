@@ -1,6 +1,7 @@
 #include "TushareDataSource.h"
 #include "Config.h"
 #include "Logger.h"
+#include "../utils/KLineAggregator.h"
 #include <unordered_map>
 
 namespace network {
@@ -122,9 +123,44 @@ std::vector<StockData> TushareDataSource::getQuoteData(
         LOG_DEBUG("获取" + freq_name + "数据: " + ts_code + " [" + start_date + " - " + end_date + "]");
         
         if (response.isSuccess()) {
-            return parseStockData(response);
+            auto data = parseStockData(response);
+            
+            if ((freq == "w" || freq == "W" || freq == "m" || freq == "M") && data.empty()) {
+                LOG_INFO(freq_name + "数据为空，尝试用日线数据聚合");
+                
+                auto dailyData = getDailyData(ts_code, start_date, end_date);
+                if (!dailyData.empty()) {
+                    if (freq == "w" || freq == "W") {
+                        data = utils::KLineAggregator::aggregateToWeekly(dailyData);
+                        LOG_INFO("日线聚合成周线: " + std::to_string(data.size()) + " 条");
+                    } else {
+                        data = utils::KLineAggregator::aggregateToMonthly(dailyData);
+                        LOG_INFO("日线聚合成月线: " + std::to_string(data.size()) + " 条");
+                    }
+                }
+            }
+            
+            return data;
         } else {
             LOG_ERROR("获取" + freq_name + "数据失败: " + response.msg);
+            
+            if (freq == "w" || freq == "W" || freq == "m" || freq == "M") {
+                LOG_INFO("尝试用日线数据聚合作为 fallback");
+                
+                auto dailyData = getDailyData(ts_code, start_date, end_date);
+                if (!dailyData.empty()) {
+                    if (freq == "w" || freq == "W") {
+                        auto data = utils::KLineAggregator::aggregateToWeekly(dailyData);
+                        LOG_INFO("日线聚合成周线: " + std::to_string(data.size()) + " 条");
+                        return data;
+                    } else {
+                        auto data = utils::KLineAggregator::aggregateToMonthly(dailyData);
+                        LOG_INFO("日线聚合成月线: " + std::to_string(data.size()) + " 条");
+                        return data;
+                    }
+                }
+            }
+            
             return {};
         }
     } catch (const std::exception& e) {

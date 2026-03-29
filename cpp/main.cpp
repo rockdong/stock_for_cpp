@@ -317,7 +317,7 @@ void analyzeStock(
                     chartData.freq = freq;
                     chartData.analysis_date = analysisDate;
                     
-                    size_t startIndex = data.size() > 50 ? data.size() - 50 : 0;
+                    size_t startIndex = data.size() > 10 ? data.size() - 10 : 0;
                     size_t emaOffset17 = ema17Values.size() - (data.size() - startIndex);
                     size_t emaOffset25 = ema25Values.size() - (data.size() - startIndex);
                     
@@ -412,7 +412,7 @@ void analyzeStock(
                             auto ema17Values = analysis::EMA::compute(closePrices, 17);
                             auto ema25Values = analysis::EMA::compute(closePrices, 25);
                             
-                            size_t startIdx = data.size() > 50 ? data.size() - 50 : 0;
+                            size_t startIdx = data.size() - 10;
                             for (size_t j = startIdx; j < data.size(); ++j) {
                                 data::ProcessDataPoint point;
                                 point.time = data[j].trade_date;

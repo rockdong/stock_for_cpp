@@ -10,6 +10,7 @@
 #include "TimeUtil.h"
 #include "StringUtil.h"
 #include "MathUtil.h"
+#include "KLineAggregator.h"
 
 /**
  * @namespace utils

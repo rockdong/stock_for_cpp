@@ -252,6 +252,7 @@ add_library(utils_lib STATIC
     utils/TimeUtil.cpp
     utils/StringUtil.cpp
     utils/MathUtil.cpp
+    utils/KLineAggregator.cpp
     utils/ThreadPool.cpp
     utils/RateLimiter.cpp
 )
