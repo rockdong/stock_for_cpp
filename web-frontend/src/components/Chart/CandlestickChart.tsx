@@ -7,6 +7,13 @@ interface CandlestickChartProps {
   height?: number
 }
 
+function formatTime(time: string): string {
+  if (time.length === 8 && /^\d{8}$/.test(time)) {
+    return `${time.slice(0, 4)}-${time.slice(4, 6)}-${time.slice(6, 8)}`
+  }
+  return time
+}
+
 export default function CandlestickChart({ data, height = 400 }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -43,7 +50,7 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
     })
 
     const candleData: CandlestickData[] = data.map(d => ({
-      time: d.time as any,
+      time: formatTime(d.time) as any,
       open: d.open,
       high: d.high,
       low: d.low,
@@ -59,7 +66,7 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
     const ema17Data: LineData[] = data
       .filter(d => d.ema17 !== undefined)
       .map(d => ({
-        time: d.time as any,
+        time: formatTime(d.time) as any,
         value: d.ema17!,
       }))
     ema17Series.setData(ema17Data)
@@ -72,7 +79,7 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
     const ema25Data: LineData[] = data
       .filter(d => d.ema25 !== undefined)
       .map(d => ({
-        time: d.time as any,
+        time: formatTime(d.time) as any,
         value: d.ema25!,
       }))
     ema25Series.setData(ema25Data)
