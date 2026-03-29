@@ -13,6 +13,7 @@ export default function AnalysisPage() {
   const [loading, setLoading] = useState(false)
   const [selectedStrategy, setSelectedStrategy] = useState<string>('')
   const [selectedFreq, setSelectedFreq] = useState<FreqType>('d')
+  const [showJson, setShowJson] = useState(false)
 
   useEffect(() => {
     loadRecords({})
@@ -212,10 +213,45 @@ export default function AnalysisPage() {
                     </div>
                   </div>
                 </div>
+
+                <div className="mt-5 pt-5 border-t border-border">
+                  <button
+                    onClick={() => setShowJson(!showJson)}
+                    className="flex items-center gap-2 text-sm text-muted hover:text-text transition-colors cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={showJson ? "M19 9l-7 7-7-7" : "M9 5l7 7-7 7"} />
+                    </svg>
+                    <span>{showJson ? '隐藏 JSON 数据' : '显示 JSON 数据'}</span>
+                  </button>
+                  
+                  {showJson && (
+                    <div className="mt-3 p-4 rounded-xl bg-primary overflow-auto">
+                      <pre className="text-xs text-text font-mono whitespace-pre-wrap break-all">
+                        {JSON.stringify(selectedRecord, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="bg-secondary rounded-2xl p-8 text-center border border-border">
                 <p className="text-muted">暂无图表数据</p>
+                {selectedRecord && (
+                  <button
+                    onClick={() => setShowJson(!showJson)}
+                    className="mt-4 text-sm text-cta hover:underline cursor-pointer"
+                  >
+                    {showJson ? '隐藏' : '显示'} JSON 数据
+                  </button>
+                )}
+                {showJson && selectedRecord && (
+                  <div className="mt-4 p-4 rounded-xl bg-primary overflow-auto max-h-96">
+                    <pre className="text-xs text-text font-mono whitespace-pre-wrap break-all">
+                      {JSON.stringify(selectedRecord, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             )}
           </div>
