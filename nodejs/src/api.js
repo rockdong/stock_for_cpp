@@ -161,6 +161,9 @@ router.get('/analysis/process', (req, res) => {
     const db = getDb();
     const { ts_code, start_date, end_date, signal, strategy, limit = 100 } = req.query;
     
+    // 当需要过滤时，先获取更多记录以确保过滤后有足够结果
+    const fetchLimit = (strategy || signal) ? Math.max(parseInt(limit) * 5, 500) : parseInt(limit);
+    
     let sql = `
       SELECT id, ts_code, stock_name, trade_date, data, created_at, expires_at
       FROM analysis_process_records
@@ -181,8 +184,8 @@ router.get('/analysis/process', (req, res) => {
       params.push(end_date);
     }
     
-    sql += ' ORDER BY created_at DESC LIMIT ?';
-    params.push(parseInt(limit));
+    sql += ' ORDER BY trade_date DESC, created_at DESC LIMIT ?';
+    params.push(fetchLimit);
     
     const records = db.prepare(sql).all(...params);
     
@@ -204,6 +207,8 @@ router.get('/analysis/process', (req, res) => {
         return strategies.some(s => s.freqs.some(f => f.signal === signal));
       });
     }
+    
+    parsedRecords = parsedRecords.slice(0, parseInt(limit));
     
     res.json({ success: true, data: parsedRecords });
   } catch (err) {
