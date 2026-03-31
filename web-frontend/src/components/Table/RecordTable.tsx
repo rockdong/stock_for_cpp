@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { AnalysisProcessRecord, StrategyData, ChartDataPoint, FreqType } from '../../types/analysis'
 import CandlestickChart, { DrillDownInfo } from '../Chart/CandlestickChart'
 
-interface DrillState {
-  active: boolean
-  originalFreq: FreqType
-  drillFreq: FreqType
+interface DrillLevel {
+  id: number
+  sourceFreq: FreqType
+  targetFreq: FreqType
   drillTime: string
   drillLabel: string
 }
@@ -36,12 +36,22 @@ function getWeekRange(date: Date): { start: Date; end: Date } {
   return { start, end }
 }
 
+function getFreqLabel(freq: FreqType): string {
+  switch (freq) {
+    case 'm': return '月K线'
+    case 'w': return '周K线'
+    case 'd': return '日K线'
+    default: return '日K线'
+  }
+}
+
 export default function RecordTable({ records }: RecordTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [selectedStrategy, setSelectedStrategy] = useState<string>('')
   const [selectedFreq, setSelectedFreq] = useState<FreqType>('d')
   const [showJson, setShowJson] = useState(false)
-  const [drillState, setDrillState] = useState<DrillState | null>(null)
+  const [drillStack, setDrillStack] = useState<DrillLevel[]>([])
+  const [drillIdCounter, setDrillIdCounter] = useState(0)
 
   const getStrategies = (record: AnalysisProcessRecord): StrategyData[] => {
     return record.data?.strategies || []
@@ -80,18 +90,16 @@ export default function RecordTable({ records }: RecordTableProps) {
     record: AnalysisProcessRecord,
     strategyName: string,
     freq: FreqType,
-    drill: DrillState | null
+    drillLevel: DrillLevel | null
   ): ChartDataPoint[] => {
     const allCandles = getCandles(record, strategyName, freq)
     
-    if (!drill || !drill.active) {
-      return allCandles
-    }
+    if (!drillLevel) return allCandles
 
-    const drillParts = parseTimeToParts(drill.drillTime)
+    const drillParts = parseTimeToParts(drillLevel.drillTime)
     if (!drillParts) return allCandles
 
-    if (drill.originalFreq === 'm' && freq === 'w') {
+    if (drillLevel.sourceFreq === 'm' && freq === 'w') {
       return allCandles.filter(candle => {
         const parts = parseTimeToParts(candle.time)
         if (!parts) return false
@@ -99,7 +107,7 @@ export default function RecordTable({ records }: RecordTableProps) {
       })
     }
     
-    if (drill.originalFreq === 'm' && freq === 'd') {
+    if (drillLevel.sourceFreq === 'm' && freq === 'd') {
       return allCandles.filter(candle => {
         const parts = parseTimeToParts(candle.time)
         if (!parts) return false
@@ -107,7 +115,7 @@ export default function RecordTable({ records }: RecordTableProps) {
       })
     }
     
-    if (drill.originalFreq === 'w' && freq === 'd') {
+    if (drillLevel.sourceFreq === 'w' && freq === 'd') {
       const drillDate = new Date(drillParts.year, drillParts.month - 1, drillParts.day)
       const { start, end } = getWeekRange(drillDate)
       
@@ -122,28 +130,29 @@ export default function RecordTable({ records }: RecordTableProps) {
     return allCandles
   }
 
-  const handleDrillDown = (info: DrillDownInfo) => {
-    const targetFreq = info.targetFreq
-    
+  const handleDrillDown = (info: DrillDownInfo, sourceFreq: FreqType) => {
     const label = info.targetFreq === 'w' 
-      ? `${info.time.slice(0, 4)}年${info.time.slice(5, 7)}月 - 周K线`
-      : `${info.time.slice(0, 4)}年${info.time.slice(5, 7)}月 - 日K线`
+      ? `${info.time.slice(0, 4)}年${info.time.slice(5, 7)}月`
+      : `${info.time}`
     
-    setDrillState({
-      active: true,
-      originalFreq: selectedFreq,
-      drillFreq: targetFreq,
+    const newLevel: DrillLevel = {
+      id: drillIdCounter,
+      sourceFreq,
+      targetFreq: info.targetFreq,
       drillTime: info.time.replace(/-/g, ''),
       drillLabel: label,
-    })
-    setSelectedFreq(targetFreq)
+    }
+    
+    setDrillIdCounter(drillIdCounter + 1)
+    setDrillStack([...drillStack, newLevel])
   }
 
-  const handleResetDrill = () => {
-    if (drillState) {
-      setSelectedFreq(drillState.originalFreq)
-    }
-    setDrillState(null)
+  const handleRemoveDrillLevel = (id: number) => {
+    setDrillStack(drillStack.filter(level => level.id !== id))
+  }
+
+  const handleClearDrillStack = () => {
+    setDrillStack([])
   }
 
   const getSignalText = (record: AnalysisProcessRecord): string => {
@@ -162,13 +171,13 @@ export default function RecordTable({ records }: RecordTableProps) {
   const handleToggle = (record: AnalysisProcessRecord) => {
     if (expandedId === record.id) {
       setExpandedId(null)
-      setDrillState(null)
+      setDrillStack([])
       return
     }
     
     setExpandedId(record.id)
     setShowJson(false)
-    setDrillState(null)
+    setDrillStack([])
     
     const strategies = getStrategies(record)
     if (strategies.length > 0) {
@@ -196,8 +205,8 @@ export default function RecordTable({ records }: RecordTableProps) {
         const { buy, sell } = getSignalSummary(record)
         const isExpanded = expandedId === record.id
         const strategies = getStrategies(record)
-        const chartData = isExpanded && selectedStrategy 
-          ? getFilteredCandles(record, selectedStrategy, selectedFreq, drillState)
+        const baseChartData = isExpanded && selectedStrategy 
+          ? getCandles(record, selectedStrategy, selectedFreq)
           : []
 
         return (
@@ -250,7 +259,10 @@ export default function RecordTable({ records }: RecordTableProps) {
                   <div className="flex gap-3">
                     <select
                       value={selectedStrategy}
-                      onChange={(e) => setSelectedStrategy(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedStrategy(e.target.value)
+                        setDrillStack([])
+                      }}
                       className="px-3 py-2 rounded-lg bg-primary border border-border text-text text-sm cursor-pointer"
                     >
                       {strategies.map(s => (
@@ -259,7 +271,10 @@ export default function RecordTable({ records }: RecordTableProps) {
                     </select>
                     <select
                       value={selectedFreq}
-                      onChange={(e) => setSelectedFreq(e.target.value as FreqType)}
+                      onChange={(e) => {
+                        setSelectedFreq(e.target.value as FreqType)
+                        setDrillStack([])
+                      }}
                       className="px-3 py-2 rounded-lg bg-primary border border-border text-text text-sm cursor-pointer"
                     >
                       <option value="d">日线</option>
@@ -269,86 +284,125 @@ export default function RecordTable({ records }: RecordTableProps) {
                   </div>
                 </div>
 
-                {chartData.length > 0 ? (
-                  <div className="mt-4 bg-primary rounded-xl p-4 border border-border">
-                    <div className="flex gap-4 mb-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded bg-cta"></span>
-                        <span className="text-muted">K线 (涨)</span>
+                {baseChartData.length > 0 ? (
+                  <div className="mt-4 space-y-4">
+                    <div className="bg-primary rounded-xl p-4 border border-border">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded bg-cta"></span>
+                            <span className="text-muted">K线 (涨)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded bg-sell"></span>
+                            <span className="text-muted">K线 (跌)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-0.5 bg-blue-500 rounded"></span>
+                            <span className="text-muted">EMA17</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-0.5 bg-orange-500 rounded"></span>
+                            <span className="text-muted">EMA25</span>
+                          </div>
+                        </div>
+                        <div className="text-sm font-medium text-gray-700">
+                          {getFreqLabel(selectedFreq)}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded bg-sell"></span>
-                        <span className="text-muted">K线 (跌)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-0.5 bg-blue-500 rounded"></span>
-                        <span className="text-muted">EMA17</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-0.5 bg-orange-500 rounded"></span>
-                        <span className="text-muted">EMA25</span>
-                      </div>
+                      
+                      <CandlestickChart 
+                        data={baseChartData} 
+                        height={300} 
+                        freq={selectedFreq}
+                        onDrillDown={(info) => handleDrillDown(info, selectedFreq)}
+                      />
                     </div>
-                    
-                    {drillState?.active && (
-                      <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-gray-100 rounded-lg">
+
+                    {drillStack.map((level, index) => {
+                      const drillData = getFilteredCandles(record, selectedStrategy, level.targetFreq, level)
+                      const prevLevel = index > 0 ? drillStack[index - 1] : null
+                      const sourceFreq = prevLevel ? prevLevel.targetFreq : selectedFreq
+                      
+                      return (
+                        <div key={level.id} className="bg-primary rounded-xl p-4 border border-gray-300 border-l-4 border-l-blue-500">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleRemoveDrillLevel(level.id)}
+                                className="p-1 rounded hover:bg-gray-200 transition-colors cursor-pointer"
+                              >
+                                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                              <span className="text-sm text-gray-500">
+                                {getFreqLabel(sourceFreq)} › {level.drillLabel}
+                              </span>
+                              <span className="text-sm font-medium text-gray-900">
+                                {getFreqLabel(level.targetFreq)}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-400">
+                              {drillData.length} 条数据
+                            </span>
+                          </div>
+                          
+                          {drillData.length > 0 ? (
+                            <CandlestickChart 
+                              data={drillData} 
+                              height={250} 
+                              freq={level.targetFreq}
+                              onDrillDown={(info) => handleDrillDown(info, level.targetFreq)}
+                            />
+                          ) : (
+                            <div className="h-16 flex items-center justify-center text-gray-400 text-sm">
+                              该时间段无数据
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {drillStack.length > 0 && (
+                      <div className="flex justify-end">
                         <button
-                          onClick={handleResetDrill}
-                          className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 cursor-pointer"
+                          onClick={handleClearDrillStack}
+                          className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
                         >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                          </svg>
-                          返回
+                          清除所有下钻图表
                         </button>
-                        <span className="text-gray-400">›</span>
-                        <span className="text-sm text-gray-600">
-                          {drillState.originalFreq === 'm' ? '月K线' : '周K线'}
-                        </span>
-                        <span className="text-gray-400">›</span>
-                        <span className="text-sm font-medium text-gray-900">{drillState.drillLabel}</span>
-                        <span className="text-gray-400">›</span>
-                        <span className="text-sm font-medium text-cta">
-                          {drillState.drillFreq === 'w' ? '周K线' : '日K线'}
-                        </span>
                       </div>
                     )}
-                    
-                    <CandlestickChart 
-                      data={chartData} 
-                      height={350} 
-                      freq={selectedFreq}
-                      onDrillDown={handleDrillDown}
-                    />
 
-                    <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
+                    <div className="grid grid-cols-4 gap-4 pt-4 border-t border-border">
                       <div className="text-center p-3 rounded-xl bg-secondary">
                         <div className="text-xs text-muted mb-1">MACD</div>
                         <div className="text-base font-semibold text-text">
-                          {chartData[chartData.length - 1]?.macd?.toFixed(4) || '-'}
+                          {baseChartData[baseChartData.length - 1]?.macd?.toFixed(4) || '-'}
                         </div>
                       </div>
                       <div className="text-center p-3 rounded-xl bg-secondary">
                         <div className="text-xs text-muted mb-1">RSI</div>
                         <div className="text-base font-semibold text-text">
-                          {chartData[chartData.length - 1]?.rsi?.toFixed(2) || '-'}
+                          {baseChartData[baseChartData.length - 1]?.rsi?.toFixed(2) || '-'}
                         </div>
                       </div>
                       <div className="text-center p-3 rounded-xl bg-secondary">
                         <div className="text-xs text-muted mb-1">EMA17</div>
                         <div className="text-base font-semibold text-text">
-                          {chartData[chartData.length - 1]?.ema17?.toFixed(2) || '-'}
+                          {baseChartData[baseChartData.length - 1]?.ema17?.toFixed(2) || '-'}
                         </div>
                       </div>
                       <div className="text-center p-3 rounded-xl bg-secondary">
                         <div className="text-xs text-muted mb-1">EMA25</div>
                         <div className="text-base font-semibold text-text">
-                          {chartData[chartData.length - 1]?.ema25?.toFixed(2) || '-'}
+                          {baseChartData[baseChartData.length - 1]?.ema25?.toFixed(2) || '-'}
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-border">
+                    <div className="pt-4 border-t border-border">
                       <button
                         onClick={() => setShowJson(!showJson)}
                         className="flex items-center gap-2 text-sm text-muted hover:text-text transition-colors cursor-pointer"
