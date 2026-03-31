@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { createChart, ColorType, IChartApi, CandlestickData, LineData } from 'lightweight-charts'
-import { ChartDataPoint } from '../../types/analysis'
+import { ChartDataPoint, FreqType } from '../../types/analysis'
+
+export interface DrillDownInfo {
+  time: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
 
 interface CandlestickChartProps {
   data: ChartDataPoint[]
   height?: number
+  freq?: FreqType
+  onDrillDown?: (info: DrillDownInfo, freq: FreqType) => void
 }
 
 function formatTime(time: string): string {
@@ -26,10 +37,16 @@ function formatVolume(vol: number | undefined): string {
   return vol.toString()
 }
 
-export default function CandlestickChart({ data, height = 400 }: CandlestickChartProps) {
+export default function CandlestickChart({ data, height = 400, freq = 'd', onDrillDown }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const [tooltip, setTooltip] = useState<{
+    visible: boolean
+    x: number
+    y: number
+    data: ChartDataPoint | null
+  }>({ visible: false, x: 0, y: 0, data: null })
+  const [clickMenu, setClickMenu] = useState<{
     visible: boolean
     x: number
     y: number
@@ -93,6 +110,26 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
       }
     })
 
+    chart.subscribeClick((param) => {
+      if (!param.time || !param.point) {
+        setClickMenu({ visible: false, x: 0, y: 0, data: null })
+        return
+      }
+      
+      const timeStr = param.time.toString()
+      const pointData = data.find(d => formatTime(d.time) === timeStr)
+      
+      if (pointData && param.point) {
+        setClickMenu({
+          visible: true,
+          x: param.point.x,
+          y: param.point.y,
+          data: pointData,
+        })
+        setTooltip({ visible: false, x: 0, y: 0, data: null })
+      }
+    })
+
     const ema17Series = chart.addLineSeries({
       color: '#2196F3',
       lineWidth: 2,
@@ -143,8 +180,38 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
 
   const isUp = tooltip.data && tooltip.data.close >= tooltip.data.open
 
+  const handleDrillDown = () => {
+    if (clickMenu.data && onDrillDown) {
+      onDrillDown({
+        time: clickMenu.data.time,
+        open: clickMenu.data.open,
+        high: clickMenu.data.high,
+        low: clickMenu.data.low,
+        close: clickMenu.data.close,
+        volume: clickMenu.data.volume,
+      }, freq)
+      setClickMenu({ visible: false, x: 0, y: 0, data: null })
+    }
+  }
+
+  const getDrillOptions = (): { label: string }[] => {
+    if (freq === 'm') {
+      return [
+        { label: '查看周K线' },
+        { label: '查看日K线' },
+      ]
+    } else if (freq === 'w') {
+      return [
+        { label: '查看日K线' },
+      ]
+    }
+    return []
+  }
+
+  const drillOptions = getDrillOptions()
+
   return (
-    <div className="relative">
+    <div className="relative" onClick={() => setClickMenu({ visible: false, x: 0, y: 0, data: null })}>
       <div 
         ref={chartContainerRef} 
         className="w-full rounded-lg border border-gray-200 bg-white"
@@ -193,6 +260,30 @@ export default function CandlestickChart({ data, height = 400 }: CandlestickChar
                tooltip.data.signal === 'SELL' ? '🟢 卖出信号' : tooltip.data.signal}
             </div>
           )}
+        </div>
+      )}
+      
+      {clickMenu.visible && clickMenu.data && drillOptions.length > 0 && (
+        <div 
+          className="absolute z-50 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg py-1 text-sm min-w-[120px]"
+          style={{ 
+            left: Math.min(clickMenu.x + 10, (chartContainerRef.current?.clientWidth || 400) - 140),
+            top: Math.max(clickMenu.y - 20, 10),
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100">
+            {clickMenu.data.time}
+          </div>
+          {drillOptions.map((option, index) => (
+            <button
+              key={index}
+              className="w-full px-3 py-2 text-left hover:bg-gray-100 transition-colors cursor-pointer text-gray-700"
+              onClick={() => handleDrillDown()}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       )}
     </div>

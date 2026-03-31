@@ -1,9 +1,39 @@
 import { useState } from 'react'
 import { AnalysisProcessRecord, StrategyData, ChartDataPoint, FreqType } from '../../types/analysis'
-import CandlestickChart from '../Chart/CandlestickChart'
+import CandlestickChart, { DrillDownInfo } from '../Chart/CandlestickChart'
+
+interface DrillState {
+  active: boolean
+  originalFreq: FreqType
+  drillFreq: FreqType
+  drillTime: string
+  drillLabel: string
+}
 
 interface RecordTableProps {
   records: AnalysisProcessRecord[]
+}
+
+function parseTimeToParts(time: string): { year: number; month: number; day: number } | null {
+  const cleanTime = time.replace(/-/g, '')
+  if (cleanTime.length === 8) {
+    return {
+      year: parseInt(cleanTime.slice(0, 4)),
+      month: parseInt(cleanTime.slice(4, 6)),
+      day: parseInt(cleanTime.slice(6, 8)),
+    }
+  }
+  return null
+}
+
+function getWeekRange(date: Date): { start: Date; end: Date } {
+  const day = date.getDay()
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1)
+  const start = new Date(date)
+  start.setDate(diff)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  return { start, end }
 }
 
 export default function RecordTable({ records }: RecordTableProps) {
@@ -11,6 +41,7 @@ export default function RecordTable({ records }: RecordTableProps) {
   const [selectedStrategy, setSelectedStrategy] = useState<string>('')
   const [selectedFreq, setSelectedFreq] = useState<FreqType>('d')
   const [showJson, setShowJson] = useState(false)
+  const [drillState, setDrillState] = useState<DrillState | null>(null)
 
   const getStrategies = (record: AnalysisProcessRecord): StrategyData[] => {
     return record.data?.strategies || []
@@ -45,6 +76,76 @@ export default function RecordTable({ records }: RecordTableProps) {
     return freqData?.candles || []
   }
 
+  const getFilteredCandles = (
+    record: AnalysisProcessRecord,
+    strategyName: string,
+    freq: FreqType,
+    drill: DrillState | null
+  ): ChartDataPoint[] => {
+    const allCandles = getCandles(record, strategyName, freq)
+    
+    if (!drill || !drill.active) {
+      return allCandles
+    }
+
+    const drillParts = parseTimeToParts(drill.drillTime)
+    if (!drillParts) return allCandles
+
+    if (drill.originalFreq === 'm' && freq === 'w') {
+      return allCandles.filter(candle => {
+        const parts = parseTimeToParts(candle.time)
+        if (!parts) return false
+        return parts.year === drillParts.year && parts.month === drillParts.month
+      })
+    }
+    
+    if (drill.originalFreq === 'm' && freq === 'd') {
+      return allCandles.filter(candle => {
+        const parts = parseTimeToParts(candle.time)
+        if (!parts) return false
+        return parts.year === drillParts.year && parts.month === drillParts.month
+      })
+    }
+    
+    if (drill.originalFreq === 'w' && freq === 'd') {
+      const drillDate = new Date(drillParts.year, drillParts.month - 1, drillParts.day)
+      const { start, end } = getWeekRange(drillDate)
+      
+      return allCandles.filter(candle => {
+        const parts = parseTimeToParts(candle.time)
+        if (!parts) return false
+        const candleDate = new Date(parts.year, parts.month - 1, parts.day)
+        return candleDate >= start && candleDate <= end
+      })
+    }
+
+    return allCandles
+  }
+
+  const handleDrillDown = (info: DrillDownInfo, fromFreq: FreqType) => {
+    const targetFreq: FreqType = fromFreq === 'm' ? 'w' : 'd'
+    
+    const label = fromFreq === 'm' 
+      ? `${info.time.slice(0, 4)}年${info.time.slice(5, 7)}月`
+      : `${info.time} 周`
+    
+    setDrillState({
+      active: true,
+      originalFreq: fromFreq,
+      drillFreq: targetFreq,
+      drillTime: info.time.replace(/-/g, ''),
+      drillLabel: label,
+    })
+    setSelectedFreq(targetFreq)
+  }
+
+  const handleResetDrill = () => {
+    if (drillState) {
+      setSelectedFreq(drillState.originalFreq)
+    }
+    setDrillState(null)
+  }
+
   const getSignalText = (record: AnalysisProcessRecord): string => {
     const strategies = getStrategies(record)
     const signals: string[] = []
@@ -61,11 +162,13 @@ export default function RecordTable({ records }: RecordTableProps) {
   const handleToggle = (record: AnalysisProcessRecord) => {
     if (expandedId === record.id) {
       setExpandedId(null)
+      setDrillState(null)
       return
     }
     
     setExpandedId(record.id)
     setShowJson(false)
+    setDrillState(null)
     
     const strategies = getStrategies(record)
     if (strategies.length > 0) {
@@ -94,7 +197,7 @@ export default function RecordTable({ records }: RecordTableProps) {
         const isExpanded = expandedId === record.id
         const strategies = getStrategies(record)
         const chartData = isExpanded && selectedStrategy 
-          ? getCandles(record, selectedStrategy, selectedFreq) 
+          ? getFilteredCandles(record, selectedStrategy, selectedFreq, drillState)
           : []
 
         return (
@@ -186,7 +289,37 @@ export default function RecordTable({ records }: RecordTableProps) {
                         <span className="text-muted">EMA25</span>
                       </div>
                     </div>
-                    <CandlestickChart data={chartData} height={350} />
+                    
+                    {drillState?.active && (
+                      <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-gray-100 rounded-lg">
+                        <button
+                          onClick={handleResetDrill}
+                          className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 cursor-pointer"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                          返回
+                        </button>
+                        <span className="text-gray-400">›</span>
+                        <span className="text-sm text-gray-600">
+                          {drillState.originalFreq === 'm' ? '月K线' : '周K线'}
+                        </span>
+                        <span className="text-gray-400">›</span>
+                        <span className="text-sm font-medium text-gray-900">{drillState.drillLabel}</span>
+                        <span className="text-gray-400">›</span>
+                        <span className="text-sm font-medium text-cta">
+                          {drillState.drillFreq === 'w' ? '周K线' : '日K线'}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <CandlestickChart 
+                      data={chartData} 
+                      height={350} 
+                      freq={selectedFreq}
+                      onDrillDown={handleDrillDown}
+                    />
 
                     <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
                       <div className="text-center p-3 rounded-xl bg-secondary">
