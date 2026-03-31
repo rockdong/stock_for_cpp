@@ -9,13 +9,14 @@ export interface DrillDownInfo {
   low: number
   close: number
   volume: number
+  targetFreq: FreqType
 }
 
 interface CandlestickChartProps {
   data: ChartDataPoint[]
   height?: number
   freq?: FreqType
-  onDrillDown?: (info: DrillDownInfo, freq: FreqType) => void
+  onDrillDown?: (info: DrillDownInfo) => void
 }
 
 function formatTime(time: string): string {
@@ -179,8 +180,11 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
   }, [data, height])
 
   const isUp = tooltip.data && tooltip.data.close >= tooltip.data.open
+  const changePercent = tooltip.data 
+    ? ((tooltip.data.close - tooltip.data.open) / tooltip.data.open * 100).toFixed(2)
+    : '0.00'
 
-  const handleDrillDown = () => {
+  const handleDrillDown = (targetFreq: FreqType) => {
     if (clickMenu.data && onDrillDown) {
       onDrillDown({
         time: clickMenu.data.time,
@@ -189,20 +193,21 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
         low: clickMenu.data.low,
         close: clickMenu.data.close,
         volume: clickMenu.data.volume,
-      }, freq)
+        targetFreq,
+      })
       setClickMenu({ visible: false, x: 0, y: 0, data: null })
     }
   }
 
-  const getDrillOptions = (): { label: string }[] => {
+  const getDrillOptions = (): { label: string; targetFreq: FreqType }[] => {
     if (freq === 'm') {
       return [
-        { label: '查看周K线' },
-        { label: '查看日K线' },
+        { label: '查看周K线', targetFreq: 'w' },
+        { label: '查看日K线', targetFreq: 'd' },
       ]
     } else if (freq === 'w') {
       return [
-        { label: '查看日K线' },
+        { label: '查看日K线', targetFreq: 'd' },
       ]
     }
     return []
@@ -235,6 +240,10 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
             <span className="text-gray-500">收:</span>
             <span className={`font-medium ${isUp ? 'text-red-500' : 'text-green-600'}`}>
               {formatNumber(tooltip.data.close)}
+            </span>
+            <span className="text-gray-500">涨跌:</span>
+            <span className={`font-medium ${isUp ? 'text-red-500' : 'text-green-600'}`}>
+              {isUp ? '+' : ''}{changePercent}%
             </span>
           </div>
           <div className="border-t border-gray-100 mt-2 pt-2">
@@ -279,7 +288,7 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
             <button
               key={index}
               className="w-full px-3 py-2 text-left hover:bg-gray-100 transition-colors cursor-pointer text-gray-700"
-              onClick={() => handleDrillDown()}
+              onClick={() => handleDrillDown(option.targetFreq)}
             >
               {option.label}
             </button>

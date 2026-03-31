@@ -122,16 +122,16 @@ export default function RecordTable({ records }: RecordTableProps) {
     return allCandles
   }
 
-  const handleDrillDown = (info: DrillDownInfo, fromFreq: FreqType) => {
-    const targetFreq: FreqType = fromFreq === 'm' ? 'w' : 'd'
+  const handleDrillDown = (info: DrillDownInfo) => {
+    const targetFreq = info.targetFreq
     
-    const label = fromFreq === 'm' 
-      ? `${info.time.slice(0, 4)}年${info.time.slice(5, 7)}月`
-      : `${info.time} 周`
+    const label = info.targetFreq === 'w' 
+      ? `${info.time.slice(0, 4)}年${info.time.slice(5, 7)}月 - 周K线`
+      : `${info.time.slice(0, 4)}年${info.time.slice(5, 7)}月 - 日K线`
     
     setDrillState({
       active: true,
-      originalFreq: fromFreq,
+      originalFreq: selectedFreq,
       drillFreq: targetFreq,
       drillTime: info.time.replace(/-/g, ''),
       drillLabel: label,

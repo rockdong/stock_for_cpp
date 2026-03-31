@@ -412,7 +412,18 @@ void analyzeStock(
                             auto ema17Values = analysis::EMA::compute(closePrices, 17);
                             auto ema25Values = analysis::EMA::compute(closePrices, 25);
                             
-                            size_t startIdx = data.size() - 10;
+                            int candleCount;
+                            if (std::string(freq) == "m") {
+                                candleCount = 20;
+                            } else if (std::string(freq) == "w") {
+                                candleCount = 100;
+                            } else {
+                                candleCount = 500;
+                            }
+                            
+                            size_t startIdx = (data.size() > static_cast<size_t>(candleCount)) 
+                                ? data.size() - candleCount : 0;
+                            
                             for (size_t j = startIdx; j < data.size(); ++j) {
                                 data::ProcessDataPoint point;
                                 point.time = data[j].trade_date;
@@ -423,7 +434,8 @@ void analyzeStock(
                                 point.volume = data[j].volume;
                                 
                                 size_t emaIdx = j - startIdx;
-                                size_t emaOffset = ema17Values.size() - 10;
+                                size_t emaOffset = ema17Values.size() > (data.size() - startIdx) 
+                                    ? ema17Values.size() - (data.size() - startIdx) : 0;
                                 if (emaIdx + emaOffset < ema17Values.size()) {
                                     point.ema17 = ema17Values[emaIdx + emaOffset];
                                 }
