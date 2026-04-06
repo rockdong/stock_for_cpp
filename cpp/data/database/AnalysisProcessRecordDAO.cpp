@@ -1,5 +1,6 @@
 #include "AnalysisProcessRecordDAO.h"
 #include "AnalysisProcessRecordTable.h"
+#include "AnalysisProgressTable.h"
 #include "Connection.h"
 #include "Logger.h"
 #include <sqlpp11/sqlpp11.h>
@@ -192,6 +193,39 @@ int StockProcessRecordDAO::count() {
     } catch (const std::exception& e) {
         LOG_ERROR("查询过程记录数量失败: " + std::string(e.what()));
         return 0;
+    }
+}
+
+AnalysisProgress StockProcessRecordDAO::getProgress() const {
+    auto& conn = Connection::getInstance();
+    AnalysisProgress progress{0, 0, 0, "", "", ""};
+    
+    if (!conn.isConnected()) {
+        LOG_ERROR("数据库未连接");
+        return progress;
+    }
+
+    try {
+        AnalysisProgressTable table;
+        auto db = conn.getDb();
+        
+        for (const auto& row : (*db)(sqlpp::select(all_of(table))
+                                     .from(table)
+                                     .unconditionally()
+                                     .limit(1u))) {
+            progress.total = row.total;
+            progress.completed = row.completed;
+            progress.failed = row.failed;
+            progress.status = row.status;
+            progress.started_at = row.startedAt.is_null() ? "" : row.startedAt.value();
+            progress.updated_at = row.updatedAt.is_null() ? "" : row.updatedAt.value();
+            return progress;
+        }
+        
+        return progress;
+    } catch (const std::exception& e) {
+        LOG_ERROR("查询分析进度失败: " + std::string(e.what()));
+        return progress;
     }
 }
 

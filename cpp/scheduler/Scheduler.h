@@ -41,13 +41,24 @@ public:
     void setOnceMode(bool once);
     
     /**
+     * @brief 检查今天是否已执行分析
+     * @return true: 今天已执行，false: 今天未执行
+     */
+    bool hasRunToday() const;
+    
+    /**
+     * @brief 获取最后执行日期
+     * @return 最后执行日期字符串（YYYY-MM-DD格式），文件不存在时返回空字符串
+     */
+    std::string getLastRunDate() const;
+    
+    /**
      * @brief 析构函数
      */
     ~Scheduler();
     
 private:
     bool shouldRunNow();
-    bool hasRunToday();
     void markAsRun();
     void executeAnalysis();
     std::string getCurrentDate() const;

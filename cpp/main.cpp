@@ -12,6 +12,9 @@
 #include "Config.h"
 #include "Logger.h"
 
+// EventBus
+#include "EventBus.h"
+
 // 数据层
 #include "Connection.h"
 #include "StockDAO.h"
@@ -88,9 +91,47 @@ void printHelp(const char* programName) {
     std::cout << "  " << programName << " -t 09:30 # 每天 09:30 执行" << std::endl;
 }
 
-/**
- * @brief 打印版本信息
- */
+bool checkStartupAnalysisNeeded(scheduler::Scheduler& sched, data::AnalysisProcessRecordDAO& dao) {
+    auto startCheck = std::chrono::high_resolution_clock::now();
+    
+    std::string analysisDate = utils::TimeUtil::today();
+    
+    try {
+        if (sched.hasRunToday()) {
+            LOG_INFO("文件记录显示今天已完成分析，验证数据库进度...");
+            
+            auto progress = dao.getProgress();
+            
+            if (progress.status == "completed" && 
+                progress.completed == progress.total && 
+                progress.total > 0) {
+                
+                auto endCheck = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endCheck - startCheck);
+                
+                LOG_INFO("今天已完成分析，跳过首次执行，进入调度等待");
+                LOG_INFO("分析日期: " + analysisDate + 
+                         ", 进度: " + std::to_string(progress.completed) + "/" + std::to_string(progress.total) +
+                         ", 检查耗时: " + std::to_string(duration.count()) + "ms");
+                
+                return false;
+            } else {
+                LOG_WARN("文件记录与数据库状态不一致，将重新执行分析");
+                LOG_WARN("进度状态: " + progress.status + 
+                         ", 完成: " + std::to_string(progress.completed) + 
+                         ", 总数: " + std::to_string(progress.total));
+                return true;
+            }
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("启动检查异常: " + std::string(e.what()) + "，默认执行分析");
+        return true;
+    }
+    
+    LOG_INFO("首次启动或今天未完成，立即执行分析...");
+    return true;
+}
+
 void printVersion() {
     std::cout << "========================================" << std::endl;
     std::cout << "📊 Stock Analysis System" << std::endl;
@@ -116,6 +157,14 @@ bool initializeSystem() {
     
     // 初始化日志系统
     logger::init();
+    
+    // 初始化 EventBus
+    if (!eventbus::initialize()) {
+        LOG_ERROR("EventBus 初始化失败");
+        return false;
+    }
+    
+    LOG_INFO("EventBus 初始化成功");
     
     LOG_INFO("========================================");
     LOG_INFO("应用名称: " + config.getAppName());
@@ -551,6 +600,9 @@ void performBatchAnalysis(
  * @brief 清理系统资源
  */
 void cleanup() {
+    // 关闭 EventBus
+    eventbus::shutdown();
+    
     // 断开数据库连接
     auto& conn = data::Connection::getInstance();
     conn.disconnect();
@@ -616,17 +668,17 @@ int main(int argc, char* argv[]) {
             LOG_INFO("执行单次分析...");
             performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
         } else {
-            // 定时执行模式 - 首次启动先执行一次
-            LOG_INFO("首次启动，立即执行一次分析...");
-            performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
-            
-            LOG_INFO("启动定时调度模式，执行时间: " + options.executeTime);
-            
             scheduler::Scheduler sched(options.executeTime, [&]() {
                 performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
             });
             
             g_scheduler = &sched;
+            
+            if (checkStartupAnalysisNeeded(sched, processRecordDao)) {
+                performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
+            }
+            
+            LOG_INFO("启动定时调度模式，执行时间: " + options.executeTime);
             sched.run();
         }
         

@@ -1,0 +1,65 @@
+{
+  "project": {
+    "name": "待定项目",
+    "phase": "idle",
+    "started": null,
+    "lastUpdate": "2026-04-06T02:00:00Z"
+  },
+  "agents": {
+    "orion-product": {
+      "status": "idle",
+      "lastActive": null,
+      "tasksCompleted": 0,
+      "currentTask": null
+    },
+    "athena-architect": {
+      "status": "idle",
+      "lastActive": null,
+      "tasksCompleted": 0,
+      "currentTask": null
+    },
+    "phoenix-frontend": {
+      "status": "idle",
+      "lastActive": null,
+      "tasksCompleted": 0,
+      "currentTask": null
+    },
+    "atlas-backend": {
+      "status": "idle",
+      "lastActive": null,
+      "tasksCompleted": 0,
+      "currentTask": null
+    },
+    "nova-devops": {
+      "status": "idle",
+      "lastActive": null,
+      "tasksCompleted": 0,
+      "currentTask": null
+    },
+    "oracle-qa": {
+      "status": "idle",
+      "lastActive": null,
+      "tasksCompleted": 0,
+      "currentTask": null
+    },
+    "scribe-docs": {
+      "status": "idle",
+      "lastActive": null,
+      "tasksCompleted": 0,
+      "currentTask": null
+    }
+  },
+  "tasks": {
+    "pending": [],
+    "inProgress": [],
+    "completed": [],
+    "blocked": []
+  },
+  "metrics": {
+    "tasksTotal": 0,
+    "tasksCompleted": 0,
+    "tasksPending": 0,
+    "tasksBlocked": 0,
+    "avgCompletionTime": null
+  }
+}

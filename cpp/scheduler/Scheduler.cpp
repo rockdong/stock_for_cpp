@@ -2,6 +2,8 @@
 #include "TradeCalendar.h"
 #include "TimeUtil.h"
 #include "Logger.h"
+#include "../eventbus/EventBusManager.h"
+#include "../eventbus/events/SystemEvents.h"
 #include <thread>
 #include <chrono>
 #include <fstream>
@@ -48,6 +50,32 @@ public:
         onceMode_ = once;
     }
     
+    bool hasRunToday() {
+        std::string today = getCurrentDate();
+        std::string lastRunFile = "data/.last_run";
+        
+        std::ifstream file(lastRunFile);
+        if (file.is_open()) {
+            std::string lastDate;
+            file >> lastDate;
+            file.close();
+            return lastDate == today;
+        }
+        return false;
+    }
+    
+    std::string getLastRunDate() const {
+        std::string lastRunFile = "data/.last_run";
+        std::ifstream file(lastRunFile);
+        if (file.is_open()) {
+            std::string lastDate;
+            file >> lastDate;
+            file.close();
+            return lastDate;
+        }
+        return "";
+    }
+    
 private:
     bool shouldRunNow() {
         std::string currentTime = getCurrentTime();
@@ -68,20 +96,6 @@ private:
         return true;
     }
     
-    bool hasRunToday() {
-        std::string today = getCurrentDate();
-        std::string lastRunFile = "data/.last_run";
-        
-        std::ifstream file(lastRunFile);
-        if (file.is_open()) {
-            std::string lastDate;
-            file >> lastDate;
-            file.close();
-            return lastDate == today;
-        }
-        return false;
-    }
-    
     void markAsRun() {
         std::string today = getCurrentDate();
         std::string lastRunFile = "data/.last_run";
@@ -97,6 +111,12 @@ private:
     }
     
     void executeAnalysis() {
+        auto bus = eventbus::EventBusManager::getInstance().getCoreBus();
+        
+        bus->postpone(eventbus::events::AppStarted{
+            "", ""
+        });
+        
         try {
             markAsRun();
             callback_();
@@ -104,6 +124,8 @@ private:
         } catch (const std::exception& e) {
             LOG_ERROR("定时任务执行失败: " + std::string(e.what()));
         }
+        
+        bus->process();
     }
     
     void parseExecuteTime() {
@@ -114,7 +136,22 @@ private:
     }
     
     std::string getCurrentDate() const {
-        return utils::TimeUtil::today();
+        // 考虑切换时间（默认 02:00），与 calculateAnalysisDate() 逻辑一致
+        // 当前时间 < 切换时间时，使用昨天的日期
+        time_t now = time(nullptr);
+        struct tm* tm_now = localtime(&now);
+        
+        int currentMinutes = tm_now->tm_hour * 60 + tm_now->tm_min;
+        int switchMinutes = 2 * 60; // 02:00
+        
+        if (currentMinutes < switchMinutes) {
+            tm_now->tm_mday -= 1;
+            mktime(tm_now); // 规范化 tm 结构
+        }
+        
+        char buf[11];
+        strftime(buf, sizeof(buf), "%Y-%m-%d", tm_now);
+        return std::string(buf);
     }
     
     std::string getCurrentTime() const {
@@ -160,6 +197,14 @@ void Scheduler::stop() {
 
 void Scheduler::setOnceMode(bool once) {
     pImpl->setOnceMode(once);
+}
+
+bool Scheduler::hasRunToday() const {
+    return pImpl->hasRunToday();
+}
+
+std::string Scheduler::getLastRunDate() const {
+    return pImpl->getLastRunDate();
 }
 
 } // namespace scheduler

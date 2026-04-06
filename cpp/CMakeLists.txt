@@ -68,6 +68,12 @@ add_subdirectory(thirdparty/dotenv-cpp)
 # 如果 thirdparty/ta-lib 有 CMakeLists.txt，可以取消下面的注释
 add_subdirectory(thirdparty/ta-lib)
 
+# EventBus (header-only library)
+add_library(EventBus INTERFACE)
+target_include_directories(EventBus INTERFACE
+    ${CMAKE_SOURCE_DIR}/thirdparty/EventBus/include
+)
+
 # 添加配置库
 add_library(config_lib STATIC
     config/Config.cpp
@@ -261,6 +267,21 @@ target_include_directories(utils_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
 )
 
+add_library(eventbus_lib STATIC
+    eventbus/EventBusManager.cpp
+    eventbus/EventValidator.cpp
+)
+
+target_include_directories(eventbus_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/eventbus
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/EventBus/include
+)
+
+target_link_libraries(eventbus_lib PUBLIC
+    EventBus
+    log_lib
+)
+
 # 创建可执行文件
 add_executable(stock_for_cpp main.cpp)
 
@@ -274,6 +295,7 @@ target_link_libraries(stock_for_cpp PRIVATE
     data_lib
     analysis_lib
     utils_lib
+    eventbus_lib
     spdlog::spdlog
     sqlpp11::sqlpp11
     sqlite3

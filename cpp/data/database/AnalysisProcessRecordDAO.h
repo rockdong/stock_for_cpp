@@ -8,6 +8,15 @@
 
 namespace data {
 
+struct AnalysisProgress {
+    int total;
+    int completed;
+    int failed;
+    std::string status;
+    std::string started_at;
+    std::string updated_at;
+};
+
 class StockProcessRecordDAO {
 public:
     StockProcessRecordDAO() = default;
@@ -30,6 +39,8 @@ public:
     bool remove(const std::string& ts_code);
 
     int count();
+    
+    AnalysisProgress getProgress() const;
 };
 
 using AnalysisProcessRecordDAO = StockProcessRecordDAO;
