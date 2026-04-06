@@ -99,12 +99,15 @@ target_include_directories(scheduler_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/eventbus
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/EventBus/include
 )
 
 target_link_libraries(scheduler_lib PUBLIC
     log_lib
     utils_lib
     core_lib
+    eventbus_lib
 )
 
 # 添加核心业务模块库（策略系统）
