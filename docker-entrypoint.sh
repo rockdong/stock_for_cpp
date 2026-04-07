@@ -6,6 +6,14 @@ set -e
 
 echo "=== Docker容器初始化脚本 ==="
 
+# 设置文件描述符限制，防止 "too many open files" 错误
+# 默认设置为 65536，与 docker-compose.yml 保持一致
+echo "设置文件描述符限制..."
+ulimit -n 65536 2>/dev/null || true
+ulimit -Hn 65536 2>/dev/null || true
+echo "当前 ulimit -n: $(ulimit -n)"
+echo "当前 ulimit -Hn: $(ulimit -Hn)"
+
 # 获取当前用户的UID/GID以进行适当的权限管理
 CURRENT_UID=${CURRENT_UID:-$(id -u)}
 CURRENT_GID=${CURRENT_GID:-$(id -g)}

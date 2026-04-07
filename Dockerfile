@@ -9,6 +9,12 @@ ENV LOG_LEVEL=INFO
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# 配置系统级文件描述符限制，防止 "too many open files" 错误
+RUN echo '* soft nofile 65536' >> /etc/security/limits.conf && \
+    echo '* hard nofile 65536' >> /etc/security/limits.conf && \
+    echo 'root soft nofile 65536' >> /etc/security/limits.conf && \
+    echo 'root hard nofile 65536' >> /etc/security/limits.conf
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-0 \
     libssl3 \
