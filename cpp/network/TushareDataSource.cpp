@@ -3,11 +3,31 @@
 #include "Logger.h"
 #include "../utils/KLineAggregator.h"
 #include <unordered_map>
+#include <algorithm>
 
 namespace network {
 
+namespace {
+    bool shouldFilterStock(const std::string& ts_code, const std::string& name) {
+        if (ts_code.empty()) return true;
+        
+        std::string symbol = ts_code.substr(0, ts_code.find('.'));
+        
+        if (symbol.size() >= 3 && symbol.substr(0, 3) == "300") return true;
+        
+        if (symbol.size() >= 3 && symbol.substr(0, 3) == "688") return true;
+        
+        if (!name.empty()) {
+            std::string upperName = name;
+            std::transform(upperName.begin(), upperName.end(), upperName.begin(), ::toupper);
+            if (upperName.find("ST") != std::string::npos) return true;
+        }
+        
+        return false;
+    }
+}
+
 TushareDataSource::TushareDataSource() {
-    // 从配置模块创建客户端
     client_ = std::make_unique<TushareClient>();
     LOG_INFO("TushareDataSource 初始化完成（从配置）");
 }
@@ -262,6 +282,7 @@ std::vector<Stock> TushareDataSource::parseStockBasic(const TushareResponse& res
         };
         
         // 解析数据
+        int filteredCount = 0;
         for (const auto& item : items) {
             Stock stock;
             
@@ -288,10 +309,15 @@ std::vector<Stock> TushareDataSource::parseStockBasic(const TushareResponse& res
             stock.delist_date = get_string(item, "delist_date");
             stock.is_hs = get_string(item, "is_hs");
             
+            if (shouldFilterStock(stock.ts_code, stock.name)) {
+                filteredCount++;
+                continue;
+            }
+            
             result.push_back(stock);
         }
         
-        LOG_INFO("解析股票列表成功，共 " + std::to_string(result.size()) + " 条");
+        LOG_INFO("解析股票列表成功，共 " + std::to_string(result.size()) + " 条（过滤创业板/科创板/ST: " + std::to_string(filteredCount) + " 条）");
         
     } catch (const json::exception& e) {
         LOG_ERROR("解析股票列表失败: " + std::string(e.what()));
