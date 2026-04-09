@@ -16,10 +16,6 @@ function getDb() {
   return db;
 }
 
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
 router.get('/stocks', (req, res) => {
   try {
     const db = getDb();
