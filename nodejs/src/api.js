@@ -214,9 +214,19 @@ router.get('/analysis/process', (req, res) => {
 });
 
 router.get('/analysis/process/strategies', (req, res) => {
-    const strategies = ['EMA17TO25', 'EMA25_CROSSOVER', 'EMA17_BREAKOUT', 'EMA_CONVERGENCE', 
-                        'EMA25_GREATER_17_PRICE_MATCH', 'MACD', 'RSI', 'BOLL', 'MA_CROSS', 'GRID'];
-    res.json({ success: true, data: strategies });
+    try {
+        // 从环境变量读取策略列表（与 C++ 配置一致）
+        const strategiesEnv = process.env.STRATEGIES || '';
+        const strategies = strategiesEnv
+            .split(';')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+        
+        res.json({ success: true, data: strategies });
+    } catch (err) {
+        logger.error('获取策略列表失败:', err);
+        res.json({ success: true, data: [] });
+    }
 });
 
 router.get('/analysis/process/chart/:ts_code', (req, res) => {
