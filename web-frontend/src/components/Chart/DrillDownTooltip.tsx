@@ -8,6 +8,8 @@ interface DrillDownTooltipProps {
   freq: FreqType
   onDrillDown: (targetFreq: FreqType) => void
   containerWidth: number
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
 }
 
 function formatNumber(num: number | undefined): string {
@@ -44,7 +46,9 @@ export default function DrillDownTooltip({
   data, 
   freq, 
   onDrillDown, 
-  containerWidth 
+  containerWidth,
+  onMouseEnter,
+  onMouseLeave
 }: DrillDownTooltipProps) {
   if (!visible || !data) return null
   
@@ -59,6 +63,8 @@ export default function DrillDownTooltip({
         left: Math.min(x + 10, containerWidth - 180),
         top: Math.max(y - 120, 10),
       }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <div className="font-medium text-gray-900 mb-2">{data.time}</div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
