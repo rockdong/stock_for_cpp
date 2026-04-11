@@ -9,6 +9,7 @@
 #include "strategies/EMAConvergenceStrategy.h"
 #include "strategies/EMA25Greater17PriceMatchStrategy.h"
 #include "strategies/EMA25CrossoverStrategy.h"
+#include "strategies/SurgeSignalStrategy.h"
 #include <stdexcept>
 
 namespace core {
@@ -49,6 +50,9 @@ StrategyPtr StrategyFactory::create(StrategyType type, const std::map<std::strin
         case StrategyType::EMA25_CROSSOVER:
             return std::make_shared<EMA25CrossoverStrategy>(params);
         
+        case StrategyType::SURGE_SIGNAL:
+            return std::make_shared<SurgeSignalStrategy>(params);
+        
         default:
             throw std::invalid_argument("Unknown strategy type");
     }
@@ -82,6 +86,8 @@ StrategyPtr StrategyFactory::create(const std::string& name, const std::map<std:
         return create(StrategyType::EMA25_GREATER_17_PRICE_MATCH, params);
     } else if (name == "EMA25_CROSSOVER" || name == "EMA25CROSSOVER" || name == "ema25_crossover" || name == "金叉") {
         return create(StrategyType::EMA25_CROSSOVER, params);
+    } else if (name == "SURGE_SIGNAL" || name == "SurgeSignal" || name == "surge_signal" || name == "暴涨预兆") {
+        return create(StrategyType::SURGE_SIGNAL, params);
     }
     
     throw std::invalid_argument("Unknown strategy name: " + name);
@@ -105,7 +111,8 @@ std::vector<std::string> StrategyFactory::getSupportedStrategies() {
         "EMA17_BREAKOUT",
         "EMA_CONVERGENCE",
         "EMA25_GREATER_17_PRICE_MATCH",
-        "EMA25_CROSSOVER"
+        "EMA25_CROSSOVER",
+        "SURGE_SIGNAL"
     };
     
     // 添加自定义策略
@@ -128,6 +135,7 @@ std::string StrategyFactory::getStrategyName(StrategyType type) {
         case StrategyType::EMA_CONVERGENCE: return "EMA_CONVERGENCE";
         case StrategyType::EMA25_GREATER_17_PRICE_MATCH: return "EMA25_GREATER_17_PRICE_MATCH";
         case StrategyType::EMA25_CROSSOVER: return "EMA25_CROSSOVER";
+        case StrategyType::SURGE_SIGNAL: return "SURGE_SIGNAL";
         case StrategyType::CUSTOM: return "CUSTOM";
         default: return "UNKNOWN";
     }
