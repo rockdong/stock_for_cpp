@@ -8,8 +8,9 @@ interface DrillDownTooltipProps {
   freq: FreqType
   showDrillButtons: boolean
   onDrillDown?: (targetFreq: FreqType) => void
-  onClose?: () => void
   containerWidth: number
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
 }
 
 function formatNumber(num: number | undefined): string {
@@ -47,8 +48,9 @@ export default function DrillDownTooltip({
   freq, 
   showDrillButtons,
   onDrillDown, 
-  onClose,
-  containerWidth
+  containerWidth,
+  onMouseEnter,
+  onMouseLeave
 }: DrillDownTooltipProps) {
   if (!visible || !data) return null
   
@@ -63,20 +65,10 @@ export default function DrillDownTooltip({
         left: Math.min(x + 10, containerWidth - 180),
         top: Math.max(y - 120, 10),
       }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
-      <div className="flex justify-between items-start">
-        <div className="font-medium text-gray-900">{data.time}</div>
-        {showDrillButtons && onClose && (
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
-      </div>
+      <div className="font-medium text-gray-900">{data.time}</div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
         <span className="text-gray-500">开:</span>
         <span className="font-medium">{formatNumber(data.open)}</span>

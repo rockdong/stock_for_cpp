@@ -20,18 +20,13 @@ interface CandlestickChartProps {
 export default function CandlestickChart({ data, height = 400, freq = 'd', onDrillDown }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
-  const [hoverTooltip, setHoverTooltip] = useState<{
+  const [tooltip, setTooltip] = useState<{
     visible: boolean
     x: number
     y: number
     data: ChartDataPoint | null
   }>({ visible: false, x: 0, y: 0, data: null })
-  const [lockedTooltip, setLockedTooltip] = useState<{
-    visible: boolean
-    x: number
-    y: number
-    data: ChartDataPoint | null
-  }>({ visible: false, x: 0, y: 0, data: null })
+  const [isLocked, setIsLocked] = useState(false)
 
   useEffect(() => {
     if (!chartContainerRef.current || data.length === 0) return
@@ -70,10 +65,10 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
     candlestickSeries.setData(candleData)
 
     chart.subscribeCrosshairMove((param) => {
-      if (lockedTooltip.visible) return
+      if (isLocked) return
       
       if (!param.time || !param.point) {
-        setHoverTooltip({ visible: false, x: 0, y: 0, data: null })
+        setTooltip({ visible: false, x: 0, y: 0, data: null })
         return
       }
       
@@ -81,27 +76,7 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
       const pointData = data.find(d => formatTime(d.time) === timeStr)
       
       if (pointData && param.point) {
-        setHoverTooltip({
-          visible: true,
-          x: param.point.x,
-          y: param.point.y,
-          data: pointData,
-        })
-      }
-    })
-
-    chart.subscribeClick((param) => {
-      if (!param.time || !param.point) {
-        setLockedTooltip({ visible: false, x: 0, y: 0, data: null })
-        return
-      }
-      
-      const timeStr = param.time.toString()
-      const pointData = data.find(d => formatTime(d.time) === timeStr)
-      
-      if (pointData && param.point) {
-        setHoverTooltip({ visible: false, x: 0, y: 0, data: null })
-        setLockedTooltip({
+        setTooltip({
           visible: true,
           x: param.point.x,
           y: param.point.y,
@@ -154,20 +129,26 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
         chart.remove()
       } catch {}
     }
-  }, [data, height, lockedTooltip.visible])
+  }, [data, height, isLocked])
 
-  const handleDrillDown = (targetFreq: FreqType) => {
-    if (lockedTooltip.data && onDrillDown) {
-      onDrillDown({
-        time: lockedTooltip.data.time,
-        targetFreq,
-      })
-      setLockedTooltip({ visible: false, x: 0, y: 0, data: null })
-    }
+  const handleTooltipEnter = () => {
+    setIsLocked(true)
   }
 
-  const handleCloseLockedTooltip = () => {
-    setLockedTooltip({ visible: false, x: 0, y: 0, data: null })
+  const handleTooltipLeave = () => {
+    setIsLocked(false)
+    setTooltip({ visible: false, x: 0, y: 0, data: null })
+  }
+
+  const handleDrillDown = (targetFreq: FreqType) => {
+    if (tooltip.data && onDrillDown) {
+      onDrillDown({
+        time: tooltip.data.time,
+        targetFreq,
+      })
+      setIsLocked(false)
+      setTooltip({ visible: false, x: 0, y: 0, data: null })
+    }
   }
 
   return (
@@ -176,32 +157,18 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
         ref={chartContainerRef} 
         className="w-full rounded-lg border border-gray-200 bg-white"
       />
-      
-      {!lockedTooltip.visible && (
-        <DrillDownTooltip 
-          visible={hoverTooltip.visible}
-          x={hoverTooltip.x}
-          y={hoverTooltip.y}
-          data={hoverTooltip.data}
-          freq={freq}
-          showDrillButtons={false}
-          containerWidth={chartContainerRef.current?.clientWidth || 600}
-        />
-      )}
-      
-      {lockedTooltip.visible && (
-        <DrillDownTooltip 
-          visible={true}
-          x={lockedTooltip.x}
-          y={lockedTooltip.y}
-          data={lockedTooltip.data}
-          freq={freq}
-          showDrillButtons={true}
-          onDrillDown={handleDrillDown}
-          onClose={handleCloseLockedTooltip}
-          containerWidth={chartContainerRef.current?.clientWidth || 600}
-        />
-      )}
+      <DrillDownTooltip 
+        visible={tooltip.visible}
+        x={tooltip.x}
+        y={tooltip.y}
+        data={tooltip.data}
+        freq={freq}
+        showDrillButtons={true}
+        onDrillDown={handleDrillDown}
+        containerWidth={chartContainerRef.current?.clientWidth || 600}
+        onMouseEnter={handleTooltipEnter}
+        onMouseLeave={handleTooltipLeave}
+      />
     </div>
   )
 }
