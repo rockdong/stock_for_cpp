@@ -1,23 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createChart, ColorType, IChartApi, CandlestickData, LineData } from 'lightweight-charts'
 import { ChartDataPoint, FreqType } from '../../types/analysis'
-
-export interface DrillDownInfo {
-  time: string
-  open: number
-  high: number
-  low: number
-  close: number
-  volume: number
-  targetFreq: FreqType
-}
-
-interface CandlestickChartProps {
-  data: ChartDataPoint[]
-  height?: number
-  freq?: FreqType
-  onDrillDown?: (info: DrillDownInfo) => void
-}
+import DrillDownTooltip from './DrillDownTooltip'
 
 function formatTime(time: string): string {
   if (time.length === 8 && /^\d{8}$/.test(time)) {
@@ -26,28 +10,17 @@ function formatTime(time: string): string {
   return time
 }
 
-function formatNumber(num: number | undefined): string {
-  if (num === undefined) return '-'
-  return num.toFixed(2)
-}
-
-function formatVolume(vol: number | undefined): string {
-  if (vol === undefined) return '-'
-  if (vol >= 100000000) return (vol / 100000000).toFixed(2) + '亿'
-  if (vol >= 10000) return (vol / 10000).toFixed(2) + '万'
-  return vol.toString()
+interface CandlestickChartProps {
+  data: ChartDataPoint[]
+  height?: number
+  freq?: FreqType
+  onDrillDown?: (info: { time: string; targetFreq: FreqType }) => void
 }
 
 export default function CandlestickChart({ data, height = 400, freq = 'd', onDrillDown }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const [tooltip, setTooltip] = useState<{
-    visible: boolean
-    x: number
-    y: number
-    data: ChartDataPoint | null
-  }>({ visible: false, x: 0, y: 0, data: null })
-  const [clickMenu, setClickMenu] = useState<{
     visible: boolean
     x: number
     y: number
@@ -111,30 +84,9 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
       }
     })
 
-    chart.subscribeClick((param) => {
-      if (!param.time || !param.point) {
-        setClickMenu({ visible: false, x: 0, y: 0, data: null })
-        return
-      }
-      
-      const timeStr = param.time.toString()
-      const pointData = data.find(d => formatTime(d.time) === timeStr)
-      
-      if (pointData && param.point) {
-        setClickMenu({
-          visible: true,
-          x: param.point.x,
-          y: param.point.y,
-          data: pointData,
-        })
-        setTooltip({ visible: false, x: 0, y: 0, data: null })
-      }
-    })
-
     const ema17Series = chart.addLineSeries({
       color: '#2196F3',
       lineWidth: 2,
-      title: 'EMA17',
     })
     const ema17Data: LineData[] = data
       .filter(d => d.ema17 !== undefined)
@@ -147,7 +99,6 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
     const ema25Series = chart.addLineSeries({
       color: '#FF9800',
       lineWidth: 2,
-      title: 'EMA25',
     })
     const ema25Data: LineData[] = data
       .filter(d => d.ema25 !== undefined)
@@ -179,122 +130,31 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
     }
   }, [data, height])
 
-  const isUp = tooltip.data && tooltip.data.close >= tooltip.data.open
-  const changePercent = tooltip.data 
-    ? ((tooltip.data.close - tooltip.data.open) / tooltip.data.open * 100).toFixed(2)
-    : '0.00'
-
   const handleDrillDown = (targetFreq: FreqType) => {
-    if (clickMenu.data && onDrillDown) {
+    if (tooltip.data && onDrillDown) {
       onDrillDown({
-        time: clickMenu.data.time,
-        open: clickMenu.data.open,
-        high: clickMenu.data.high,
-        low: clickMenu.data.low,
-        close: clickMenu.data.close,
-        volume: clickMenu.data.volume,
+        time: tooltip.data.time,
         targetFreq,
       })
-      setClickMenu({ visible: false, x: 0, y: 0, data: null })
+      setTooltip({ visible: false, x: 0, y: 0, data: null })
     }
   }
-
-  const getDrillOptions = (): { label: string; targetFreq: FreqType }[] => {
-    if (freq === 'm') {
-      return [
-        { label: '查看周K线', targetFreq: 'w' },
-        { label: '查看日K线', targetFreq: 'd' },
-      ]
-    } else if (freq === 'w') {
-      return [
-        { label: '查看日K线', targetFreq: 'd' },
-      ]
-    }
-    return []
-  }
-
-  const drillOptions = getDrillOptions()
 
   return (
-    <div className="relative" onClick={() => setClickMenu({ visible: false, x: 0, y: 0, data: null })}>
+    <div className="relative">
       <div 
         ref={chartContainerRef} 
         className="w-full rounded-lg border border-gray-200 bg-white"
       />
-      {tooltip.visible && tooltip.data && (
-        <div 
-          className="absolute pointer-events-none z-50 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-3 text-sm"
-          style={{ 
-            left: Math.min(tooltip.x + 10, (chartContainerRef.current?.clientWidth || 400) - 160),
-            top: Math.max(tooltip.y - 100, 10),
-          }}
-        >
-          <div className="font-medium text-gray-900 mb-2">{tooltip.data.time}</div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <span className="text-gray-500">开:</span>
-            <span className="font-medium">{formatNumber(tooltip.data.open)}</span>
-            <span className="text-gray-500">高:</span>
-            <span className="font-medium text-red-500">{formatNumber(tooltip.data.high)}</span>
-            <span className="text-gray-500">低:</span>
-            <span className="font-medium text-green-600">{formatNumber(tooltip.data.low)}</span>
-            <span className="text-gray-500">收:</span>
-            <span className={`font-medium ${isUp ? 'text-red-500' : 'text-green-600'}`}>
-              {formatNumber(tooltip.data.close)}
-            </span>
-            <span className="text-gray-500">涨跌:</span>
-            <span className={`font-medium ${isUp ? 'text-red-500' : 'text-green-600'}`}>
-              {isUp ? '+' : ''}{changePercent}%
-            </span>
-          </div>
-          <div className="border-t border-gray-100 mt-2 pt-2">
-            <span className="text-gray-500">量:</span>
-            <span className="ml-2">{formatVolume(tooltip.data.volume)}</span>
-          </div>
-          {tooltip.data.ema17 !== undefined && (
-            <div className="text-blue-500 text-xs mt-1">
-              EMA17: {formatNumber(tooltip.data.ema17)}
-            </div>
-          )}
-          {tooltip.data.ema25 !== undefined && (
-            <div className="text-orange-500 text-xs mt-1">
-              EMA25: {formatNumber(tooltip.data.ema25)}
-            </div>
-          )}
-          {tooltip.data.signal && (
-            <div className={`mt-2 pt-2 border-t border-gray-100 text-xs font-medium ${
-              tooltip.data.signal === 'BUY' ? 'text-red-500' : 
-              tooltip.data.signal === 'SELL' ? 'text-green-600' : 'text-gray-500'
-            }`}>
-              {tooltip.data.signal === 'BUY' ? '🔴 买入信号' : 
-               tooltip.data.signal === 'SELL' ? '🟢 卖出信号' : tooltip.data.signal}
-            </div>
-          )}
-        </div>
-      )}
-      
-      {clickMenu.visible && clickMenu.data && drillOptions.length > 0 && (
-        <div 
-          className="absolute z-50 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg py-1 text-sm min-w-[120px]"
-          style={{ 
-            left: Math.min(clickMenu.x + 10, (chartContainerRef.current?.clientWidth || 400) - 140),
-            top: Math.max(clickMenu.y - 20, 10),
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100">
-            {clickMenu.data.time}
-          </div>
-          {drillOptions.map((option, index) => (
-            <button
-              key={index}
-              className="w-full px-3 py-2 text-left hover:bg-gray-100 transition-colors cursor-pointer text-gray-700"
-              onClick={() => handleDrillDown(option.targetFreq)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <DrillDownTooltip 
+        visible={tooltip.visible}
+        x={tooltip.x}
+        y={tooltip.y}
+        data={tooltip.data}
+        freq={freq}
+        onDrillDown={handleDrillDown}
+        containerWidth={chartContainerRef.current?.clientWidth || 600}
+      />
     </div>
   )
 }
