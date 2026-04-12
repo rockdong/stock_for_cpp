@@ -39,13 +39,20 @@
 
 #include <csignal>
 
+// API HTTP Server
+#include "api/Api.h"
+
 // 全局调度器指针（用于信号处理）
 scheduler::Scheduler* g_scheduler = nullptr;
+api::HttpServer* g_httpServer = nullptr;
 
 // 信号处理函数
 void signalHandler(int signal) {
     LOG_INFO("收到退出信号，正在优雅关闭...");
     RateLimiter::getInstance().stop();
+    if (g_httpServer) {
+        g_httpServer->stop();
+    }
     if (g_scheduler) {
         g_scheduler->stop();
     }
@@ -600,6 +607,11 @@ void performBatchAnalysis(
  * @brief 清理系统资源
  */
 void cleanup() {
+    // 停止 HTTP API Server
+    if (g_httpServer) {
+        g_httpServer->stop();
+    }
+    
     // 关闭 EventBus
     eventbus::shutdown();
     
@@ -640,6 +652,16 @@ int main(int argc, char* argv[]) {
         
         // 2. 打印配置信息
         printConfiguration();
+        
+        // 3. 启动 HTTP API Server
+        int apiPort = 3001;
+        const char* apiPortEnv = std::getenv("API_PORT");
+        if (apiPortEnv) apiPort = std::stoi(apiPortEnv);
+        
+        api::HttpServer httpServer(apiPort);
+        g_httpServer = &httpServer;
+        httpServer.start();
+        LOG_INFO("HTTP API Server 已启动，端口: " + std::to_string(apiPort));
         
         // 3. 初始化数据库
         if (!initializeDatabase()) {
