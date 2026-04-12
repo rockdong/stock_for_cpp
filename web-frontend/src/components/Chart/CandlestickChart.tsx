@@ -85,6 +85,27 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
       }
     })
 
+    chart.subscribeClick((param) => {
+      if (!param.time || !param.point) {
+        isLockedRef.current = false
+        setTooltip({ visible: false, x: 0, y: 0, data: null })
+        return
+      }
+      
+      const timeStr = param.time.toString()
+      const pointData = data.find(d => formatTime(d.time) === timeStr)
+      
+      if (pointData && param.point) {
+        isLockedRef.current = true
+        setTooltip({
+          visible: true,
+          x: param.point.x,
+          y: param.point.y,
+          data: pointData,
+        })
+      }
+    })
+
     const ema17Series = chart.addLineSeries({
       color: '#2196F3',
       lineWidth: 2,
@@ -131,14 +152,6 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
     }
   }, [data, height])
 
-  const handleTooltipEnter = () => {
-    isLockedRef.current = true
-  }
-
-  const handleTooltipLeave = () => {
-    isLockedRef.current = false
-  }
-
   const handleDrillDown = (targetFreq: FreqType) => {
     if (tooltip.data && onDrillDown) {
       onDrillDown({
@@ -165,8 +178,6 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
         showDrillButtons={true}
         onDrillDown={handleDrillDown}
         containerWidth={chartContainerRef.current?.clientWidth || 600}
-        onMouseEnter={handleTooltipEnter}
-        onMouseLeave={handleTooltipLeave}
       />
     </div>
   )
