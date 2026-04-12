@@ -54,11 +54,16 @@ export default function DrillDownTooltip({
   const changePercent = ((data.close - data.open) / data.open * 100).toFixed(2)
   const drillOptions = getDrillOptions(freq)
   
+  // 计算 tooltip 位置：当右侧空间不足时，显示在鼠标左侧
+  const tooltipWidth = 180
+  const shouldPlaceLeft = x + tooltipWidth + 20 > containerWidth
+  const leftPosition = shouldPlaceLeft ? Math.max(x - tooltipWidth - 10, 10) : Math.min(x + 10, containerWidth - tooltipWidth)
+  
   return (
     <div 
-      className="absolute pointer-events-auto z-50 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-3 text-sm"
+      className="absolute pointer-events-none z-50 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-3 text-sm"
       style={{ 
-        left: Math.min(x + 10, containerWidth - 180),
+        left: leftPosition,
         top: Math.max(y - 120, 10),
       }}
     >
@@ -94,7 +99,7 @@ export default function DrillDownTooltip({
         </div>
       )}
       {showDrillButtons && drillOptions.length > 0 && onDrillDown && (
-        <div className="border-t border-gray-100 mt-2 pt-2 flex gap-2">
+        <div className="border-t border-gray-100 mt-2 pt-2 flex gap-2 pointer-events-auto">
           {drillOptions.map((option, index) => (
             <button
               key={index}
