@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <algorithm>
+#include <mutex>
 
 namespace api {
 
@@ -16,17 +17,27 @@ static std::string getDbPath() {
     return dbPath ? std::string(dbPath) : "/app/stock.db";
 }
 
-static sqlite3* openDb() {
-    sqlite3* db = nullptr;
-    if (sqlite3_open(getDbPath().c_str(), &db) != SQLITE_OK) {
-        LOG_ERROR("无法打开数据库: " + std::string(sqlite3_errmsg(db)));
-        return nullptr;
+static sqlite3* g_db = nullptr;
+static std::mutex g_dbMutex;
+
+static sqlite3* getDb() {
+    std::lock_guard<std::mutex> lock(g_dbMutex);
+    if (!g_db) {
+        if (sqlite3_open(getDbPath().c_str(), &g_db) != SQLITE_OK) {
+            LOG_ERROR("无法打开数据库: " + std::string(sqlite3_errmsg(g_db)));
+            return nullptr;
+        }
+        sqlite3_busy_timeout(g_db, 5000);
     }
-    return db;
+    return g_db;
 }
 
-static void closeDb(sqlite3* db) {
-    if (db) sqlite3_close(db);
+static void closeDb() {
+    std::lock_guard<std::mutex> lock(g_dbMutex);
+    if (g_db) {
+        sqlite3_close(g_db);
+        g_db = nullptr;
+    }
 }
 
 std::string jsonSuccess(const std::string& data) {
@@ -61,7 +72,7 @@ std::string getStrategies() {
 }
 
 std::string getStocks(int limit) {
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
     json stocks = json::array();
@@ -71,23 +82,22 @@ std::string getStocks(int limit) {
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             json stock;
-            stock["ts_code"] = sqlite3_column_text(stmt, 0) ? (const char*)sqlite3_column_text(stmt, 0) : "";
-            stock["name"] = sqlite3_column_text(stmt, 1) ? (const char*)sqlite3_column_text(stmt, 1) : "";
-            stock["industry"] = sqlite3_column_text(stmt, 2) ? (const char*)sqlite3_column_text(stmt, 2) : "";
-            stock["market"] = sqlite3_column_text(stmt, 3) ? (const char*)sqlite3_column_text(stmt, 3) : "";
+            stock["ts_code"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            stock["name"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            stock["industry"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            stock["market"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
             stocks.push_back(stock);
         }
         sqlite3_finalize(stmt);
     }
     
-    closeDb(db);
     return jsonSuccess(stocks.dump());
 }
 
 std::string searchStocks(const std::string& keyword) {
     if (keyword.empty()) return jsonSuccess("[]");
     
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
     json stocks = json::array();
@@ -101,21 +111,20 @@ std::string searchStocks(const std::string& keyword) {
         
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             json stock;
-            stock["ts_code"] = sqlite3_column_text(stmt, 0) ? (const char*)sqlite3_column_text(stmt, 0) : "";
-            stock["name"] = sqlite3_column_text(stmt, 1) ? (const char*)sqlite3_column_text(stmt, 1) : "";
-            stock["industry"] = sqlite3_column_text(stmt, 2) ? (const char*)sqlite3_column_text(stmt, 2) : "";
-            stock["market"] = sqlite3_column_text(stmt, 3) ? (const char*)sqlite3_column_text(stmt, 3) : "";
+            stock["ts_code"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            stock["name"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            stock["industry"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            stock["market"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
             stocks.push_back(stock);
         }
         sqlite3_finalize(stmt);
     }
     
-    closeDb(db);
     return jsonSuccess(stocks.dump());
 }
 
 std::string getStockByCode(const std::string& code) {
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
     json stock;
@@ -127,10 +136,10 @@ std::string getStockByCode(const std::string& code) {
         sqlite3_bind_text(stmt, 1, code.c_str(), -1, SQLITE_TRANSIENT);
         if (sqlite3_step(stmt) == SQLITE_ROW) {
             found = true;
-            stock["ts_code"] = sqlite3_column_text(stmt, 0) ? (const char*)sqlite3_column_text(stmt, 0) : "";
-            stock["name"] = sqlite3_column_text(stmt, 1) ? (const char*)sqlite3_column_text(stmt, 1) : "";
-            stock["industry"] = sqlite3_column_text(stmt, 2) ? (const char*)sqlite3_column_text(stmt, 2) : "";
-            stock["market"] = sqlite3_column_text(stmt, 3) ? (const char*)sqlite3_column_text(stmt, 3) : "";
+            stock["ts_code"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            stock["name"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            stock["industry"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            stock["market"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
         }
         sqlite3_finalize(stmt);
     }
@@ -149,14 +158,12 @@ std::string getStockByCode(const std::string& code) {
         }
     }
     
-    closeDb(db);
-    
     if (!found) return jsonError("股票不存在");
     return jsonSuccess(stock.dump());
 }
 
 std::string getAnalysisSignals(const std::string& label, int limit) {
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
     json results = json::array();
@@ -182,23 +189,22 @@ std::string getAnalysisSignals(const std::string& label, int limit) {
         
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             json row;
-            row["ts_code"] = sqlite3_column_text(stmt, 0) ? (const char*)sqlite3_column_text(stmt, 0) : "";
-            row["name"] = sqlite3_column_text(stmt, 1) ? (const char*)sqlite3_column_text(stmt, 1) : "";
-            row["strategy_name"] = sqlite3_column_text(stmt, 2) ? (const char*)sqlite3_column_text(stmt, 2) : "";
-            row["label"] = sqlite3_column_text(stmt, 3) ? (const char*)sqlite3_column_text(stmt, 3) : "";
-            row["freq"] = sqlite3_column_text(stmt, 4) ? (const char*)sqlite3_column_text(stmt, 4) : "";
-            row["trade_date"] = sqlite3_column_text(stmt, 5) ? (const char*)sqlite3_column_text(stmt, 5) : "";
+            row["ts_code"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            row["name"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            row["strategy_name"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            row["label"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+            row["freq"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+            row["trade_date"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
             results.push_back(row);
         }
         sqlite3_finalize(stmt);
     }
     
-    closeDb(db);
     return jsonSuccess(results.dump());
 }
 
 std::string getAnalysisProgress() {
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
     json progress;
@@ -216,19 +222,18 @@ std::string getAnalysisProgress() {
             progress["total"] = sqlite3_column_int(stmt, 1);
             progress["completed"] = sqlite3_column_int(stmt, 2);
             progress["failed"] = sqlite3_column_int(stmt, 3);
-            progress["status"] = sqlite3_column_text(stmt, 4) ? (const char*)sqlite3_column_text(stmt, 4) : "idle";
-            progress["started_at"] = sqlite3_column_text(stmt, 5) ? (const char*)sqlite3_column_text(stmt, 5) : "";
-            progress["updated_at"] = sqlite3_column_text(stmt, 6) ? (const char*)sqlite3_column_text(stmt, 6) : "";
+            progress["status"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+            progress["started_at"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+            progress["updated_at"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
         }
         sqlite3_finalize(stmt);
     }
     
-    closeDb(db);
     return jsonSuccess(progress.dump());
 }
 
 std::string getAnalysisProcess(const std::map<std::string, std::string>& params) {
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
     json results = json::array();
@@ -253,9 +258,9 @@ std::string getAnalysisProcess(const std::map<std::string, std::string>& params)
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             json row;
             row["id"] = sqlite3_column_int(stmt, 0);
-            row["ts_code"] = sqlite3_column_text(stmt, 1) ? (const char*)sqlite3_column_text(stmt, 1) : "";
-            row["stock_name"] = sqlite3_column_text(stmt, 2) ? (const char*)sqlite3_column_text(stmt, 2) : "";
-            row["trade_date"] = sqlite3_column_text(stmt, 3) ? (const char*)sqlite3_column_text(stmt, 3) : "";
+            row["ts_code"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            row["stock_name"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            row["trade_date"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
             
             const char* dataStr = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
             if (dataStr) {
@@ -268,18 +273,17 @@ std::string getAnalysisProcess(const std::map<std::string, std::string>& params)
                 row["data"] = json::object();
             }
             
-            row["created_at"] = sqlite3_column_text(stmt, 5) ? (const char*)sqlite3_column_text(stmt, 5) : "";
+            row["created_at"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
             results.push_back(row);
         }
         sqlite3_finalize(stmt);
     }
     
-    closeDb(db);
     return jsonSuccess(results.dump());
 }
 
 std::string getAnalysisProcessById(int id) {
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
     json result;
@@ -292,9 +296,9 @@ std::string getAnalysisProcessById(int id) {
         if (sqlite3_step(stmt) == SQLITE_ROW) {
             found = true;
             result["id"] = sqlite3_column_int(stmt, 0);
-            result["ts_code"] = sqlite3_column_text(stmt, 1) ? (const char*)sqlite3_column_text(stmt, 1) : "";
-            result["stock_name"] = sqlite3_column_text(stmt, 2) ? (const char*)sqlite3_column_text(stmt, 2) : "";
-            result["trade_date"] = sqlite3_column_text(stmt, 3) ? (const char*)sqlite3_column_text(stmt, 3) : "";
+            result["ts_code"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            result["stock_name"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            result["trade_date"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
             
             const char* dataStr = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
             if (dataStr) {
@@ -307,19 +311,17 @@ std::string getAnalysisProcessById(int id) {
                 result["data"] = json::object();
             }
             
-            result["created_at"] = sqlite3_column_text(stmt, 5) ? (const char*)sqlite3_column_text(stmt, 5) : "";
+            result["created_at"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
         }
         sqlite3_finalize(stmt);
     }
-    
-    closeDb(db);
     
     if (!found) return jsonError("记录不存在");
     return jsonSuccess(result.dump());
 }
 
 std::string getAnalysisProcessChart(const std::string& tsCode, const std::string& strategy, const std::string& freq) {
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonSuccess("[]");
     
     std::string sql = "SELECT data FROM analysis_process_records WHERE ts_code = ? ORDER BY trade_date DESC LIMIT 1";
@@ -353,7 +355,6 @@ std::string getAnalysisProcessChart(const std::string& tsCode, const std::string
                     }
                     
                     sqlite3_finalize(stmt);
-                    closeDb(db);
                     return jsonSuccess(candles.dump());
                 } catch (...) {}
             }
@@ -361,12 +362,11 @@ std::string getAnalysisProcessChart(const std::string& tsCode, const std::string
         sqlite3_finalize(stmt);
     }
     
-    closeDb(db);
     return jsonSuccess("[]");
 }
 
 std::string getAnalysisByCode(const std::string& code) {
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
     json result;
@@ -380,24 +380,22 @@ std::string getAnalysisByCode(const std::string& code) {
         sqlite3_bind_text(stmt, 1, code.c_str(), -1, SQLITE_TRANSIENT);
         if (sqlite3_step(stmt) == SQLITE_ROW) {
             found = true;
-            result["ts_code"] = sqlite3_column_text(stmt, 0) ? (const char*)sqlite3_column_text(stmt, 0) : "";
-            result["name"] = sqlite3_column_text(stmt, 1) ? (const char*)sqlite3_column_text(stmt, 1) : "";
-            result["strategy_name"] = sqlite3_column_text(stmt, 2) ? (const char*)sqlite3_column_text(stmt, 2) : "";
-            result["label"] = sqlite3_column_text(stmt, 3) ? (const char*)sqlite3_column_text(stmt, 3) : "";
-            result["freq"] = sqlite3_column_text(stmt, 4) ? (const char*)sqlite3_column_text(stmt, 4) : "";
-            result["trade_date"] = sqlite3_column_text(stmt, 5) ? (const char*)sqlite3_column_text(stmt, 5) : "";
+            result["ts_code"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            result["name"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            result["strategy_name"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            result["label"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+            result["freq"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+            result["trade_date"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
         }
         sqlite3_finalize(stmt);
     }
-    
-    closeDb(db);
     
     if (!found) return jsonError("无分析结果");
     return jsonSuccess(result.dump());
 }
 
 std::string getCharts(const std::string& code, const std::string& freq, int limit) {
-    sqlite3* db = openDb();
+    sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
     json charts = json::array();
@@ -412,7 +410,7 @@ std::string getCharts(const std::string& code, const std::string& freq, int limi
         
         while (sqlite3_step(stmt) == SQLITE_ROW) {
             json candle;
-            candle["time"] = sqlite3_column_text(stmt, 0) ? (const char*)sqlite3_column_text(stmt, 0) : "";
+            candle["time"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
             candle["open"] = sqlite3_column_double(stmt, 1);
             candle["high"] = sqlite3_column_double(stmt, 2);
             candle["low"] = sqlite3_column_double(stmt, 3);
@@ -423,13 +421,15 @@ std::string getCharts(const std::string& code, const std::string& freq, int limi
         sqlite3_finalize(stmt);
     }
     
-    closeDb(db);
-    
     std::reverse(charts.begin(), charts.end());
     return jsonSuccess(charts.dump());
 }
 
 void setupRoutes(httplib::Server& server) {
+    server.set_keep_alive_timeout(30);
+    server.set_read_timeout(30);
+    server.set_write_timeout(30);
+    
     server.Get("/api/stocks", [](const httplib::Request& req, httplib::Response& res) {
         int limit = req.has_param("limit") ? std::stoi(req.get_param_value("limit")) : 100;
         res.set_content(getStocks(limit), "application/json");
@@ -495,6 +495,10 @@ void setupRoutes(httplib::Server& server) {
     server.Get("/api/user/watchlist", [](const httplib::Request&, httplib::Response& res) {
         res.set_content(jsonSuccess("[]"), "application/json");
     });
+}
+
+void cleanupDatabase() {
+    closeDb();
 }
 
 } // namespace api

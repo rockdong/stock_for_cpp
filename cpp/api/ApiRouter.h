@@ -10,6 +10,7 @@ namespace httplib { class Server; }
 namespace api {
 
 void setupRoutes(httplib::Server& server);
+void cleanupDatabase();
 
 std::string jsonSuccess(const std::string& data);
 std::string jsonError(const std::string& error);

@@ -607,12 +607,12 @@ void performBatchAnalysis(
  * @brief 清理系统资源
  */
 void cleanup() {
-    // 停止 HTTP API Server
     if (g_httpServer) {
         g_httpServer->stop();
     }
     
-    // 关闭 EventBus
+    api::cleanupDatabase();
+    
     eventbus::shutdown();
     
     // 断开数据库连接
