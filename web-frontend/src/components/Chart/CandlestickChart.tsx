@@ -137,7 +137,6 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
 
   const handleTooltipLeave = () => {
     isLockedRef.current = false
-    setTooltip({ visible: false, x: 0, y: 0, data: null })
   }
 
   const handleDrillDown = (targetFreq: FreqType) => {
