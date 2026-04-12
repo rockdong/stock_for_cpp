@@ -20,13 +20,13 @@ interface CandlestickChartProps {
 export default function CandlestickChart({ data, height = 400, freq = 'd', onDrillDown }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+  const isLockedRef = useRef(false)
   const [tooltip, setTooltip] = useState<{
     visible: boolean
     x: number
     y: number
     data: ChartDataPoint | null
   }>({ visible: false, x: 0, y: 0, data: null })
-  const [isLocked, setIsLocked] = useState(false)
 
   useEffect(() => {
     if (!chartContainerRef.current || data.length === 0) return
@@ -65,7 +65,7 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
     candlestickSeries.setData(candleData)
 
     chart.subscribeCrosshairMove((param) => {
-      if (isLocked) return
+      if (isLockedRef.current) return
       
       if (!param.time || !param.point) {
         setTooltip({ visible: false, x: 0, y: 0, data: null })
@@ -129,14 +129,14 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
         chart.remove()
       } catch {}
     }
-  }, [data, height, isLocked])
+  }, [data, height])
 
   const handleTooltipEnter = () => {
-    setIsLocked(true)
+    isLockedRef.current = true
   }
 
   const handleTooltipLeave = () => {
-    setIsLocked(false)
+    isLockedRef.current = false
     setTooltip({ visible: false, x: 0, y: 0, data: null })
   }
 
@@ -146,7 +146,7 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
         time: tooltip.data.time,
         targetFreq,
       })
-      setIsLocked(false)
+      isLockedRef.current = false
       setTooltip({ visible: false, x: 0, y: 0, data: null })
     }
   }
