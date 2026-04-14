@@ -14,8 +14,13 @@ export default defineConfig({
     }
   },
   preview: {
+    allowedHosts: [
+      'xn--coder-742hg28fxv7bifi.online',
+      'coder的工作站.online',
+      '119.3.155.216'
+    ],
+    host: true,  // 允许外部访问
     port: 5173,
-    host: '0.0.0.0',
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3000',
