@@ -46,6 +46,15 @@ bool Connection::connect() {
         // 创建连接
         db_ = std::make_unique<sqlpp::sqlite3::connection>(config);
         
+        // 设置 busy_timeout (5秒等待锁释放)
+        db_->execute("PRAGMA busy_timeout = 5000");
+        
+        // 启用 WAL 模式 (提高并发性能)
+        db_->execute("PRAGMA journal_mode = WAL");
+        
+        // 设置同步模式为 NORMAL (性能优化)
+        db_->execute("PRAGMA synchronous = NORMAL");
+        
         connected_ = true;
         LOG_INFO("数据库连接成功: " + dbPath_);
         
