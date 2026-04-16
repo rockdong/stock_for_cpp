@@ -38,3 +38,6 @@ Thumbs.db
 env/.env
 *.pem
 *.key
+
+# OpenCode backup
+.opencode/agents.bak/
