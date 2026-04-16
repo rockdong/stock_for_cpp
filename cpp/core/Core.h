@@ -3,6 +3,7 @@
 
 #include "Stock.h"
 #include "AnalysisResult.h"
+#include "FundamentalData.h"
 
 #include "Strategy.h"
 #include "StrategyFactory.h"
