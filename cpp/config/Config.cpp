@@ -104,6 +104,23 @@ void Config::loadConfig() {
     app_version_ = getEnvString("APP_VERSION", "1.0.0");
     app_env_ = getEnvString("APP_ENV", "development");
     debug_mode_ = getEnvBool("DEBUG_MODE", false);
+
+    // ========== 基本面筛选配置 ==========
+    fundamental_pe_max_ = getEnvDouble("FUNDAMENTAL_PE_MAX", 30.0);
+    fundamental_pb_max_ = getEnvDouble("FUNDAMENTAL_PB_MAX", 5.0);
+    fundamental_peg_max_ = getEnvDouble("FUNDAMENTAL_PEG_MAX", 1.5);
+    fundamental_roe_min_ = getEnvDouble("FUNDAMENTAL_ROE_MIN", 10.0);
+    fundamental_gross_margin_min_ = getEnvDouble("FUNDAMENTAL_GROSS_MARGIN_MIN", 20.0);
+    fundamental_net_margin_min_ = getEnvDouble("FUNDAMENTAL_NET_MARGIN_MIN", 10.0);
+    fundamental_revenue_growth_min_ = getEnvDouble("FUNDAMENTAL_REVENUE_GROWTH_MIN", 5.0);
+    fundamental_profit_growth_min_ = getEnvDouble("FUNDAMENTAL_PROFIT_GROWTH_MIN", 5.0);
+    fundamental_debt_ratio_max_ = getEnvDouble("FUNDAMENTAL_DEBT_RATIO_MAX", 60.0);
+    fundamental_current_ratio_min_ = getEnvDouble("FUNDAMENTAL_CURRENT_RATIO_MIN", 1.0);
+    fundamental_total_score_min_ = getEnvDouble("FUNDAMENTAL_TOTAL_SCORE_MIN", 60.0);
+
+    // ========== Web API 配置 ==========
+    web_api_timeout_ = getEnvInt("WEB_API_TIMEOUT", 30000);
+    fundamental_filter_timeout_ = getEnvInt("FUNDAMENTAL_FILTER_TIMEOUT", 60000);
 }
 
 std::string Config::getDbConnectionString() const {
@@ -154,6 +171,19 @@ size_t Config::getEnvSize(const char* key, size_t default_value) const {
         return static_cast<size_t>(std::stoull(value));
     } catch (...) {
         std::cerr << "Config: 无法解析 size_t 值 " << key << "=" << value 
+                  << ", 使用默认值 " << default_value << std::endl;
+        return default_value;
+    }
+}
+
+double Config::getEnvDouble(const char* key, double default_value) const {
+    const char* value = std::getenv(key);
+    if (!value) return default_value;
+    
+    try {
+        return std::stod(value);
+    } catch (...) {
+        std::cerr << "Config: 无法解析 double 值 " << key << "=" << value 
                   << ", 使用默认值 " << default_value << std::endl;
         return default_value;
     }

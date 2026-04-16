@@ -106,6 +106,23 @@ public:
     std::string getAppEnv() const { return app_env_; }
     bool isDebugMode() const { return debug_mode_; }
 
+    // ========== 基本面筛选配置 ==========
+    double getFundamentalPeMax() const { return fundamental_pe_max_; }
+    double getFundamentalPbMax() const { return fundamental_pb_max_; }
+    double getFundamentalPegMax() const { return fundamental_peg_max_; }
+    double getFundamentalRoeMin() const { return fundamental_roe_min_; }
+    double getFundamentalGrossMarginMin() const { return fundamental_gross_margin_min_; }
+    double getFundamentalNetMarginMin() const { return fundamental_net_margin_min_; }
+    double getFundamentalRevenueGrowthMin() const { return fundamental_revenue_growth_min_; }
+    double getFundamentalProfitGrowthMin() const { return fundamental_profit_growth_min_; }
+    double getFundamentalDebtRatioMax() const { return fundamental_debt_ratio_max_; }
+    double getFundamentalCurrentRatioMin() const { return fundamental_current_ratio_min_; }
+    double getFundamentalTotalScoreMin() const { return fundamental_total_score_min_; }
+
+    // ========== Web API 配置 ==========
+    int getWebApiTimeout() const { return web_api_timeout_; }
+    int getFundamentalFilterTimeout() const { return fundamental_filter_timeout_; }
+
     // 禁用拷贝和赋值
     Config(const Config&) = delete;
     Config& operator=(const Config&) = delete;
@@ -150,6 +167,14 @@ private:
      * @return 环境变量值或默认值
      */
     size_t getEnvSize(const char* key, size_t default_value) const;
+
+    /**
+     * @brief 从环境变量获取 double 值
+     * @param key 环境变量名
+     * @param default_value 默认值
+     * @return 环境变量值或默认值
+     */
+    double getEnvDouble(const char* key, double default_value) const;
 
     // 线程安全
     mutable std::mutex mutex_;
@@ -213,6 +238,23 @@ private:
     std::string app_version_;
     std::string app_env_;
     bool debug_mode_;
+
+    // ========== 基本面筛选配置 ==========
+    double fundamental_pe_max_;
+    double fundamental_pb_max_;
+    double fundamental_peg_max_;
+    double fundamental_roe_min_;
+    double fundamental_gross_margin_min_;
+    double fundamental_net_margin_min_;
+    double fundamental_revenue_growth_min_;
+    double fundamental_profit_growth_min_;
+    double fundamental_debt_ratio_max_;
+    double fundamental_current_ratio_min_;
+    double fundamental_total_score_min_;
+
+    // ========== Web API 配置 ==========
+    int web_api_timeout_;
+    int fundamental_filter_timeout_;
 };
 
 } // namespace config
