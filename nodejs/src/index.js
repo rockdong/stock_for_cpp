@@ -5,6 +5,7 @@ const config = require('./config');
 const { handleMessage, handleCardAction } = require('./handler');
 const apiRoutes = require('./api');
 const logger = require('./logger');
+const requestLogger = require('./middleware/requestLogger');
 
 const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
@@ -28,6 +29,7 @@ async function main() {
   const httpApp = express();
   httpApp.use(cors());
   httpApp.use(express.json());
+  httpApp.use(requestLogger);
   httpApp.use('/api', apiRoutes);
   
   httpApp.listen(HTTP_PORT, () => {
