@@ -119,6 +119,7 @@ add_library(core_lib STATIC
     core/PredictionHistory.cpp
     core/AccuracyAnalyzer.cpp
     core/ParameterOptimizer.cpp
+    core/FundamentalFilter.cpp
     core/strategies/MACrossStrategy.cpp
     core/strategies/MACDStrategy.cpp
     core/strategies/RSIStrategy.cpp
