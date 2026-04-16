@@ -252,6 +252,44 @@ bool TushareDataSource::testConnection() {
     }
 }
 
+std::vector<core::FinancialIndicator> TushareDataSource::getFinancialIndicators(
+    const std::string& ts_code,
+    const std::string& period) {
+    
+    try {
+        LOG_DEBUG("获取财务指标数据" + (ts_code.empty() ? "" : ": " + ts_code));
+        
+        std::map<std::string, std::string> params;
+        if (!ts_code.empty()) {
+            params["ts_code"] = ts_code;
+        }
+        if (!period.empty()) {
+            params["period"] = period;
+        }
+        
+        std::vector<std::string> fields = {
+            "ts_code", "ann_date", "end_date",
+            "pe", "pe_ttm", "pb", "ps", "pcf",
+            "roe", "roe_ttm", "roa", "grossprofit_margin", "netprofit_margin", "operating_margin",
+            "or_yoy", "op_yoy", "ebt_yoy", "netprofit_yoy", "tr_yoy",
+            "debt_to_assets", "assets_turn", "current_ratio",
+            "ocf_to_operatingprofit", "ocf_to_or"
+        };
+        
+        auto response = client_->query("fina_indicator", params, fields);
+        
+        if (response.isSuccess()) {
+            return parseFinancialIndicators(response);
+        } else {
+            LOG_ERROR("获取财务指标失败: " + response.msg);
+            return {};
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取财务指标异常: " + std::string(e.what()));
+        return {};
+    }
+}
+
 // ========== 私有方法 ==========
 
 std::vector<Stock> TushareDataSource::parseStockBasic(const TushareResponse& response) {
@@ -400,6 +438,84 @@ std::vector<StockData> TushareDataSource::parseStockData(const TushareResponse& 
         
     } catch (const json::exception& e) {
         LOG_ERROR("解析股票数据失败: " + std::string(e.what()));
+    }
+    
+    return result;
+}
+
+std::vector<core::FinancialIndicator> TushareDataSource::parseFinancialIndicators(const TushareResponse& response) {
+    std::vector<core::FinancialIndicator> result;
+    
+    try {
+        if (!response.data.contains("fields") || !response.data.contains("items")) {
+            LOG_ERROR("响应数据格式错误");
+            return result;
+        }
+        
+        auto fields = response.data["fields"].get<std::vector<std::string>>();
+        auto items = response.data["items"];
+        
+        std::unordered_map<std::string, size_t> field_index;
+        for (size_t i = 0; i < fields.size(); ++i) {
+            field_index[fields[i]] = i;
+        }
+        
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
+        
+        auto get_double = [&](const json& item, const std::string& field_name) -> double {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<double>();
+            }
+            return 0.0;
+        };
+        
+        for (const auto& item : items) {
+            core::FinancialIndicator indicator;
+            
+            indicator.ts_code = get_string(item, "ts_code");
+            indicator.ann_date = get_string(item, "ann_date");
+            indicator.end_date = get_string(item, "end_date");
+            
+            indicator.pe = get_double(item, "pe");
+            indicator.pe_ttm = get_double(item, "pe_ttm");
+            indicator.pb = get_double(item, "pb");
+            indicator.ps = get_double(item, "ps");
+            indicator.pcf = get_double(item, "pcf");
+            
+            indicator.roe = get_double(item, "roe");
+            indicator.roe_ttm = get_double(item, "roe_ttm");
+            indicator.roa = get_double(item, "roa");
+            indicator.grossprofit_margin = get_double(item, "grossprofit_margin");
+            indicator.netprofit_margin = get_double(item, "netprofit_margin");
+            indicator.operating_margin = get_double(item, "operating_margin");
+            
+            indicator.or_yoy = get_double(item, "or_yoy");
+            indicator.op_yoy = get_double(item, "op_yoy");
+            indicator.ebt_yoy = get_double(item, "ebt_yoy");
+            indicator.netprofit_yoy = get_double(item, "netprofit_yoy");
+            indicator.tr_yoy = get_double(item, "tr_yoy");
+            
+            indicator.debt_to_assets = get_double(item, "debt_to_assets");
+            indicator.assets_turn = get_double(item, "assets_turn");
+            indicator.current_ratio = get_double(item, "current_ratio");
+            
+            indicator.ocf_to_operatingprofit = get_double(item, "ocf_to_operatingprofit");
+            indicator.ocf_to_or = get_double(item, "ocf_to_or");
+            
+            result.push_back(indicator);
+        }
+        
+        LOG_INFO("解析财务指标成功，共 " + std::to_string(result.size()) + " 条");
+        
+    } catch (const json::exception& e) {
+        LOG_ERROR("解析财务指标失败: " + std::string(e.what()));
     }
     
     return result;

@@ -3,6 +3,7 @@
 
 #include "IDataSource.h"
 #include "http/TushareClient.h"
+#include "../core/FundamentalData.h"
 #include <memory>
 
 namespace network {
@@ -103,6 +104,17 @@ public:
      */
     TushareClient* getClient() { return client_.get(); }
 
+    /**
+     * @brief 获取财务指标数据
+     * @param ts_code 股票代码（可选，为空表示获取全部）
+     * @param period 报告期（可选，如 20231231）
+     * @return 财务指标列表
+     */
+    std::vector<core::FinancialIndicator> getFinancialIndicators(
+        const std::string& ts_code = "",
+        const std::string& period = ""
+    );
+
 private:
     /**
      * @brief 解析股票基本信息
@@ -117,6 +129,13 @@ private:
      * @return 股票数据列表
      */
     std::vector<StockData> parseStockData(const TushareResponse& response);
+
+    /**
+     * @brief 解析财务指标数据
+     * @param response Tushare 响应
+     * @return 财务指标列表
+     */
+    std::vector<core::FinancialIndicator> parseFinancialIndicators(const TushareResponse& response);
 
     std::unique_ptr<TushareClient> client_;
 };

@@ -5,12 +5,14 @@
 #include <vector>
 #include <memory>
 #include "../core/Stock.h"
+#include "../core/FundamentalData.h"
 
 namespace network {
 
 // 使用核心模块的数据结构
 using Stock = core::Stock;
 using StockData = core::StockData;
+using FinancialIndicator = core::FinancialIndicator;
 
 /**
  * @brief 数据源接口（抽象基类）
@@ -88,6 +90,17 @@ public:
      * @return 是否连接成功
      */
     virtual bool testConnection() = 0;
+
+    /**
+     * @brief 获取财务指标数据
+     * @param ts_code 股票代码（可选，空表示全市场）
+     * @param period 报告期（可选）
+     * @return 财务指标列表
+     */
+    virtual std::vector<FinancialIndicator> getFinancialIndicators(
+        const std::string& ts_code = "",
+        const std::string& period = ""
+    ) = 0;
 };
 
 using DataSourcePtr = std::shared_ptr<IDataSource>;
