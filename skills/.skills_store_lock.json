@@ -36,12 +36,6 @@
       "zip_url": "https://lightmake.site/api/v1/download?slug=openspec",
       "source": "skillhub",
       "version": "1.0.0"
-    },
-    "using-superpowers": {
-      "name": "Using Superpowers",
-      "zip_url": "https://lightmake.site/api/v1/download?slug=using-superpowers",
-      "source": "skillhub",
-      "version": "0.1.0"
     }
   }
 }
