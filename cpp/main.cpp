@@ -4,6 +4,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <set>
 
 // 版本信息
 #include "version.h"
@@ -27,6 +28,7 @@
 
 // 核心业务
 #include "Core.h"
+#include "core/FundamentalFilter.h"
 #include "indicators/EMA.h"
 
 // 调度器
@@ -284,6 +286,54 @@ std::string calculateAnalysisDate() {
     char buffer[9];
     std::strftime(buffer, sizeof(buffer), "%Y%m%d", nowTm);
     return std::string(buffer);
+}
+
+/**
+ * @brief 执行基本面筛选
+ * 获取全市场财务指标，计算评分，筛选优质股票池
+ * @param dataSource 数据源
+ * @return 优质股票代码列表（如果失败返回空列表）
+ */
+std::vector<std::string> performFundamentalScreening(
+    std::shared_ptr<network::IDataSource> dataSource
+) {
+    LOG_INFO("========================================");
+    LOG_INFO("开始基本面筛选...");
+    LOG_INFO("========================================");
+    
+    try {
+        // 1. 获取全市场财务指标
+        LOG_INFO("从 Tushare API 获取财务指标数据...");
+        auto indicators = dataSource->getFinancialIndicators();
+        
+        if (indicators.empty()) {
+            LOG_WARN("获取财务指标数据失败或数据为空，将降级处理");
+            return {};
+        }
+        
+        LOG_INFO("获取到 " + std::to_string(indicators.size()) + " 只股票的财务指标");
+        
+        // 2. 创建筛选器（使用默认阈值）
+        core::FundamentalFilter filter;
+        
+        // 3. 筛选优质股票
+        LOG_INFO("开始计算评分并筛选优质股票...");
+        auto qualifiedCodes = filter.filterQualifiedStocks(indicators);
+        
+        // 4. 输出结果
+        LOG_INFO("========================================");
+        LOG_INFO("基本面筛选完成");
+        LOG_INFO("  优质股票数量: " + std::to_string(qualifiedCodes.size()) + " / " + std::to_string(indicators.size()));
+        LOG_INFO("  筛选比例: " + std::to_string(static_cast<int>(100.0 * qualifiedCodes.size() / indicators.size())) + "%");
+        LOG_INFO("========================================");
+        
+        return qualifiedCodes;
+        
+    } catch (const std::exception& e) {
+        LOG_ERROR("基本面筛选失败: " + std::string(e.what()));
+        LOG_WARN("将降级处理，继续对全市场执行技术分析");
+        return {};
+    }
 }
 
 /**
@@ -604,6 +654,63 @@ void performBatchAnalysis(
 }
 
 /**
+ * @brief 执行每日分析流程
+ * 先基本面筛选，后技术分析
+ * @param stockList 全市场股票列表
+ * @param dataSource 数据源
+ * @param strategyManager 策略管理器
+ * @param analysisResultDao 分析结果 DAO
+ * @param chartDataDao 图表数据 DAO
+ * @param processRecordDao 过程记录 DAO
+ */
+void performDailyAnalysis(
+    const std::vector<core::Stock>& stockList,
+    std::shared_ptr<network::IDataSource> dataSource,
+    core::StrategyManager& strategyManager,
+    data::AnalysisResultDAO& analysisResultDao,
+    data::ChartDataDAO& chartDataDao,
+    data::AnalysisProcessRecordDAO& processRecordDao
+) {
+    LOG_INFO("========================================");
+    LOG_INFO("开始每日分析流程");
+    LOG_INFO("========================================");
+    
+    std::vector<core::Stock> analysisStockList;
+    
+    auto qualifiedCodes = performFundamentalScreening(dataSource);
+    
+    if (qualifiedCodes.empty()) {
+        LOG_WARN("基本面筛选未返回优质股票，降级到全市场分析");
+        analysisStockList = stockList;
+    } else {
+        LOG_INFO("基本面筛选成功，优质股票: " + std::to_string(qualifiedCodes.size()) + " 只");
+        
+        std::set<std::string> qualifiedSet(qualifiedCodes.begin(), qualifiedCodes.end());
+        
+        for (const auto& stock : stockList) {
+            if (qualifiedSet.count(stock.ts_code) > 0) {
+                analysisStockList.push_back(stock);
+            }
+        }
+        
+        LOG_INFO("从股票列表中匹配到 " + std::to_string(analysisStockList.size()) + " 只优质股票");
+    }
+    
+    if (analysisStockList.empty()) {
+        LOG_WARN("分析股票列表为空，跳过技术分析");
+        return;
+    }
+    
+    LOG_INFO("开始技术分析，股票数量: " + std::to_string(analysisStockList.size()));
+    
+    performBatchAnalysis(analysisStockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
+    
+    LOG_INFO("========================================");
+    LOG_INFO("每日分析流程完成");
+    LOG_INFO("========================================");
+}
+
+/**
  * @brief 清理系统资源
  */
 void cleanup() {
@@ -688,16 +795,16 @@ int main(int argc, char* argv[]) {
         if (options.onceMode) {
             // 单次执行模式
             LOG_INFO("执行单次分析...");
-            performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
+            performDailyAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
         } else {
             scheduler::Scheduler sched(options.executeTime, [&]() {
-                performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
+                performDailyAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
             });
             
             g_scheduler = &sched;
             
             if (checkStartupAnalysisNeeded(sched, processRecordDao)) {
-                performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
+                performDailyAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
             }
             
             LOG_INFO("启动定时调度模式，执行时间: " + options.executeTime);
