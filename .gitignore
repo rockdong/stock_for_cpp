@@ -39,5 +39,8 @@ env/.env
 *.pem
 *.key
 
-# OpenCode backup
-.opencode/agents.bak/
+# OpenCode
+.opencode/
+
+# Skills
+skills/
