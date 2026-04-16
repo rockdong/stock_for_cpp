@@ -444,4 +444,67 @@ router.delete('/user/subscribe/:code', (req, res) => {
   res.json({ success: true, message: '取消成功' });
 });
 
+// ============================================
+// fundamentals/* 路由 - 基本面筛选
+// ============================================
+
+router.get('/fundamentals/filter', (req, res) => {
+  try {
+    const { pe_max, pb_max, roe_min, gross_margin_min, total_score_min } = req.query;
+    
+    const thresholds = {
+      pe_max: pe_max ? parseFloat(pe_max) : 30.0,
+      pb_max: pb_max ? parseFloat(pb_max) : 5.0,
+      roe_min: roe_min ? parseFloat(roe_min) : 10.0,
+      gross_margin_min: gross_margin_min ? parseFloat(gross_margin_min) : 20.0,
+      total_score_min: total_score_min ? parseFloat(total_score_min) : 60.0
+    };
+    
+    res.json({ 
+      success: true, 
+      message: '基本面筛选功能正在开发中，请通过 C++ 后端执行',
+      thresholds: thresholds
+    });
+  } catch (err) {
+    logger.error('基本面筛选失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/fundamentals/:code', (req, res) => {
+  try {
+    const { code } = req.params;
+    
+    res.json({ 
+      success: true, 
+      message: '基本面详情功能正在开发中',
+      ts_code: code
+    });
+  } catch (err) {
+    logger.error('获取基本面详情失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/fundamentals/progress', (req, res) => {
+  try {
+    const defaultProgress = {
+      total: 0,
+      completed: 0,
+      qualified: 0,
+      status: 'idle',
+      started_at: null,
+      updated_at: new Date().toISOString()
+    };
+    
+    res.json({ 
+      success: true, 
+      data: defaultProgress
+    });
+  } catch (err) {
+    logger.error('获取基本面筛选进度失败:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;
