@@ -44,3 +44,6 @@ env/.env
 
 # Skills
 skills/
+
+# Worktrees
+.worktrees/
