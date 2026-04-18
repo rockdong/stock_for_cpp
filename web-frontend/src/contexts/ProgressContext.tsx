@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { analysisApi } from '../services/api'
-import { AnalysisProgress, ProgressStatus } from '../types/analysis'
+import { AnalysisProgress, ProgressStatus, PhaseProgress } from '../types/analysis'
 
 interface ProgressContextValue {
-  progress: AnalysisProgress | null
+  progress: AnalysisProgress
   isLoading: boolean
   error: boolean
   status: ProgressStatus
@@ -12,13 +12,64 @@ interface ProgressContextValue {
 
 const ProgressContext = createContext<ProgressContextValue | null>(null)
 
+const DEFAULT_PHASE1: PhaseProgress = { status: 'idle', total: 0, completed: 0, qualified: 0 }
+const DEFAULT_PHASE2: PhaseProgress = { status: 'idle', total: 0, completed: 0, failed: 0 }
+
 const DEFAULT_PROGRESS: AnalysisProgress = {
   id: 1,
-  phase1: { status: 'idle', total: 0, completed: 0, qualified: 0 },
-  phase2: { status: 'idle', total: 0, completed: 0, failed: 0 },
+  phase1: DEFAULT_PHASE1,
+  phase2: DEFAULT_PHASE2,
   started_at: null,
   phase1_completed_at: null,
   updated_at: ''
+}
+
+function normalizeProgress(data: any): AnalysisProgress {
+  if (!data) return DEFAULT_PROGRESS
+  
+  if (data.phase1 && data.phase2) {
+    return {
+      id: data.id || 1,
+      phase1: {
+        status: data.phase1.status || 'idle',
+        total: data.phase1.total || 0,
+        completed: data.phase1.completed || 0,
+        qualified: data.phase1.qualified || 0
+      },
+      phase2: {
+        status: data.phase2.status || 'idle',
+        total: data.phase2.total || 0,
+        completed: data.phase2.completed || 0,
+        failed: data.phase2.failed || 0
+      },
+      started_at: data.started_at || null,
+      phase1_completed_at: data.phase1_completed_at || null,
+      updated_at: data.updated_at || ''
+    }
+  }
+  
+  if (data.status) {
+    return {
+      id: data.id || 1,
+      phase1: {
+        status: data.status === 'completed' ? 'completed' : 'idle',
+        total: 0,
+        completed: 0,
+        qualified: 0
+      },
+      phase2: {
+        status: data.status || 'idle',
+        total: data.total || 0,
+        completed: data.completed || 0,
+        failed: data.failed || 0
+      },
+      started_at: data.started_at || null,
+      phase1_completed_at: null,
+      updated_at: data.updated_at || ''
+    }
+  }
+  
+  return DEFAULT_PROGRESS
 }
 
 export function ProgressProvider({ 
@@ -28,14 +79,14 @@ export function ProgressProvider({
   children: ReactNode
   refreshInterval?: number 
 }) {
-  const [progress, setProgress] = useState<AnalysisProgress | null>(null)
+  const [progress, setProgress] = useState<AnalysisProgress>(DEFAULT_PROGRESS)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(false)
 
   const fetchProgress = useCallback(async () => {
     try {
       const data = await analysisApi.getProgress()
-      setProgress(data)
+      setProgress(normalizeProgress(data))
       setError(false)
     } catch (err) {
       console.error('获取进度失败:', err)
@@ -52,8 +103,6 @@ export function ProgressProvider({
   }, [fetchProgress, refreshInterval])
 
   const getOverallStatus = (): ProgressStatus => {
-    if (!progress) return 'idle'
-    
     const p1 = progress.phase1.status
     const p2 = progress.phase2.status
     
@@ -63,7 +112,7 @@ export function ProgressProvider({
   }
 
   const value: ProgressContextValue = {
-    progress: progress || DEFAULT_PROGRESS,
+    progress,
     isLoading,
     error,
     status: getOverallStatus(),
@@ -92,10 +141,10 @@ export function useProgressStatus() {
 
 export function usePhase1Progress() {
   const { progress } = useProgress()
-  return progress?.phase1 || DEFAULT_PROGRESS.phase1
+  return progress.phase1
 }
 
 export function usePhase2Progress() {
   const { progress } = useProgress()
-  return progress?.phase2 || DEFAULT_PROGRESS.phase2
+  return progress.phase2
 }
