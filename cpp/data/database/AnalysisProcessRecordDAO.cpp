@@ -198,7 +198,12 @@ int StockProcessRecordDAO::count() {
 
 AnalysisProgress StockProcessRecordDAO::getProgress() const {
     auto& conn = Connection::getInstance();
-    AnalysisProgress progress{0, 0, 0, "", "", ""};
+    AnalysisProgress progress;
+    progress.phase1 = {"idle", 0, 0, 0, 0};
+    progress.phase2 = {"idle", 0, 0, 0, 0};
+    progress.started_at = "";
+    progress.phase1_completed_at = "";
+    progress.updated_at = "";
     
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
@@ -213,11 +218,18 @@ AnalysisProgress StockProcessRecordDAO::getProgress() const {
                                      .from(table)
                                      .unconditionally()
                                      .limit(1u))) {
-            progress.total = row.total;
-            progress.completed = row.completed;
-            progress.failed = row.failed;
-            progress.status = row.status;
+            progress.phase1.status = row.phase1Status.is_null() ? "idle" : row.phase1Status.value();
+            progress.phase1.total = row.phase1Total.is_null() ? 0 : row.phase1Total.value();
+            progress.phase1.completed = row.phase1Completed.is_null() ? 0 : row.phase1Completed.value();
+            progress.phase1.qualified = row.phase1Qualified.is_null() ? 0 : row.phase1Qualified.value();
+            
+            progress.phase2.status = row.phase2Status.is_null() ? "idle" : row.phase2Status.value();
+            progress.phase2.total = row.phase2Total.is_null() ? 0 : row.phase2Total.value();
+            progress.phase2.completed = row.phase2Completed.is_null() ? 0 : row.phase2Completed.value();
+            progress.phase2.failed = row.phase2Failed.is_null() ? 0 : row.phase2Failed.value();
+            
             progress.started_at = row.startedAt.is_null() ? "" : row.startedAt.value();
+            progress.phase1_completed_at = row.phase1CompletedAt.is_null() ? "" : row.phase1CompletedAt.value();
             progress.updated_at = row.updatedAt.is_null() ? "" : row.updatedAt.value();
             return progress;
         }

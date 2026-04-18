@@ -2,13 +2,20 @@ export type SignalType = 'BUY' | 'SELL' | 'HOLD' | 'NONE'
 export type FreqType = 'd' | 'w' | 'm'
 export type ProgressStatus = 'idle' | 'running' | 'completed'
 
-export interface AnalysisProgress {
-  id: number
+export interface PhaseProgress {
+  status: ProgressStatus
   total: number
   completed: number
-  failed: number
-  status: ProgressStatus
+  qualified?: number
+  failed?: number
+}
+
+export interface AnalysisProgress {
+  id: number
+  phase1: PhaseProgress
+  phase2: PhaseProgress
   started_at: string | null
+  phase1_completed_at: string | null
   updated_at: string
 }
 

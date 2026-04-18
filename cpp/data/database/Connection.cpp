@@ -228,27 +228,46 @@ bool Connection::createTables() {
         return false;
     }
     
-    // 创建分析进度表
+    // 创建分析进度表（两阶段：基本面 + 技术面）
     std::string createAnalysisProgressTable = R"(
         CREATE TABLE IF NOT EXISTS analysis_progress (
             id INTEGER PRIMARY KEY CHECK (id = 1),
-            total INTEGER DEFAULT 0,
-            completed INTEGER DEFAULT 0,
-            failed INTEGER DEFAULT 0,
-            status TEXT DEFAULT 'idle',
+            -- Phase 1: 基本面分析
+            phase1_status TEXT DEFAULT 'idle',
+            phase1_total INTEGER DEFAULT 0,
+            phase1_completed INTEGER DEFAULT 0,
+            phase1_qualified INTEGER DEFAULT 0,
+            -- Phase 2: 技术面分析
+            phase2_status TEXT DEFAULT 'idle',
+            phase2_total INTEGER DEFAULT 0,
+            phase2_completed INTEGER DEFAULT 0,
+            phase2_failed INTEGER DEFAULT 0,
+            -- 时间戳
             started_at DATETIME,
+            phase1_completed_at DATETIME,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     )";
     
-    LOG_INFO("创建 analysis_progress 表");
+    LOG_INFO("创建 analysis_progress 表（两阶段模式）");
     if (!executeInternal(createAnalysisProgressTable)) {
         LOG_ERROR("创建 analysis_progress 表失败");
         return false;
     }
     
     // 初始化进度表（如果为空）
-    executeInternal("INSERT OR IGNORE INTO analysis_progress (id, status) VALUES (1, 'idle')");
+    executeInternal("INSERT OR IGNORE INTO analysis_progress (id, phase1_status, phase2_status) VALUES (1, 'idle', 'idle')");
+    
+    // 兼容旧数据库：添加新字段（如果不存在）
+    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_status TEXT DEFAULT 'idle'");
+    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_total INTEGER DEFAULT 0");
+    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_completed INTEGER DEFAULT 0");
+    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_qualified INTEGER DEFAULT 0");
+    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase2_status TEXT DEFAULT 'idle'");
+    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase2_total INTEGER DEFAULT 0");
+    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase2_completed INTEGER DEFAULT 0");
+    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase2_failed INTEGER DEFAULT 0");
+    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_completed_at DATETIME");
     
     // 创建图表数据表
     std::string createChartDataTable = R"(

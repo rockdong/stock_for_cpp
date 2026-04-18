@@ -111,24 +111,28 @@ bool checkStartupAnalysisNeeded(scheduler::Scheduler& sched, data::AnalysisProce
             
             auto progress = dao.getProgress();
             
-            if (progress.status == "completed" && 
-                progress.completed == progress.total && 
-                progress.total > 0) {
-                
+            bool phase1Completed = progress.phase1.status == "completed";
+            bool phase2Completed = progress.phase2.status == "completed" &&
+                                   progress.phase2.completed == progress.phase2.total &&
+                                   progress.phase2.total > 0;
+            
+            if (phase1Completed && phase2Completed) {
                 auto endCheck = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endCheck - startCheck);
                 
                 LOG_INFO("今天已完成分析，跳过首次执行，进入调度等待");
                 LOG_INFO("分析日期: " + analysisDate + 
-                         ", 进度: " + std::to_string(progress.completed) + "/" + std::to_string(progress.total) +
+                         ", Phase1: " + progress.phase1.status + " (" + std::to_string(progress.phase1.qualified) + " 只优质股)" +
+                         ", Phase2: " + std::to_string(progress.phase2.completed) + "/" + std::to_string(progress.phase2.total) +
                          ", 检查耗时: " + std::to_string(duration.count()) + "ms");
                 
                 return false;
             } else {
                 LOG_WARN("文件记录与数据库状态不一致，将重新执行分析");
-                LOG_WARN("进度状态: " + progress.status + 
-                         ", 完成: " + std::to_string(progress.completed) + 
-                         ", 总数: " + std::to_string(progress.total));
+                LOG_WARN("Phase1: " + progress.phase1.status + 
+                         ", Phase2: " + progress.phase2.status + 
+                         ", 完成: " + std::to_string(progress.phase2.completed) + 
+                         ", 总数: " + std::to_string(progress.phase2.total));
                 return true;
             }
         }
@@ -295,43 +299,100 @@ std::string calculateAnalysisDate() {
  * @return 优质股票代码列表（如果失败返回空列表）
  */
 std::vector<std::string> performFundamentalScreening(
-    std::shared_ptr<network::IDataSource> dataSource
+    std::shared_ptr<network::IDataSource> dataSource,
+    const std::vector<core::Stock>& allStocks,
+    const std::string& tradeDate
 ) {
     LOG_INFO("========================================");
     LOG_INFO("开始基本面筛选...");
     LOG_INFO("========================================");
     
+    updatePhase1Progress(static_cast<int>(allStocks.size()), 0, 0, "running");
+    
     try {
-        // 1. 获取全市场财务指标
-        LOG_INFO("从 Tushare API 获取财务指标数据...");
-        auto indicators = dataSource->getFinancialIndicators();
+        LOG_INFO("获取每日指标数据 (daily_basic)...");
         
-        if (indicators.empty()) {
-            LOG_WARN("获取财务指标数据失败或数据为空，将降级处理");
+        auto tushareSource = std::dynamic_pointer_cast<network::TushareDataSource>(dataSource);
+        if (!tushareSource) {
+            LOG_WARN("数据源类型不支持基本面筛选，降级到全市场分析");
+            updatePhase1Progress(-1, -1, -1, "completed");
             return {};
         }
         
-        LOG_INFO("获取到 " + std::to_string(indicators.size()) + " 只股票的财务指标");
+        auto response = tushareSource->getClient()->getDailyBasic("", tradeDate, "", "");
         
-        // 2. 创建筛选器（使用默认阈值）
-        core::FundamentalFilter filter;
+        if (!response.isSuccess()) {
+            LOG_ERROR("获取每日指标失败: " + response.msg);
+            updatePhase1Progress(-1, -1, -1, "completed");
+            return {};
+        }
         
-        // 3. 筛选优质股票
-        LOG_INFO("开始计算评分并筛选优质股票...");
-        auto qualifiedCodes = filter.filterQualifiedStocks(indicators);
+        std::vector<std::string> qualifiedCodes;
+        int processedCount = 0;
         
-        // 4. 输出结果
+        if (response.data.contains("fields") && response.data.contains("items")) {
+            auto fields = response.data["fields"].get<std::vector<std::string>>();
+            auto items = response.data["items"];
+            
+            std::unordered_map<std::string, size_t> fieldIndex;
+            for (size_t i = 0; i < fields.size(); ++i) {
+                fieldIndex[fields[i]] = i;
+            }
+            
+            auto get_double = [&](const json& item, const std::string& fieldName) -> double {
+                auto it = fieldIndex.find(fieldName);
+                if (it != fieldIndex.end() && it->second < item.size() && !item[it->second].is_null()) {
+                    return item[it->second].get<double>();
+                }
+                return 0.0;
+            };
+            
+            for (const auto& item : items) {
+                std::string tsCode = item[fieldIndex["ts_code"]].get<std::string>();
+                
+                double pe = get_double(item, "pe");
+                double peTtm = get_double(item, "pe_ttm");
+                double pb = get_double(item, "pb");
+                double totalMv = get_double(item, "total_mv");
+                double circMv = get_double(item, "circ_mv");
+                double turnoverRate = get_double(item, "turnover_rate");
+                
+                double score = 0.0;
+                
+                if (pe > 0 && pe < 30) score += 10.0;
+                else if (peTtm > 0 && peTtm < 30) score += 10.0;
+                
+                if (pb > 0 && pb < 5) score += 8.0;
+                
+                if (totalMv >= 50 && totalMv <= 5000) score += 5.0;
+                
+                if (turnoverRate >= 1 && turnoverRate <= 10) score += 2.0;
+                
+                if (score >= 15.0) {
+                    qualifiedCodes.push_back(tsCode);
+                }
+                
+                processedCount++;
+                if (processedCount % 500 == 0) {
+                    updatePhase1Progress(-1, processedCount, static_cast<int>(qualifiedCodes.size()));
+                }
+            }
+            
+            LOG_INFO("处理了 " + std::to_string(processedCount) + " 只股票的估值数据");
+        }
+        
+        updatePhase1Progress(-1, processedCount, static_cast<int>(qualifiedCodes.size()), "completed");
+        
         LOG_INFO("========================================");
         LOG_INFO("基本面筛选完成");
-        LOG_INFO("  优质股票数量: " + std::to_string(qualifiedCodes.size()) + " / " + std::to_string(indicators.size()));
-        LOG_INFO("  筛选比例: " + std::to_string(static_cast<int>(100.0 * qualifiedCodes.size() / indicators.size())) + "%");
+        LOG_INFO("  优质股票数量: " + std::to_string(qualifiedCodes.size()));
         LOG_INFO("========================================");
         
         return qualifiedCodes;
         
     } catch (const std::exception& e) {
         LOG_ERROR("基本面筛选失败: " + std::string(e.what()));
-        LOG_WARN("将降级处理，继续对全市场执行技术分析");
+        updatePhase1Progress(-1, -1, -1, "completed");
         return {};
     }
 }
@@ -572,16 +633,31 @@ void analyzeStock(
  * @param failed 失败数（-1 表示不更新）
  * @param status 状态（空表示不更新）
  */
-void updateProgress(int total = -1, int completed = -1, int failed = -1, const std::string& status = "") {
+void updatePhase1Progress(int total = -1, int completed = -1, int qualified = -1, const std::string& status = "") {
     auto& conn = data::Connection::getInstance();
     if (!conn.isConnected()) return;
     
     std::string sql = "UPDATE analysis_progress SET updated_at = CURRENT_TIMESTAMP";
-    if (total >= 0) sql += ", total = " + std::to_string(total);
-    if (completed >= 0) sql += ", completed = " + std::to_string(completed);
-    if (failed >= 0) sql += ", failed = " + std::to_string(failed);
-    if (!status.empty()) sql += ", status = '" + status + "'";
+    if (total >= 0) sql += ", phase1_total = " + std::to_string(total);
+    if (completed >= 0) sql += ", phase1_completed = " + std::to_string(completed);
+    if (qualified >= 0) sql += ", phase1_qualified = " + std::to_string(qualified);
+    if (!status.empty()) sql += ", phase1_status = '" + status + "'";
     if (status == "running") sql += ", started_at = CURRENT_TIMESTAMP";
+    if (status == "completed") sql += ", phase1_completed_at = CURRENT_TIMESTAMP";
+    sql += " WHERE id = 1";
+    
+    conn.execute(sql);
+}
+
+void updatePhase2Progress(int total = -1, int completed = -1, int failed = -1, const std::string& status = "") {
+    auto& conn = data::Connection::getInstance();
+    if (!conn.isConnected()) return;
+    
+    std::string sql = "UPDATE analysis_progress SET updated_at = CURRENT_TIMESTAMP";
+    if (total >= 0) sql += ", phase2_total = " + std::to_string(total);
+    if (completed >= 0) sql += ", phase2_completed = " + std::to_string(completed);
+    if (failed >= 0) sql += ", phase2_failed = " + std::to_string(failed);
+    if (!status.empty()) sql += ", phase2_status = '" + status + "'";
     sql += " WHERE id = 1";
     
     conn.execute(sql);
@@ -603,11 +679,11 @@ void performBatchAnalysis(
     data::AnalysisProcessRecordDAO& processRecordDao
 ) {
     LOG_INFO("========================================");
-    LOG_INFO("开始批量分析，共 " + std::to_string(stockList.size()) + " 只股票");
+    LOG_INFO("开始技术面分析，共 " + std::to_string(stockList.size()) + " 只股票");
     LOG_INFO("========================================");
     
     int total = static_cast<int>(stockList.size());
-    updateProgress(total, 0, 0, "running");
+    updatePhase2Progress(total, 0, 0, "running");
     
     unsigned int threadCount = std::thread::hardware_concurrency();
     if (threadCount == 0) threadCount = 4;
@@ -628,14 +704,14 @@ void performBatchAnalysis(
                 analyzeStock(stock, localDataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
                 int completed = successCount.fetch_add(1) + 1 + failCount.load();
                 if (completed - lastReportedProgress.load() >= 10) {
-                    updateProgress(-1, completed, failCount.load());
+                    updatePhase2Progress(-1, completed, failCount.load());
                     lastReportedProgress = completed;
                 }
             } catch (const std::exception& e) {
                 LOG_ERROR("分析失败: " + stock.ts_code + " - " + std::string(e.what()));
                 int failed = failCount.fetch_add(1) + 1;
                 int completed = successCount.load() + failed;
-                updateProgress(-1, completed, failed);
+                updatePhase2Progress(-1, completed, failed);
             }
         });
         
@@ -644,10 +720,10 @@ void performBatchAnalysis(
     
     pool.wait();
     
-    updateProgress(-1, successCount.load(), failCount.load(), "completed");
+    updatePhase2Progress(-1, successCount.load(), failCount.load(), "completed");
     
     LOG_INFO("========================================");
-    LOG_INFO("批量分析完成");
+    LOG_INFO("技术面分析完成");
     LOG_INFO("  成功: " + std::to_string(successCount.load()) + " 只");
     LOG_INFO("  失败: " + std::to_string(failCount.load()) + " 只");
     LOG_INFO("========================================");
@@ -675,9 +751,11 @@ void performDailyAnalysis(
     LOG_INFO("开始每日分析流程");
     LOG_INFO("========================================");
     
+    std::string analysisDate = calculateAnalysisDate();
+    
     std::vector<core::Stock> analysisStockList;
     
-    auto qualifiedCodes = performFundamentalScreening(dataSource);
+    auto qualifiedCodes = performFundamentalScreening(dataSource, stockList, analysisDate);
     
     if (qualifiedCodes.empty()) {
         LOG_WARN("基本面筛选未返回优质股票，降级到全市场分析");

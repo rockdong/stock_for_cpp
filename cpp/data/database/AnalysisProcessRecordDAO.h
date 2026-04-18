@@ -8,12 +8,19 @@
 
 namespace data {
 
-struct AnalysisProgress {
+struct PhaseProgress {
+    std::string status;
     int total;
     int completed;
+    int qualified;
     int failed;
-    std::string status;
+};
+
+struct AnalysisProgress {
+    PhaseProgress phase1;
+    PhaseProgress phase2;
     std::string started_at;
+    std::string phase1_completed_at;
     std::string updated_at;
 };
 

@@ -22,60 +22,116 @@ namespace AnalysisProgressTable_ {
         using _traits = sqlpp::make_traits<sqlpp::integer, sqlpp::tag::must_not_insert, sqlpp::tag::must_not_update>;
     };
 
-    struct Total {
+    struct Phase1Status {
         struct _alias_t {
-            static constexpr const char _literal[] = "total";
+            static constexpr const char _literal[] = "phase1_status";
             using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
             template<typename T>
             struct _member_t {
-                T total;
-                T& operator()() { return total; }
-                const T& operator()() const { return total; }
-            };
-        };
-        using _traits = sqlpp::make_traits<sqlpp::integer>;
-    };
-
-    struct Completed {
-        struct _alias_t {
-            static constexpr const char _literal[] = "completed";
-            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
-            template<typename T>
-            struct _member_t {
-                T completed;
-                T& operator()() { return completed; }
-                const T& operator()() const { return completed; }
-            };
-        };
-        using _traits = sqlpp::make_traits<sqlpp::integer>;
-    };
-
-    struct Failed {
-        struct _alias_t {
-            static constexpr const char _literal[] = "failed";
-            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
-            template<typename T>
-            struct _member_t {
-                T failed;
-                T& operator()() { return failed; }
-                const T& operator()() const { return failed; }
-            };
-        };
-        using _traits = sqlpp::make_traits<sqlpp::integer>;
-    };
-
-    struct Status {
-        struct _alias_t {
-            static constexpr const char _literal[] = "status";
-            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
-            template<typename T>
-            struct _member_t {
-                T status;
-                T& operator()() { return status; }
-                const T& operator()() const { return status; }
+                T phase1Status;
+                T& operator()() { return phase1Status; }
+                const T& operator()() const { return phase1Status; }
             };
         };
         using _traits = sqlpp::make_traits<sqlpp::text>;
+    };
+
+    struct Phase1Total {
+        struct _alias_t {
+            static constexpr const char _literal[] = "phase1_total";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T phase1Total;
+                T& operator()() { return phase1Total; }
+                const T& operator()() const { return phase1Total; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::integer>;
+    };
+
+    struct Phase1Completed {
+        struct _alias_t {
+            static constexpr const char _literal[] = "phase1_completed";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T phase1Completed;
+                T& operator()() { return phase1Completed; }
+                const T& operator()() const { return phase1Completed; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::integer>;
+    };
+
+    struct Phase1Qualified {
+        struct _alias_t {
+            static constexpr const char _literal[] = "phase1_qualified";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T phase1Qualified;
+                T& operator()() { return phase1Qualified; }
+                const T& operator()() const { return phase1Qualified; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::integer>;
+    };
+
+    struct Phase2Status {
+        struct _alias_t {
+            static constexpr const char _literal[] = "phase2_status";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T phase2Status;
+                T& operator()() { return phase2Status; }
+                const T& operator()() const { return phase2Status; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text>;
+    };
+
+    struct Phase2Total {
+        struct _alias_t {
+            static constexpr const char _literal[] = "phase2_total";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T phase2Total;
+                T& operator()() { return phase2Total; }
+                const T& operator()() const { return phase2Total; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::integer>;
+    };
+
+    struct Phase2Completed {
+        struct _alias_t {
+            static constexpr const char _literal[] = "phase2_completed";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T phase2Completed;
+                T& operator()() { return phase2Completed; }
+                const T& operator()() const { return phase2Completed; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::integer>;
+    };
+
+    struct Phase2Failed {
+        struct _alias_t {
+            static constexpr const char _literal[] = "phase2_failed";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T phase2Failed;
+                T& operator()() { return phase2Failed; }
+                const T& operator()() const { return phase2Failed; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::integer>;
     };
 
     struct StartedAt {
@@ -87,6 +143,20 @@ namespace AnalysisProgressTable_ {
                 T startedAt;
                 T& operator()() { return startedAt; }
                 const T& operator()() const { return startedAt; }
+            };
+        };
+        using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
+    };
+
+    struct Phase1CompletedAt {
+        struct _alias_t {
+            static constexpr const char _literal[] = "phase1_completed_at";
+            using _name_t = sqlpp::make_char_sequence<sizeof(_literal), _literal>;
+            template<typename T>
+            struct _member_t {
+                T phase1CompletedAt;
+                T& operator()() { return phase1CompletedAt; }
+                const T& operator()() const { return phase1CompletedAt; }
             };
         };
         using _traits = sqlpp::make_traits<sqlpp::text, sqlpp::tag::can_be_null>;
@@ -109,11 +179,16 @@ namespace AnalysisProgressTable_ {
 
 struct AnalysisProgressTable : sqlpp::table_t<AnalysisProgressTable,
     AnalysisProgressTable_::Id,
-    AnalysisProgressTable_::Total,
-    AnalysisProgressTable_::Completed,
-    AnalysisProgressTable_::Failed,
-    AnalysisProgressTable_::Status,
+    AnalysisProgressTable_::Phase1Status,
+    AnalysisProgressTable_::Phase1Total,
+    AnalysisProgressTable_::Phase1Completed,
+    AnalysisProgressTable_::Phase1Qualified,
+    AnalysisProgressTable_::Phase2Status,
+    AnalysisProgressTable_::Phase2Total,
+    AnalysisProgressTable_::Phase2Completed,
+    AnalysisProgressTable_::Phase2Failed,
     AnalysisProgressTable_::StartedAt,
+    AnalysisProgressTable_::Phase1CompletedAt,
     AnalysisProgressTable_::UpdatedAt>
 {
     struct _alias_t {

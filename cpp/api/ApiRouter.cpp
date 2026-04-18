@@ -209,22 +209,47 @@ std::string getAnalysisProgress() {
     
     json progress;
     progress["id"] = 1;
-    progress["total"] = 0;
-    progress["completed"] = 0;
-    progress["failed"] = 0;
-    progress["status"] = "idle";
+    
+    progress["phase1"] = json::object();
+    progress["phase1"]["status"] = "idle";
+    progress["phase1"]["total"] = 0;
+    progress["phase1"]["completed"] = 0;
+    progress["phase1"]["qualified"] = 0;
+    
+    progress["phase2"] = json::object();
+    progress["phase2"]["status"] = "idle";
+    progress["phase2"]["total"] = 0;
+    progress["phase2"]["completed"] = 0;
+    progress["phase2"]["failed"] = 0;
+    
+    progress["started_at"] = nullptr;
+    progress["phase1_completed_at"] = nullptr;
+    progress["updated_at"] = "";
     
     std::string sql = "SELECT * FROM analysis_progress ORDER BY id DESC LIMIT 1";
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
         if (sqlite3_step(stmt) == SQLITE_ROW) {
             progress["id"] = sqlite3_column_int(stmt, 0);
-            progress["total"] = sqlite3_column_int(stmt, 1);
-            progress["completed"] = sqlite3_column_int(stmt, 2);
-            progress["failed"] = sqlite3_column_int(stmt, 3);
-            progress["status"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
-            progress["started_at"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
-            progress["updated_at"] = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+            
+            progress["phase1"]["status"] = sqlite3_column_text(stmt, 1) ? 
+                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)) : "idle";
+            progress["phase1"]["total"] = sqlite3_column_int(stmt, 2);
+            progress["phase1"]["completed"] = sqlite3_column_int(stmt, 3);
+            progress["phase1"]["qualified"] = sqlite3_column_int(stmt, 4);
+            
+            progress["phase2"]["status"] = sqlite3_column_text(stmt, 5) ? 
+                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)) : "idle";
+            progress["phase2"]["total"] = sqlite3_column_int(stmt, 6);
+            progress["phase2"]["completed"] = sqlite3_column_int(stmt, 7);
+            progress["phase2"]["failed"] = sqlite3_column_int(stmt, 8);
+            
+            progress["started_at"] = sqlite3_column_text(stmt, 9) ? 
+                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 9)) : nullptr;
+            progress["phase1_completed_at"] = sqlite3_column_text(stmt, 10) ? 
+                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 10)) : nullptr;
+            progress["updated_at"] = sqlite3_column_text(stmt, 11) ? 
+                reinterpret_cast<const char*>(sqlite3_column_text(stmt, 11)) : "";
         }
         sqlite3_finalize(stmt);
     }
