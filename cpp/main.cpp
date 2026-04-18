@@ -385,7 +385,7 @@ std::vector<std::string> performFundamentalScreening(
                 
                 processedCount++;
                 if (processedCount % 500 == 0) {
-                    updatePhase1Progress(-1, processedCount, static_cast<int>(qualifiedCodes.size()));
+                    updatePhase1Progress(-1, processedCount, static_cast<int>(qualifiedCodes.size()), "");
                 }
             }
             
