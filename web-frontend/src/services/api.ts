@@ -3,12 +3,15 @@ import { AnalysisProcessRecord, ChartResponse, FilterParams, AnalysisProgress } 
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 30000,
+  timeout: 60000,
 })
 
 export const analysisApi = {
   getProcessRecords: async (params: FilterParams): Promise<AnalysisProcessRecord[]> => {
-    const response = await api.get('/analysis/process', { params })
+    const response = await api.get('/analysis/process', { 
+      params,
+      timeout: 120000
+    })
     return response.data.data
   },
 
