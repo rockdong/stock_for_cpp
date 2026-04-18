@@ -37,40 +37,10 @@ jobs:
       env:
         BUILD_NUMBER: ${{ github.run_number }}
 
-    - name: 📤 上传 C++ 构建产物 (Ubuntu)
+    - name: 📤 上传 C++ 构建产物
       uses: actions/upload-artifact@v4
       with:
         name: cpp-build-ubuntu
-        path: |
-          cpp/build/stock_for_cpp
-          cpp/build/version.h
-
-  build-cpp-macos:
-    name: 🏗️ 编译 C++ (macOS)
-    runs-on: macos-latest
-
-    steps:
-    - name: 📥 检出代码仓库
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: 🔧 安装构建依赖
-      run: |
-        brew install cmake sqlite3 openssl@3
-
-    - name: ⚙️ 配置 CMake (使用 cpp 目录)
-      run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3)
-
-    - name: 🏗️ 编译项目
-      run: cmake --build cpp/build --config ${{ env.BUILD_TYPE }} -- -j$(sysctl -n hw.ncpu)
-      env:
-        BUILD_NUMBER: ${{ github.run_number }}
-
-    - name: 📤 上传 C++ 构建产物 (macOS)
-      uses: actions/upload-artifact@v4
-      with:
-        name: cpp-build-macos
         path: |
           cpp/build/stock_for_cpp
           cpp/build/version.h
@@ -115,7 +85,7 @@ jobs:
       - name: 📥 检出代码仓库
         uses: actions/checkout@v4
 
-      - name: 📦 下载 C++ 构建产物 (Ubuntu)
+      - name: 📦 下载 C++ 构建产物
         uses: actions/download-artifact@v4
         with:
           name: cpp-build-ubuntu
