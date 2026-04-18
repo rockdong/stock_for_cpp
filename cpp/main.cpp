@@ -5,6 +5,7 @@
 #include <atomic>
 #include <chrono>
 #include <set>
+#include <unordered_map>
 
 // 版本信息
 #include "version.h"
@@ -25,11 +26,15 @@
 
 // 网络层
 #include "DataSourceFactory.h"
+#include "network/TushareDataSource.h"
 
 // 核心业务
 #include "Core.h"
 #include "core/FundamentalFilter.h"
 #include "indicators/EMA.h"
+
+// JSON
+#include "../thirdparty/json/include/nlohmann/json.hpp"
 
 // 调度器
 #include "Scheduler.h"
@@ -43,6 +48,12 @@
 
 // API HTTP Server
 #include "api/Api.h"
+
+using json = nlohmann::json;
+
+// 前置声明
+void updatePhase1Progress(int total, int completed, int qualified, const std::string& status);
+void updatePhase2Progress(int total, int completed, int failed, const std::string& status);
 
 // 全局调度器指针（用于信号处理）
 scheduler::Scheduler* g_scheduler = nullptr;
