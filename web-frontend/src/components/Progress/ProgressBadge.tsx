@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useProgressStore } from '../../stores/progressStore'
+import CircleProgress from './CircleProgress'
 
 export default function ProgressBadge() {
   const { progress, isLoading, error, fetchProgress } = useProgressStore()
@@ -58,21 +59,22 @@ export default function ProgressBadge() {
   }
   
   return (
-    <div className="flex items-center gap-4 text-xs">
+    <div className="flex items-center gap-6 text-xs">
       {phase1.status !== 'idle' && (
         <div className="flex items-center gap-2">
-          <span className={`w-1.5 h-1.5 rounded-full ${phase1.status === 'running' ? 'bg-blue-400' : 'bg-emerald-400'}`} />
-          <span className="text-gray-400">基本面</span>
+          <span className={`w-1.5 h-1.5 rounded-full ${phase1.status === 'running' ? 'bg-blue-400 animate-pulse' : 'bg-emerald-400'}`} />
+          <span className="text-gray-400 font-medium">基本面</span>
           {phase1.status === 'running' && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${p1Percent}%` }} />
-              </div>
-              <span className="text-gray-500 font-mono">{p1Percent}%</span>
-            </div>
+            <CircleProgress 
+              percent={p1Percent} 
+              completed={phase1.completed} 
+              total={phase1.total}
+              size={28}
+              strokeWidth={2.5}
+            />
           )}
           {phase1.status === 'completed' && (
-            <span className="text-emerald-400">✓</span>
+            <span className="text-emerald-400 text-sm">✓</span>
           )}
         </div>
       )}
@@ -83,18 +85,19 @@ export default function ProgressBadge() {
       
       {phase2.status !== 'idle' && (
         <div className="flex items-center gap-2">
-          <span className={`w-1.5 h-1.5 rounded-full ${phase2.status === 'running' ? 'bg-blue-400' : 'bg-emerald-400'}`} />
-          <span className="text-gray-400">技术面</span>
+          <span className={`w-1.5 h-1.5 rounded-full ${phase2.status === 'running' ? 'bg-blue-400 animate-pulse' : 'bg-emerald-400'}`} />
+          <span className="text-gray-400 font-medium">技术面</span>
           {phase2.status === 'running' && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${p2Percent}%` }} />
-              </div>
-              <span className="text-gray-500 font-mono">{p2Percent}%</span>
-            </div>
+            <CircleProgress 
+              percent={p2Percent} 
+              completed={phase2.completed} 
+              total={phase2.total}
+              size={28}
+              strokeWidth={2.5}
+            />
           )}
           {phase2.status === 'completed' && (
-            <span className="text-emerald-400">✓</span>
+            <span className="text-emerald-400 text-sm">✓</span>
           )}
         </div>
       )}
