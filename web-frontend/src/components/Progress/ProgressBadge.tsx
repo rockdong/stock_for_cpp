@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useProgressStore } from '../../stores/progressStore'
 import CircleProgress from './CircleProgress'
 
 export default function ProgressBadge() {
   const { progress, isLoading, error, fetchProgress } = useProgressStore()
+  const isFirstLoad = useRef(true)
 
   const phase1 = progress.phase1
   const phase2 = progress.phase2
@@ -16,7 +17,9 @@ export default function ProgressBadge() {
   const isCompleted = phase1.status === 'completed' && phase2.status === 'completed'
 
   useEffect(() => {
-    fetchProgress()
+    fetchProgress().finally(() => {
+      isFirstLoad.current = false
+    })
     const interval = setInterval(fetchProgress, 5000)
     return () => clearInterval(interval)
   }, [fetchProgress])
@@ -30,7 +33,8 @@ export default function ProgressBadge() {
     )
   }
 
-  if (isLoading) {
+  // 只在首次加载时显示加载状态，避免轮询时闪烁
+  if (isLoading && isFirstLoad.current) {
     return (
       <span className="text-xs text-text-tertiary flex items-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-text-tertiary animate-pulse" />
