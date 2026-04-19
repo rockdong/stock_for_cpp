@@ -78,4 +78,6 @@ export interface FilterParams {
   ts_code?: string
   start_date?: string
   end_date?: string
+  freq?: FreqType[]
+  strategy?: string[]
 }
