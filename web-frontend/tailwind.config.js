@@ -7,7 +7,46 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 背景色阶
+        // shadcn/ui CSS 变量
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+          blue: '#3B82F6',
+          'blue-bg': 'rgba(59,130,246,0.12)',
+          amber: '#F59E0B',
+          purple: '#8B5CF6',
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        
+        // 项目原有色阶
         base: '#0B0E11',
         surface: '#141820',
         elevated: '#1C2333',
@@ -29,14 +68,6 @@ export default {
         'signal-sell': '#22C55E',
         'signal-sell-bg': 'rgba(34,197,94,0.12)',
         'signal-hold': '#94A3B8',
-        
-        // 强调色
-        accent: {
-          blue: '#3B82F6',
-          'blue-bg': 'rgba(59,130,246,0.12)',
-          amber: '#F59E0B',
-          purple: '#8B5CF6',
-        },
       },
       fontFamily: {
         sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],

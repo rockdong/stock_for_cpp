@@ -4,6 +4,27 @@
 
 @layer base {
   :root {
+    /* shadcn/ui 深色主题 CSS 变量 */
+    --background: 220 20% 6%;
+    --foreground: 220 20% 90%;
+    --card: 220 20% 8%;
+    --card-foreground: 220 20% 90%;
+    --popover: 220 20% 8%;
+    --popover-foreground: 220 20% 90%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 14%;
+    --secondary-foreground: 220 20% 90%;
+    --muted: 220 20% 14%;
+    --muted-foreground: 220 20% 60%;
+    --accent: 220 20% 14%;
+    --accent-foreground: 220 20% 90%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 20% 16%;
+    --input: 220 20% 16%;
+    --ring: 217 91% 60%;
+    
     /* 涨跌色 CSS 变量 (A股惯例: 红涨绿跌) */
     --buy-color: #EF4444;
     --sell-color: #22C55E;
@@ -77,6 +98,23 @@
            placeholder:text-text-tertiary text-sm tabular-nums
            focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30
            transition-colors duration-150;
+  }
+
+  /* 日期输入框增强 */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.5) brightness(0.8);
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  }
+
+  input[type="date"]:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+  }
+
+  input[type="date"]:focus::-webkit-calendar-picker-indicator {
+    filter: invert(0.3) brightness(1);
+    opacity: 1;
   }
 
   /* 按钮基础 */
