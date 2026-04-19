@@ -1,12 +1,7 @@
 import AnalysisPage from './pages/Analysis'
-import { ProgressProvider } from './contexts/ProgressContext'
 
 function App() {
-  return (
-    <ProgressProvider>
-      <AnalysisPage />
-    </ProgressProvider>
-  )
+  return <AnalysisPage />
 }
 
 export default App

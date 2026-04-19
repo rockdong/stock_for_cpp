@@ -1,7 +1,8 @@
-import { useProgress } from '../../contexts/ProgressContext'
+import { useEffect } from 'react'
+import { useProgressStore } from '../../stores/progressStore'
 
 export default function ProgressBadge() {
-  const { progress, isLoading, error } = useProgress()
+  const { progress, isLoading, error, fetchProgress } = useProgressStore()
   
   const phase1 = progress.phase1
   const phase2 = progress.phase2
@@ -12,6 +13,12 @@ export default function ProgressBadge() {
   
   const isIdle = phase1.status === 'idle' && phase2.status === 'idle'
   const isCompleted = phase1.status === 'completed' && phase2.status === 'completed'
+  
+  useEffect(() => {
+    fetchProgress()
+    const interval = setInterval(fetchProgress, 5000)
+    return () => clearInterval(interval)
+  }, [fetchProgress])
   
   if (error) {
     return (
