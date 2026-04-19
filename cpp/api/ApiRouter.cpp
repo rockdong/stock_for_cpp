@@ -207,6 +207,8 @@ std::string getAnalysisProgress() {
     sqlite3* db = getDb();
     if (!db) return jsonError("数据库连接失败");
     
+    auto& config = config::Config::getInstance();
+    
     json progress;
     progress["id"] = 1;
     
@@ -225,6 +227,7 @@ std::string getAnalysisProgress() {
     progress["started_at"] = nullptr;
     progress["phase1_completed_at"] = nullptr;
     progress["updated_at"] = "";
+    progress["execute_time"] = config.getSchedulerExecuteTime();
     
     std::string sql = "SELECT * FROM analysis_progress ORDER BY id DESC LIMIT 1";
     sqlite3_stmt* stmt;

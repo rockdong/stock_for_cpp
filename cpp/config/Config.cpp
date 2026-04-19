@@ -98,6 +98,7 @@ void Config::loadConfig() {
     default_rsi_period_ = getEnvInt("DEFAULT_RSI_PERIOD", 14);
     strategies_ = getEnvString("STRATEGIES", "EMA17TO25;MACD;RSI");
     analysis_date_switch_time_ = getEnvString("ANALYSIS_DATE_SWITCH_TIME", "02:00");
+    scheduler_execute_time_ = getEnvString("SCHEDULER_EXECUTE_TIME", "20:00");
 
     // ========== 应用配置 ==========
     app_name_ = getEnvString("APP_NAME", "Stock Analysis System");

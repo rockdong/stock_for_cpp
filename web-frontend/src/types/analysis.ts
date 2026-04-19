@@ -17,6 +17,7 @@ export interface AnalysisProgress {
   started_at: string | null
   phase1_completed_at: string | null
   updated_at: string
+  execute_time: string
 }
 
 export interface DataPoint {

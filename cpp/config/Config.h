@@ -99,6 +99,7 @@ public:
     int getDefaultRsiPeriod() const { return default_rsi_period_; }
     std::string getStrategies() const { return strategies_; }
     std::string getAnalysisDateSwitchTime() const { return analysis_date_switch_time_; }
+    std::string getSchedulerExecuteTime() const { return scheduler_execute_time_; }
 
     // ========== 应用配置 ==========
     std::string getAppName() const { return app_name_; }
@@ -232,6 +233,7 @@ private:
     int default_rsi_period_;
     std::string strategies_;
     std::string analysis_date_switch_time_;
+    std::string scheduler_execute_time_;
 
     // ========== 应用配置 ==========
     std::string app_name_;
