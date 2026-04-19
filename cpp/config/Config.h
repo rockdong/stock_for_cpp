@@ -193,6 +193,7 @@ private:
     size_t log_async_queue_size_;
 
     // ========== 数据库配置 ==========
+    std::string db_type_;
     std::string db_host_;
     int db_port_;
     std::string db_name_;

@@ -59,7 +59,10 @@ set(HTTPLIB_IS_USING_OPENSSL OFF CACHE BOOL "Force disable OpenSSL" FORCE)
 
 # 添加第三方库子目录
 add_subdirectory(thirdparty/spdlog)
+
+set(BUILD_MYSQL_CONNECTOR ON CACHE BOOL "Enable MySQL connector" FORCE)
 add_subdirectory(thirdparty/sqlpp11)
+
 add_subdirectory(thirdparty/json)
 add_subdirectory(thirdparty/cpp-httplib)
 add_subdirectory(thirdparty/dotenv-cpp)
@@ -229,6 +232,7 @@ target_include_directories(data_lib PUBLIC
 
 target_link_libraries(data_lib PUBLIC
     sqlpp11::sqlpp11
+    sqlpp11::mysql
     sqlite3
     nlohmann_json::nlohmann_json
     core_lib
@@ -322,6 +326,7 @@ target_link_libraries(stock_for_cpp PRIVATE
     api_lib
     spdlog::spdlog
     sqlpp11::sqlpp11
+    sqlpp11::mysql
     sqlite3
     nlohmann_json::nlohmann_json
     httplib::httplib

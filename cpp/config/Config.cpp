@@ -58,6 +58,7 @@ void Config::loadConfig() {
     log_async_queue_size_ = getEnvSize("LOG_ASYNC_QUEUE_SIZE", 8192);
 
     // ========== 数据库配置 ==========
+    db_type_ = getEnvString("DB_TYPE", "sqlite");
     db_host_ = getEnvString("DB_HOST", "localhost");
     db_port_ = getEnvInt("DB_PORT", 3306);
     db_name_ = getEnvString("DB_NAME", "stock_db");
