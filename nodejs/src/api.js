@@ -126,23 +126,34 @@ router.get('/analysis/signals', (req, res) => {
 router.get('/analysis/progress', (req, res) => {
   try {
     const db = getDb();
-    const progress = db.prepare(`
+    const row = db.prepare(`
       SELECT * FROM analysis_progress ORDER BY id DESC LIMIT 1
     `).get();
     
-    const defaultProgress = {
-      id: 1,
-      total: 0,
-      completed: 0,
-      failed: 0,
-      status: 'idle',
-      started_at: null,
-      updated_at: new Date().toISOString()
+    // 转换成前端期望的嵌套格式
+    const progress = {
+      id: row?.id || 1,
+      phase1: {
+        status: row?.phase1_status || 'idle',
+        total: row?.phase1_total || 0,
+        completed: row?.phase1_completed || 0,
+        qualified: row?.phase1_qualified || 0
+      },
+      phase2: {
+        status: row?.phase2_status || 'idle',
+        total: row?.phase2_total || 0,
+        completed: row?.phase2_completed || 0,
+        failed: row?.phase2_failed || 0
+      },
+      started_at: row?.started_at || null,
+      phase1_completed_at: row?.phase1_completed_at || null,
+      updated_at: row?.updated_at || '',
+      execute_time: process.env.SCHEDULER_EXECUTE_TIME || '20:00'
     };
     
     res.json({ 
       success: true, 
-      data: progress || defaultProgress
+      data: progress
     });
   } catch (err) {
     logger.error('获取分析进度失败:', err);
