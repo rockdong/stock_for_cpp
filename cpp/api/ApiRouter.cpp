@@ -2,6 +2,7 @@
 #include "../thirdparty/cpp-httplib/httplib.h"
 #include "../thirdparty/json/include/nlohmann/json.hpp"
 #include "../log/Logger.h"
+#include "../config/Config.h"
 #include <sqlite3.h>
 #include <cstdlib>
 #include <sstream>
