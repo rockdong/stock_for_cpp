@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface NavItem {
   id: string
@@ -49,15 +49,21 @@ const navItems: NavItem[] = [
 interface SidebarProps {
   activeId: string
   onNavChange: (id: string) => void
+  collapsed?: boolean
+  onCollapsedChange?: (collapsed: boolean) => void
 }
 
-export default function Sidebar({ activeId, onNavChange }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
+export default function Sidebar({ activeId, onNavChange, collapsed, onCollapsedChange }: SidebarProps) {
+  const [internalCollapsed, setInternalCollapsed] = useState(false)
+  
+  // 使用外部状态或内部状态
+  const isCollapsed = collapsed !== undefined ? collapsed : internalCollapsed
+  const setIsCollapsed = onCollapsedChange || setInternalCollapsed
 
   return (
     <aside
       className={`fixed left-0 top-0 h-screen bg-overlay border-r border-border-default z-30 flex flex-col transition-all duration-300 ${
-        collapsed ? 'w-16' : 'w-60'
+        isCollapsed ? 'w-16' : 'w-60'
       }`}
     >
       {/* Logo */}
@@ -67,7 +73,7 @@ export default function Sidebar({ activeId, onNavChange }: SidebarProps) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
         </div>
-        {!collapsed && (
+        {!isCollapsed && (
           <div className="overflow-hidden">
             <h1 className="text-sm font-semibold text-text-primary truncate">StockLens</h1>
             <p className="text-2xs text-text-tertiary truncate">A股智能分析平台</p>
@@ -82,21 +88,21 @@ export default function Sidebar({ activeId, onNavChange }: SidebarProps) {
             key={item.id}
             onClick={() => onNavChange(item.id)}
             className={`w-full ${activeId === item.id ? 'nav-item--active' : 'nav-item'}`}
-            title={collapsed ? item.label : undefined}
+            title={isCollapsed ? item.label : undefined}
           >
             <span className="flex-shrink-0">{item.icon}</span>
-            {!collapsed && <span className="truncate">{item.label}</span>}
+            {!isCollapsed && <span className="truncate">{item.label}</span>}
           </button>
         ))}
       </nav>
 
       {/* Collapse Toggle */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={() => setIsCollapsed(!isCollapsed)}
         className="h-12 flex items-center justify-center border-t border-border-default text-text-tertiary hover:text-text-secondary transition-colors cursor-pointer"
       >
         <svg
-          className={`w-4 h-4 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

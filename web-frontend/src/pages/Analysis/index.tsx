@@ -16,6 +16,7 @@ interface ModalState {
 
 export default function AnalysisPage() {
   const [activeNav, setActiveNav] = useState('analysis')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [records, setRecords] = useState<AnalysisProcessRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [modalState, setModalState] = useState<ModalState>({
@@ -65,10 +66,17 @@ export default function AnalysisPage() {
   return (
     <div className="min-h-screen bg-base flex">
       {/* 侧边栏 */}
-      <Sidebar activeId={activeNav} onNavChange={setActiveNav} />
+      <Sidebar 
+        activeId={activeNav} 
+        onNavChange={setActiveNav}
+        collapsed={sidebarCollapsed}
+        onCollapsedChange={setSidebarCollapsed}
+      />
 
       {/* 主内容区 */}
-      <div className="flex-1 ml-60 flex flex-col min-h-screen">
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
+        sidebarCollapsed ? 'ml-16' : 'ml-60'
+      }`}>
         {/* 顶部栏 */}
         <header className="sticky top-0 z-20 h-14 bg-surface/80 backdrop-blur-xl border-b border-border-default flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
