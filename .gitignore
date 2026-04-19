@@ -1,6 +1,7 @@
 # build
 build/
 cpp/build/
+web-frontend/dist/
 
 # Node.js
 node_modules/
