@@ -75,13 +75,12 @@ export default function AnalysisPage() {
               <p className="text-xs text-gray-500">股票分析过程数据展示</p>
             </div>
           </div>
-          <div className="mt-3">
-            <ProgressBadge />
-          </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <ProgressBadge />
+
         <AnalysisFilter onFilter={loadRecords} />
 
         {loading ? (
