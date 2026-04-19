@@ -11,18 +11,20 @@ interface StockCardProps {
 export default function StockCard({ record, defaultStrategy, onFreqClick }: StockCardProps) {
   const strategies = record.data?.strategies || []
   const strategy = defaultStrategy || (strategies.length > 0 ? strategies[0].name : '')
-  
+
   const handleFreqClick = (freq: FreqType) => {
     if (strategy) {
       onFreqClick(record, freq, strategy)
     }
   }
-  
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-4">
+    <div className="card group cursor-pointer">
       <StockInfo record={record} />
       {strategies.length > 0 && (
-        <FreqButtons onFreqClick={handleFreqClick} />
+        <div className="mt-3 pt-3 border-t border-border-default">
+          <FreqButtons onFreqClick={handleFreqClick} />
+        </div>
       )}
     </div>
   )

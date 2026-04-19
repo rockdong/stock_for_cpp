@@ -38,73 +38,72 @@ function getDrillOptions(freq: FreqType): { label: string; targetFreq: FreqType 
   return []
 }
 
-export default function DrillDownTooltip({ 
-  visible, 
-  x, 
-  y, 
-  data, 
-  freq, 
+export default function DrillDownTooltip({
+  visible,
+  x,
+  y,
+  data,
+  freq,
   showDrillButtons,
-  onDrillDown, 
+  onDrillDown,
   containerWidth
 }: DrillDownTooltipProps) {
   if (!visible || !data) return null
-  
+
   const isUp = data.close >= data.open
   const changePercent = ((data.close - data.open) / data.open * 100).toFixed(2)
   const drillOptions = getDrillOptions(freq)
-  
-  // 计算 tooltip 位置：当右侧空间不足时，显示在鼠标左侧
+
   const tooltipWidth = 180
   const shouldPlaceLeft = x + tooltipWidth + 20 > containerWidth
   const leftPosition = shouldPlaceLeft ? Math.max(x - tooltipWidth - 10, 10) : Math.min(x + 10, containerWidth - tooltipWidth)
-  
+
   return (
-    <div 
-      className="absolute pointer-events-none z-50 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-3 text-sm"
-      style={{ 
+    <div
+      className="absolute pointer-events-none z-50 bg-elevated/95 backdrop-blur-sm border border-border-default rounded-lg shadow-modal p-3 text-sm animate-fade-in"
+      style={{
         left: leftPosition,
         top: Math.max(y - 120, 10),
       }}
     >
-      <div className="font-medium text-gray-900">{data.time}</div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
-        <span className="text-gray-500">开:</span>
-        <span className="font-medium">{formatNumber(data.open)}</span>
-        <span className="text-gray-500">高:</span>
-        <span className="font-medium text-red-500">{formatNumber(data.high)}</span>
-        <span className="text-gray-500">低:</span>
-        <span className="font-medium text-green-600">{formatNumber(data.low)}</span>
-        <span className="text-gray-500">收:</span>
-        <span className={`font-medium ${isUp ? 'text-red-500' : 'text-green-600'}`}>
+      <div className="font-medium text-text-primary font-mono text-xs">{data.time}</div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-xs">
+        <span className="text-text-tertiary">开</span>
+        <span className="font-medium text-text-primary font-mono tabular-nums">{formatNumber(data.open)}</span>
+        <span className="text-text-tertiary">高</span>
+        <span className="font-medium text-signal-buy font-mono tabular-nums">{formatNumber(data.high)}</span>
+        <span className="text-text-tertiary">低</span>
+        <span className="font-medium text-signal-sell font-mono tabular-nums">{formatNumber(data.low)}</span>
+        <span className="text-text-tertiary">收</span>
+        <span className={`font-medium font-mono tabular-nums ${isUp ? 'text-signal-buy' : 'text-signal-sell'}`}>
           {formatNumber(data.close)}
         </span>
-        <span className="text-gray-500">涨跌:</span>
-        <span className={`font-medium ${isUp ? 'text-red-500' : 'text-green-600'}`}>
+        <span className="text-text-tertiary">涨跌</span>
+        <span className={`font-medium font-mono tabular-nums ${isUp ? 'text-signal-buy' : 'text-signal-sell'}`}>
           {isUp ? '+' : ''}{changePercent}%
         </span>
       </div>
-      <div className="border-t border-gray-100 mt-2 pt-2">
-        <span className="text-gray-500">量:</span>
-        <span className="ml-2">{formatVolume(data.volume)}</span>
+      <div className="border-t border-border-default mt-2 pt-2 text-xs">
+        <span className="text-text-tertiary">量</span>
+        <span className="ml-2 text-text-primary font-mono tabular-nums">{formatVolume(data.volume)}</span>
       </div>
       {data.ema17 !== undefined && (
-        <div className="text-blue-500 text-xs mt-1">
+        <div className="text-accent-blue text-xs mt-1 font-mono tabular-nums">
           EMA17: {formatNumber(data.ema17)}
         </div>
       )}
       {data.ema25 !== undefined && (
-        <div className="text-orange-500 text-xs mt-1">
+        <div className="text-accent-amber text-xs mt-1 font-mono tabular-nums">
           EMA25: {formatNumber(data.ema25)}
         </div>
       )}
       {showDrillButtons && drillOptions.length > 0 && onDrillDown && (
-        <div className="border-t border-gray-100 mt-2 pt-2 flex gap-2 pointer-events-auto">
+        <div className="border-t border-border-default mt-2 pt-2 flex gap-2 pointer-events-auto">
           {drillOptions.map((option, index) => (
             <button
               key={index}
               onClick={() => onDrillDown(option.targetFreq)}
-              className="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors cursor-pointer"
+              className="px-2.5 py-1 text-xs bg-accent-blue-bg text-accent-blue rounded-md hover:bg-accent-blue/20 border border-accent-blue/20 transition-colors cursor-pointer font-medium"
             >
               {option.label}
             </button>

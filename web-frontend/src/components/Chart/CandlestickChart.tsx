@@ -17,7 +17,7 @@ interface CandlestickChartProps {
   onDrillDown?: (info: { time: string; targetFreq: FreqType }) => void
 }
 
-export default function CandlestickChart({ data, height = 400, freq = 'd', onDrillDown }: CandlestickChartProps) {
+export default function CandlestickChart({ data, height = 420, freq = 'd', onDrillDown }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const isLockedRef = useRef(false)
@@ -33,26 +33,50 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#ffffff' },
-        textColor: '#333',
+        background: { type: ColorType.Solid, color: '#141820' },
+        textColor: '#8B95A5',
+        fontSize: 12,
       },
       width: chartContainerRef.current.clientWidth,
       height: height,
       grid: {
-        vertLines: { color: '#e1e1e1' },
-        horzLines: { color: '#e1e1e1' },
+        vertLines: { color: '#1E2536' },
+        horzLines: { color: '#1E2536' },
+      },
+      crosshair: {
+        mode: 0,
+        vertLine: {
+          color: '#3B82F6',
+          width: 1,
+          style: 2,
+          labelBackgroundColor: '#3B82F6',
+        },
+        horzLine: {
+          color: '#3B82F6',
+          width: 1,
+          style: 2,
+          labelBackgroundColor: '#3B82F6',
+        },
+      },
+      rightPriceScale: {
+        borderColor: '#2A3142',
+        textColor: '#8B95A5',
+      },
+      timeScale: {
+        borderColor: '#2A3142',
+        timeVisible: false,
       },
     })
 
     chartRef.current = chart
 
     const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#EF5350',
-      downColor: '#26A69A',
-      borderUpColor: '#EF5350',
-      borderDownColor: '#26A69A',
-      wickUpColor: '#EF5350',
-      wickDownColor: '#26A69A',
+      upColor: '#EF4444',
+      downColor: '#22C55E',
+      borderUpColor: '#EF4444',
+      borderDownColor: '#22C55E',
+      wickUpColor: '#EF4444',
+      wickDownColor: '#22C55E',
     })
 
     const candleData: CandlestickData[] = data.map(d => ({
@@ -66,15 +90,15 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
 
     chart.subscribeCrosshairMove((param) => {
       if (isLockedRef.current) return
-      
+
       if (!param.time || !param.point) {
         setTooltip({ visible: false, x: 0, y: 0, data: null })
         return
       }
-      
+
       const timeStr = param.time.toString()
       const pointData = data.find(d => formatTime(d.time) === timeStr)
-      
+
       if (pointData && param.point) {
         setTooltip({
           visible: true,
@@ -91,10 +115,10 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
         setTooltip({ visible: false, x: 0, y: 0, data: null })
         return
       }
-      
+
       const timeStr = param.time.toString()
       const pointData = data.find(d => formatTime(d.time) === timeStr)
-      
+
       if (pointData && param.point) {
         isLockedRef.current = true
         setTooltip({
@@ -107,7 +131,7 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
     })
 
     const ema17Series = chart.addLineSeries({
-      color: '#2196F3',
+      color: '#3B82F6',
       lineWidth: 2,
     })
     const ema17Data: LineData[] = data
@@ -119,7 +143,7 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
     ema17Series.setData(ema17Data)
 
     const ema25Series = chart.addLineSeries({
-      color: '#FF9800',
+      color: '#F59E0B',
       lineWidth: 2,
     })
     const ema25Data: LineData[] = data
@@ -165,11 +189,11 @@ export default function CandlestickChart({ data, height = 400, freq = 'd', onDri
 
   return (
     <div className="relative">
-      <div 
-        ref={chartContainerRef} 
-        className="w-full rounded-lg border border-gray-200 bg-white"
+      <div
+        ref={chartContainerRef}
+        className="w-full rounded-lg border border-border-default bg-surface"
       />
-      <DrillDownTooltip 
+      <DrillDownTooltip
         visible={tooltip.visible}
         x={tooltip.x}
         y={tooltip.y}

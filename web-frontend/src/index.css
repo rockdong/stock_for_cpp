@@ -2,12 +2,123 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --buy-color: #07C160;
-  --sell-color: #FA5151;
-  --hold-color: #888888;
+@layer base {
+  :root {
+    /* 涨跌色 CSS 变量 (A股惯例: 红涨绿跌) */
+    --buy-color: #EF4444;
+    --sell-color: #22C55E;
+    --hold-color: #94A3B8;
+  }
+
+  body {
+    @apply bg-base text-text-primary antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* 数字等宽对齐 */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-default rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-tertiary;
+  }
+
+  /* 选中态 */
+  ::selection {
+    @apply bg-accent-blue/30 text-text-primary;
+  }
 }
 
-body {
-  @apply bg-gray-50 text-gray-900;
+@layer components {
+  /* 信号标签基础 */
+  .signal-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border-l-[3px] tabular-nums;
+  }
+
+  .signal-badge--buy {
+    @apply signal-badge bg-signal-buy-bg text-signal-buy border-l-signal-buy;
+  }
+
+  .signal-badge--sell {
+    @apply signal-badge bg-signal-sell-bg text-signal-sell border-l-signal-sell;
+  }
+
+  .signal-badge--hold {
+    @apply signal-badge bg-gray-800 text-signal-hold border-l-signal-hold;
+  }
+
+  /* 卡片基础 */
+  .card {
+    @apply bg-surface rounded-xl border border-border-default p-4 transition-all duration-200;
+  }
+
+  .card:hover {
+    @apply border-accent-blue/30 shadow-card-hover -translate-y-0.5;
+  }
+
+  /* 输入框基础 */
+  .input-field {
+    @apply w-full px-3.5 py-2.5 bg-elevated border border-border-default rounded-lg text-text-primary 
+           placeholder:text-text-tertiary text-sm tabular-nums
+           focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30
+           transition-colors duration-150;
+  }
+
+  /* 按钮基础 */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm
+           transition-all duration-150 cursor-pointer
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-surface
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn--primary {
+    @apply btn bg-accent-blue text-white hover:bg-accent-blue/90 active:scale-[0.98];
+  }
+
+  .btn--ghost {
+    @apply btn bg-transparent text-text-secondary hover:bg-elevated hover:text-text-primary;
+  }
+
+  /* 骨架屏 */
+  .skeleton {
+    @apply bg-gradient-to-r from-surface via-elevated to-surface bg-[length:200%_100%] animate-shimmer rounded;
+  }
+
+  /* 侧边栏导航项 */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary text-sm font-medium
+           transition-all duration-150 cursor-pointer
+           hover:bg-elevated hover:text-text-primary;
+  }
+
+  .nav-item--active {
+    @apply nav-item bg-accent-blue-bg text-accent-blue;
+  }
+}
+
+@layer utilities {
+  /* 数字颜色工具 */
+  .text-up {
+    @apply text-signal-buy;
+  }
+
+  .text-down {
+    @apply text-signal-sell;
+  }
 }

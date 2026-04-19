@@ -47,3 +47,6 @@ skills/
 
 # Worktrees
 .worktrees/
+
+# workbuddy
+.workbuddy/
