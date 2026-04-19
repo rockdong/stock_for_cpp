@@ -8,11 +8,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@types/node": "^25.6.0",
     "axios": "^1.6.0",
-    "date-fns": "^3.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
     "lightweight-charts": "^4.1.0",
+    "lucide-react": "^1.8.0",
     "react": "^18.2.0",
+    "react-day-picker": "^9.14.0",
     "react-dom": "^18.2.0",
+    "tailwind-merge": "^3.5.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
