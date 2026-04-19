@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { analysisApi } from '../../services/api'
-import { FilterParams, FreqType } from '../../types/analysis'
+import { FilterParams, FreqType, SignalType } from '../../types/analysis'
 import { DatePicker } from '@/components/ui/date-picker'
 
 interface FilterProps {
@@ -15,7 +15,12 @@ const freqOptions: { freq: FreqType; label: string }[] = [
 
 export default function AnalysisFilter({ onFilter }: FilterProps) {
   const [strategies, setStrategies] = useState<string[]>([])
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{
+    ts_code: string
+    start_date: string
+    end_date: string
+    signal: SignalType | ''
+  }>({
     ts_code: '',
     start_date: '',
     end_date: '',
@@ -48,9 +53,10 @@ export default function AnalysisFilter({ onFilter }: FilterProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const params: FilterParams = {}
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params[key as keyof FilterParams] = value
-    })
+    if (filters.ts_code) params.ts_code = filters.ts_code
+    if (filters.start_date) params.start_date = filters.start_date
+    if (filters.end_date) params.end_date = filters.end_date
+    if (filters.signal) params.signal = filters.signal as SignalType
     if (selectedStrategies.length > 0) {
       params.strategy = selectedStrategies
     }
@@ -148,7 +154,7 @@ export default function AnalysisFilter({ onFilter }: FilterProps) {
               </label>
               <select
                 value={filters.signal}
-                onChange={e => setFilters({ ...filters, signal: e.target.value })}
+                onChange={e => setFilters({ ...filters, signal: e.target.value as SignalType | '' })}
                 className="input-field cursor-pointer"
               >
                 <option value="">全部信号</option>
