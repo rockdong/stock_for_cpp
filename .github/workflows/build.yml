@@ -127,7 +127,7 @@ jobs:
 
     - name: 📦 安装依赖
       working-directory: web-frontend
-      run: npm ci
+      run: npm install
 
     - name: 🏗️ 构建 Vite 项目
       working-directory: web-frontend
