@@ -803,19 +803,11 @@ void performDailyAnalysis(
  * @brief 清理系统资源
  */
 void cleanup() {
-    if (g_httpServer) {
-        g_httpServer->stop();
-    }
-    
-    api::cleanupDatabase();
-    
     eventbus::shutdown();
     
-    // 断开数据库连接
     auto& conn = data::Connection::getInstance();
     conn.disconnect();
     
-    // 关闭日志系统
     logger::LoggerManager::getInstance().shutdown();
     
     LOG_INFO("应用程序退出");
