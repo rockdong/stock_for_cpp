@@ -323,7 +323,6 @@ target_link_libraries(stock_for_cpp PRIVATE
     analysis_lib
     utils_lib
     eventbus_lib
-    api_lib
     spdlog::spdlog
     sqlpp11::sqlpp11
     sqlpp11::mysql
