@@ -104,7 +104,7 @@ export class AnalysisService {
   async getStrategies() {
     const strategiesEnv = this.config.get('STRATEGIES', '');
     if (!strategiesEnv) return [];
-    return strategiesEnv.split(';').filter(s => s.trim());
+    return strategiesEnv.split(';').filter((s: string) => s.trim());
   }
 
   async getProcessChart(tsCode: string, strategy?: string, freq: string = 'd') {
