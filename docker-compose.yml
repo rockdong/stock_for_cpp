@@ -45,6 +45,27 @@ services:
         hard: 65536
     restart: unless-stopped
 
+  api-server:
+    build: ./backend
+    container_name: stock-api-server
+    platform: linux/amd64
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db
+      - STRATEGIES=EMA25_GREATER_17_PRICE_MATCH
+      - SCHEDULER_EXECUTE_TIME=20:00
+      - PORT=3001
+      - TZ=Asia/Shanghai
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: unless-stopped
+
 volumes:
   mysql_data:
 

@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Stock {
+  id          Int       @id @default(autoincrement())
+  tsCode      String    @unique @map("ts_code") @db.VarChar(20)
+  symbol      String?   @db.VarChar(10)
+  name        String?   @db.VarChar(100)
+  area        String?   @db.VarChar(20)
+  industry    String?   @db.VarChar(50)
+  market      String?   @db.VarChar(20)
+  exchange    String?   @db.VarChar(20)
+  listStatus  String?   @map("list_status") @db.VarChar(10)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("stocks")
+}
+
+model AnalysisResult {
+  id           Int      @id @default(autoincrement())
+  tsCode       String   @map("ts_code") @db.VarChar(20)
+  strategyName String   @map("strategy_name") @db.VarChar(50)
+  tradeDate    DateTime @map("trade_date") @db.Date
+  label        String   @db.VarChar(20)
+  freq         String?  @db.VarChar(5)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([tsCode, strategyName, tradeDate, freq])
+  @@index([tsCode])
+  @@index([strategyName])
+  @@index([tradeDate])
+  @@map("analysis_results")
+}
+
+model AnalysisProgress {
+  id                Int       @id
+  phase1Status      String    @default("idle") @map("phase1_status") @db.VarChar(20)
+  phase1Total       Int       @default(0) @map("phase1_total")
+  phase1Completed   Int       @default(0) @map("phase1_completed")
+  phase1Qualified   Int       @default(0) @map("phase1_qualified")
+  phase2Status      String    @default("idle") @map("phase2_status") @db.VarChar(20)
+  phase2Total       Int       @default(0) @map("phase2_total")
+  phase2Completed   Int       @default(0) @map("phase2_completed")
+  phase2Failed      Int       @default(0) @map("phase2_failed")
+  startedAt         DateTime? @map("started_at")
+  phase1CompletedAt DateTime? @map("phase1_completed_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@map("analysis_progress")
+}
+
+model AnalysisProcessRecord {
+  id        Int       @id @default(autoincrement())
+  tsCode    String    @map("ts_code") @db.VarChar(20)
+  stockName String?   @map("stock_name") @db.VarChar(100)
+  tradeDate DateTime  @map("trade_date") @db.Date
+  data      Json      @default("{\"strategies\":[]}")
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime? @map("expires_at")
+
+  @@unique([tsCode, tradeDate])
+  @@index([tsCode])
+  @@index([tradeDate])
+  @@map("analysis_process_records")
+}
+
+model ChartData {
+  id           Int      @id @default(autoincrement())
+  tsCode       String   @map("ts_code") @db.VarChar(20)
+  freq         String   @db.VarChar(5)
+  analysisDate DateTime @map("analysis_date") @db.Date
+  data         Json
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([tsCode, freq, analysisDate])
+  @@map("chart_data")
+}
