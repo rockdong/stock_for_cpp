@@ -3,6 +3,9 @@ build/
 cpp/build/
 web-frontend/dist/
 
+# MCP
+.playwright-mcp/
+
 # Node.js
 node_modules/
 npm-debug.log
