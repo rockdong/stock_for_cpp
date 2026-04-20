@@ -291,25 +291,6 @@ target_link_libraries(eventbus_lib PUBLIC
     log_lib
 )
 
-add_library(api_lib STATIC
-    api/HttpServer.cpp
-    api/ApiRouter.cpp
-)
-
-target_include_directories(api_lib PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/api
-    ${CMAKE_CURRENT_SOURCE_DIR}/log
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-httplib
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include
-)
-
-target_link_libraries(api_lib PUBLIC
-    log_lib
-    httplib::httplib
-    nlohmann_json::nlohmann_json
-)
-
-# 创建可执行文件
 add_executable(stock_for_cpp main.cpp)
 
 # 链接第三方库
@@ -342,7 +323,6 @@ target_include_directories(stock_for_cpp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/data
     ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
-    ${CMAKE_CURRENT_SOURCE_DIR}/api
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/spdlog/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/sqlpp11/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include
