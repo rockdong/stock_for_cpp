@@ -62,10 +62,6 @@ void signalHandler(int signal) {
         g_scheduler->stop();
     }
 }
-    if (g_scheduler) {
-        g_scheduler->stop();
-    }
-}
 
 struct ProgramOptions {
     bool onceMode = false;
