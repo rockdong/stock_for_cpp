@@ -1,15 +1,14 @@
 services:
-  stock-analysis:
+  stock-cpp:
     image: rockdong13/stock_for_cpp:master
-    container_name: stock-analysis-dev
+    container_name: stock-cpp-engine
     platform: linux/amd64
-    ports:
-      - "3000:3000"
-      - "5173:5173"
     env_file:
       - ./env/.env
     environment:
       - TZ=Asia/Shanghai
+      - DB_TYPE=mysql
+      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db
     depends_on:
       mysql:
         condition: service_healthy
@@ -39,6 +38,28 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: unless-stopped
+
+  stock-bot:
+    image: rockdong13/stock_for_cpp_bot:master
+    container_name: stock-feishu-bot
+    platform: linux/amd64
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./env/.env
+    environment:
+      - TZ=Asia/Shanghai
+      - DB_TYPE=mysql
+      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db
+      - PORT=3000
+    depends_on:
+      mysql:
+        condition: service_healthy
     ulimits:
       nofile:
         soft: 65536

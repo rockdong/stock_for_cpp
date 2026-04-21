@@ -9,6 +9,8 @@ const config = {
   verificationToken: process.env.FEISHU_VERIFICATION_TOKEN || process.env.VERIFICATION_TOKEN,
   port: parseInt(process.env.PORT) || 3000,
   dbPath: process.env.DB_PATH || './stock.db',
+  databaseUrl: process.env.DATABASE_URL || null,
+  dbType: process.env.DB_TYPE || (process.env.DATABASE_URL ? 'mysql' : 'sqlite'),
 };
 
 module.exports = config;
