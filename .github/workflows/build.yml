@@ -163,9 +163,6 @@ jobs:
       - name: 🔧 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 🔧 设置 QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: 🔐 登录 Docker Hub
         uses: docker/login-action@v3
         with:
@@ -193,7 +190,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
   docker-backend:
     name: 🐳 构建并推送 Backend API 镜像
@@ -213,9 +210,6 @@ jobs:
 
       - name: 🔧 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: 🔧 设置 QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: 🔐 登录 Docker Hub
         uses: docker/login-action@v3
@@ -244,7 +238,7 @@ jobs:
           labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
   docker-web:
     name: 🐳 构建并推送 Web Frontend 镜像
@@ -264,9 +258,6 @@ jobs:
 
       - name: 🔧 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: 🔧 设置 QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: 🔐 登录 Docker Hub
         uses: docker/login-action@v3
@@ -295,7 +286,7 @@ jobs:
           labels: ${{ steps.meta-web.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
   docker-nodejs-bot:
     name: 🐳 构建并推送 Node.js Bot 镜像
@@ -315,9 +306,6 @@ jobs:
 
       - name: 🔧 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: 🔧 设置 QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: 🔐 登录 Docker Hub
         uses: docker/login-action@v3
@@ -346,4 +334,4 @@ jobs:
           labels: ${{ steps.meta-bot.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
