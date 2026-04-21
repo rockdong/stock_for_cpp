@@ -2,8 +2,11 @@
 .git
 .gitignore
 
+# 第三方库（148M 子模块，构建时不需要）
+cpp/thirdparty/
+
 # C++ 构建产物
-# 允许 Docker 构建时访问 cpp/build 目录中的必要文件 (CI 会通过 artifact 注入)
+# 允许 Docker 构建时访问 cpp/build 目录中的必要文件
 !cpp/build/stock_for_cpp
 !cpp/build/version.h
 
