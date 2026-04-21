@@ -17,38 +17,38 @@ env:
   DOCKER_IMAGE_NAME_BOT: stock_for_cpp_bot
 
 jobs:
-build-cpp:
+  build-cpp:
     name: 🏗️ 编译 C++
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
 
     steps:
-    - name: 📥 检出代码仓库
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - name: 📥 检出代码仓库
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: 🔧 安装构建依赖
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake libsqlite3-dev libssl-dev
+      - name: 🔧 安装构建依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libsqlite3-dev libssl-dev
 
-    - name: ⚙️ 配置 CMake (使用 cpp 目录)
-      run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+      - name: ⚙️ 配置 CMake (使用 cpp 目录)
+        run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
 
-    - name: 🏗️ 编译项目
-      run: cmake --build cpp/build --config ${{ env.BUILD_TYPE }} -- -j$(nproc)
-      env:
-        BUILD_NUMBER: ${{ github.run_number }}
+      - name: 🏗️ 编译项目
+        run: cmake --build cpp/build --config ${{ env.BUILD_TYPE }} -- -j$(nproc)
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
 
-    - name: 📤 上传 C++ 构建产物 (仅 PR)
-      if: github.event_name == 'pull_request'
-      uses: actions/upload-artifact@v4
-      with:
-        name: cpp-build-ubuntu
-        path: |
-          cpp/build/stock_for_cpp
-          cpp/build/version.h
+      - name: 📤 上传 C++ 构建产物 (仅 PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-build-ubuntu
+          path: |
+            cpp/build/stock_for_cpp
+            cpp/build/version.h
 
   docker-cpp:
     name: 🐳 构建并推送 C++ Docker 镜像
