@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
 
   api-server:
-    build: ./backend
+    image: rockdong13/stock_for_cpp_api:master
     container_name: stock-api-server
     platform: linux/amd64
     ports:
@@ -60,6 +60,20 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: unless-stopped
+
+  web-frontend:
+    image: rockdong13/stock_for_cpp_web:master
+    container_name: stock-web-frontend
+    platform: linux/amd64
+    ports:
+      - "80:80"
+    environment:
+      - TZ=Asia/Shanghai
     ulimits:
       nofile:
         soft: 65536
