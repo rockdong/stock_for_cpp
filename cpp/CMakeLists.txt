@@ -60,17 +60,23 @@ set(HTTPLIB_IS_USING_OPENSSL OFF CACHE BOOL "Force disable OpenSSL" FORCE)
 # 添加第三方库子目录
 add_subdirectory(thirdparty/spdlog)
 
-set(BUILD_MYSQL_CONNECTOR OFF CACHE BOOL "Disable MySQL connector (optional)" FORCE)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/thirdparty/sqlpp11/cmake/modules")
+find_package(MySQL QUIET)
+
+if(MySQL_FOUND)
+    set(BUILD_MYSQL_CONNECTOR ON CACHE BOOL "Enable MySQL connector")
+else()
+    set(BUILD_MYSQL_CONNECTOR OFF CACHE BOOL "Disable MySQL connector (not found)")
+endif()
+
 add_subdirectory(thirdparty/sqlpp11)
 
-# 检查 MySQL 是否可用
-find_package(MySQL QUIET)
-if(MySQL_FOUND)
+if(TARGET sqlpp11::mysql)
     set(HAS_MYSQL TRUE)
-    message(STATUS "MySQL 库已找到，启用 MySQL 支持")
+    message(STATUS "MySQL connector 已启用")
 else()
     set(HAS_MYSQL FALSE)
-    message(STATUS "MySQL 库未找到，仅使用 SQLite")
+    message(STATUS "MySQL connector 未启用（MySQL 库未找到）")
 endif()
 
 add_subdirectory(thirdparty/json)
