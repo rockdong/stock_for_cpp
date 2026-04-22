@@ -78,15 +78,15 @@ bool ChartDataDAO::save(const ChartData& data) {
         std::string jsonData = toJson(data.candles);
         
 #ifdef HAS_MYSQL
-        // MySQL: 使用 INSERT ... ON DUPLICATE KEY UPDATE
-        (*db)(sqlpp::mysql::insert_or_update_into(table).set(
+        (*db)(sqlpp::remove_from(table)
+            .where(table.tsCode == data.ts_code and table.freq == data.freq));
+        (*db)(sqlpp::insert_into(table).set(
             table.tsCode = data.ts_code,
             table.freq = data.freq,
             table.analysisDate = data.analysis_date,
             table.data = jsonData
         ));
 #else
-        // SQLite: 使用 INSERT OR REPLACE
         (*db)(sqlpp::sqlite3::insert_or_replace_into(table).set(
             table.tsCode = data.ts_code,
             table.freq = data.freq,
