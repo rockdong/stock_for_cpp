@@ -2,6 +2,7 @@
 #include "Connection.h"
 #include "Config.h"
 #include "Logger.h"
+#include <stdexcept>
 
 #ifdef HAS_MYSQL
 #include "MySQLConnection.h"
@@ -32,8 +33,12 @@ IConnection& ConnectionFactory::createConnection() {
     }
 #else
     if (dbType == "mysql") {
-        LOG_WARN("MySQL 支持未编译，降级使用 SQLite");
-        LOG_WARN("请安装 MySQL 库并重新编译以启用 MySQL 支持");
+        LOG_ERROR("DB_TYPE=mysql 但 MySQL 支持未编译");
+        LOG_ERROR("请安装 MySQL 开发库：");
+        LOG_ERROR("  - Ubuntu: sudo apt-get install libmysqlclient-dev");
+        LOG_ERROR("  - macOS: brew install mysql-client");
+        LOG_ERROR("然后重新编译：cmake -S cpp -B cpp/build && cmake --build cpp/build");
+        throw std::runtime_error("MySQL support not compiled. Cannot connect to MySQL database.");
     }
 #endif
     
