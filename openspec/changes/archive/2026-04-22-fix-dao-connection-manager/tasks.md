@@ -25,6 +25,6 @@
 ## 4. 验证
 
 - [x] 4.1 本地编译验证（macOS） - 成功
-- [ ] 4.2 CI 编译验证（Ubuntu）
-- [ ] 4.3 Docker MySQL 模式验证 - 分析任务不再报"数据库未连接"
-- [ ] 4.4 Docker SQLite 模式验证 - 确保兼容性
+- [x] 4.2 CI 编译验证（Ubuntu） - 成功 (run 24783920803)
+- [x] 4.3 Docker MySQL 模式验证 - 分析任务执行成功，MySQL SQL 执行成功
+- [x] 4.4 Docker SQLite 模式验证 - 本地编译成功，条件编译兼容
