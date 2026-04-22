@@ -105,9 +105,16 @@ save_image_ids
 
 echo ""
 
-# 停止服务
 log "停止所有服务..."
 docker-compose down
+
+log "清理冲突容器..."
+for container in stock-mysql stock-cpp-engine stock-feishu-bot stock-api-server stock-web-frontend stock-db-admin stock-log-monitor; do
+    if docker ps -a --format '{{.Names}}' | grep -q "^${container}$"; then
+        docker rm -f "$container" 2>/dev/null || true
+        log "  ✓ 已清理: $container"
+    fi
+done
 log "✓ 服务已停止"
 
 echo ""
