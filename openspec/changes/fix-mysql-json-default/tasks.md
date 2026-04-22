@@ -7,6 +7,6 @@
 ## 2. 验证
 
 - [x] 2.1 本地编译验证（macOS）- 成功
-- [ ] 2.2 CI 编译验证（Ubuntu）
-- [ ] 2.3 Docker 容器启动验证（观察日志确认表创建成功）
-- [ ] 2.4 使用 adminer 检查 MySQL 数据库表结构
+- [x] 2.2 CI 编译验证（Ubuntu）- 成功
+- [x] 2.3 Docker 容器启动验证（观察日志确认表创建成功）- 成功，MySQL 数据库表创建成功
+- [x] 2.4 使用 adminer 检查 MySQL 数据库表结构 - 成功，analysis_process_records 表 data 列无 DEFAULT 值
