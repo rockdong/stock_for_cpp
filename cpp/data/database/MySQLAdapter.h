@@ -11,7 +11,8 @@ namespace data {
 
 class MySQLAdapter : public IDatabaseAdapter {
 public:
-    static MySQLAdapter& getInstance();
+    MySQLAdapter() = default;
+    ~MySQLAdapter();
     
     bool initialize(const std::string& host, int port,
                     const std::string& database,
@@ -57,12 +58,7 @@ public:
     
     sqlpp::mysql::connection* getConnection();
     
-    MySQLAdapter(const MySQLAdapter&) = delete;
-    MySQLAdapter& operator=(const MySQLAdapter&) = delete;
-    
 private:
-    MySQLAdapter() = default;
-    ~MySQLAdapter();
     
     bool executeInternal(const std::string& sql);
     

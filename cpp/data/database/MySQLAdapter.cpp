@@ -8,11 +8,6 @@
 
 namespace data {
 
-MySQLAdapter& MySQLAdapter::getInstance() {
-    static MySQLAdapter instance;
-    return instance;
-}
-
 bool MySQLAdapter::initialize(const std::string& host, int port,
                                const std::string& database,
                                const std::string& user,
