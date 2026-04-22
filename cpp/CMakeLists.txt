@@ -216,6 +216,8 @@ set(DATA_LIB_SOURCES
     data/Data.cpp
     data/database/Connection.cpp
     data/database/ConnectionFactory.cpp
+    data/database/SQLiteAdapter.cpp
+    data/database/AdapterFactory.cpp
     data/database/StockDAO.cpp
     data/database/PriceDAO.cpp
     data/database/AnalysisResultDAO.cpp
@@ -227,9 +229,9 @@ set(DATA_LIB_SOURCES
     data/file/CSVWriter.cpp
 )
 
-# 只有 MySQL 可用时才添加 MySQLConnection.cpp
 if(HAS_MYSQL)
     list(APPEND DATA_LIB_SOURCES data/database/MySQLConnection.cpp)
+    list(APPEND DATA_LIB_SOURCES data/database/MySQLAdapter.cpp)
 endif()
 
 add_library(data_lib STATIC ${DATA_LIB_SOURCES})

@@ -1,4 +1,5 @@
 #include "Connection.h"
+#include "SQLiteAdapter.h"
 #include "Logger.h"
 #include <iostream>
 
@@ -128,197 +129,21 @@ bool Connection::rollback() {
 }
 
 bool Connection::createTables() {
-    // 此方法假设调用者已经持有 mutex_ 锁（从 connect() 调用）
     LOG_INFO("创建数据库表");
     
-    // 创建股票表
-    std::string createStocksTable = R"(
-        CREATE TABLE IF NOT EXISTS stocks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts_code TEXT NOT NULL UNIQUE,
-            symbol TEXT,
-            name TEXT,
-            area TEXT,
-            industry TEXT,
-            fullname TEXT,
-            enname TEXT,
-            cnspell TEXT,
-            market TEXT,
-            exchange TEXT,
-            curr_type TEXT,
-            list_status TEXT,
-            list_date TEXT,
-            delist_date TEXT,
-            is_hs TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    )";
-    
-    LOG_INFO("创建 stocks 表");
-    if (!executeInternal(createStocksTable)) {
-        LOG_ERROR("创建 stocks 表失败");
-        return false;
+    auto& adapter = SQLiteAdapter::getInstance();
+    if (!adapter.isConnected()) {
+        adapter.initialize(dbPath_);
+        if (!adapter.connect()) {
+            LOG_ERROR("SQLiteAdapter 连接失败");
+            return false;
+        }
     }
     
-    // 创建价格表
-    std::string createPricesTable = R"(
-        CREATE TABLE IF NOT EXISTS prices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            stock_id INTEGER NOT NULL,
-            trade_date TEXT NOT NULL,
-            open REAL,
-            high REAL,
-            low REAL,
-            close REAL,
-            pre_close REAL,
-            change_pct REAL,
-            volume REAL,
-            amount REAL,
-            FOREIGN KEY (stock_id) REFERENCES stocks(id),
-            UNIQUE(stock_id, trade_date)
-        )
-    )";
-    
-    LOG_INFO("创建 prices 表");
-    if (!executeInternal(createPricesTable)) {
-        LOG_ERROR("创建 prices 表失败");
+    if (!adapter.createTables()) {
+        LOG_ERROR("创建数据库表失败");
         return false;
     }
-    
-    // 创建交易表
-    std::string createTradesTable = R"(
-        CREATE TABLE IF NOT EXISTS trades (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            stock_id INTEGER NOT NULL,
-            trade_type TEXT NOT NULL,
-            price REAL NOT NULL,
-            quantity INTEGER NOT NULL,
-            amount REAL NOT NULL,
-            trade_time DATETIME NOT NULL,
-            FOREIGN KEY (stock_id) REFERENCES stocks(id)
-        )
-    )";
-    
-    LOG_INFO("创建 trades 表");
-    if (!executeInternal(createTradesTable)) {
-        LOG_ERROR("创建 trades 表失败");
-        return false;
-    }
-    
-    // 创建分析结果表
-    std::string createAnalysisResultsTable = R"(
-        CREATE TABLE IF NOT EXISTS analysis_results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts_code TEXT NOT NULL,
-            strategy_name TEXT NOT NULL,
-            trade_date TEXT NOT NULL,
-            label TEXT NOT NULL,
-            opt TEXT,
-            freq TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(ts_code, strategy_name, trade_date, freq)
-        )
-    )";
-    
-    LOG_INFO("创建 analysis_results 表");
-    if (!executeInternal(createAnalysisResultsTable)) {
-        LOG_ERROR("创建 analysis_results 表失败");
-        return false;
-    }
-    
-    // 创建分析进度表（两阶段：基本面 + 技术面）
-    std::string createAnalysisProgressTable = R"(
-        CREATE TABLE IF NOT EXISTS analysis_progress (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            -- Phase 1: 基本面分析
-            phase1_status TEXT DEFAULT 'idle',
-            phase1_total INTEGER DEFAULT 0,
-            phase1_completed INTEGER DEFAULT 0,
-            phase1_qualified INTEGER DEFAULT 0,
-            -- Phase 2: 技术面分析
-            phase2_status TEXT DEFAULT 'idle',
-            phase2_total INTEGER DEFAULT 0,
-            phase2_completed INTEGER DEFAULT 0,
-            phase2_failed INTEGER DEFAULT 0,
-            -- 时间戳
-            started_at DATETIME,
-            phase1_completed_at DATETIME,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    )";
-    
-    LOG_INFO("创建 analysis_progress 表（两阶段模式）");
-    if (!executeInternal(createAnalysisProgressTable)) {
-        LOG_ERROR("创建 analysis_progress 表失败");
-        return false;
-    }
-    
-    // 初始化进度表（如果为空）
-    executeInternal("INSERT OR IGNORE INTO analysis_progress (id, phase1_status, phase2_status) VALUES (1, 'idle', 'idle')");
-    
-    // 兼容旧数据库：添加新字段（如果不存在）
-    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_status TEXT DEFAULT 'idle'");
-    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_total INTEGER DEFAULT 0");
-    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_completed INTEGER DEFAULT 0");
-    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_qualified INTEGER DEFAULT 0");
-    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase2_status TEXT DEFAULT 'idle'");
-    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase2_total INTEGER DEFAULT 0");
-    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase2_completed INTEGER DEFAULT 0");
-    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase2_failed INTEGER DEFAULT 0");
-    executeInternal("ALTER TABLE analysis_progress ADD COLUMN IF NOT EXISTS phase1_completed_at DATETIME");
-    
-    // 创建图表数据表
-    std::string createChartDataTable = R"(
-        CREATE TABLE IF NOT EXISTS chart_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts_code TEXT NOT NULL,
-            freq TEXT NOT NULL,
-            analysis_date TEXT NOT NULL,
-            data TEXT NOT NULL,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(ts_code, freq, analysis_date)
-        )
-    )";
-    
-    LOG_INFO("创建 chart_data 表");
-    if (!executeInternal(createChartDataTable)) {
-        LOG_ERROR("创建 chart_data 表失败");
-        return false;
-    }
-    
-    // 创建分析过程记录表
-    std::string createProcessRecordsTable = R"(
-        CREATE TABLE IF NOT EXISTS analysis_process_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts_code TEXT NOT NULL,
-            stock_name TEXT,
-            trade_date TEXT NOT NULL,
-            data TEXT NOT NULL DEFAULT '{"strategies":[]}',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            expires_at DATETIME,
-            UNIQUE(ts_code, trade_date)
-        )
-    )";
-    
-    LOG_INFO("创建 analysis_process_records 表");
-    if (!executeInternal(createProcessRecordsTable)) {
-        LOG_ERROR("创建 analysis_process_records 表失败");
-        return false;
-    }
-    
-    // 创建索引
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_stocks_ts_code ON stocks(ts_code)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_prices_stock_date ON prices(stock_id, trade_date)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_trades_stock_time ON trades(stock_id, trade_time)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_ts_code ON analysis_results(ts_code)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_strategy ON analysis_results(strategy_name)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_date ON analysis_results(trade_date)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_results_label ON analysis_results(label)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_chart_data_lookup ON chart_data(ts_code, freq, analysis_date)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_process_ts_code ON analysis_process_records(ts_code)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_process_date ON analysis_process_records(trade_date)");
     
     LOG_INFO("数据库表创建成功");
     return true;
