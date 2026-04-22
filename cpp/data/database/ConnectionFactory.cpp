@@ -1,5 +1,6 @@
 #include "ConnectionFactory.h"
 #include "Connection.h"
+#include "ConnectionManager.h"
 #include "Config.h"
 #include "Logger.h"
 #include <stdexcept>
@@ -29,6 +30,7 @@ IConnection& ConnectionFactory::createConnection() {
             config.getDbPassword(),
             config.getDbCharset()
         );
+        ConnectionManager::getInstance().registerConnection(conn);
         return conn;
     }
 #else
@@ -46,6 +48,7 @@ IConnection& ConnectionFactory::createConnection() {
     LOG_INFO("使用 SQLite 连接: " + dbPath);
     auto& conn = Connection::getInstance();
     conn.initialize(dbPath);
+    ConnectionManager::getInstance().registerConnection(conn);
     return conn;
 }
 

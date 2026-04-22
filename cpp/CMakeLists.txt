@@ -222,6 +222,7 @@ set(DATA_LIB_SOURCES
     data/Data.cpp
     data/database/Connection.cpp
     data/database/ConnectionFactory.cpp
+    data/database/ConnectionManager.cpp
     data/database/SQLiteAdapter.cpp
     data/database/AdapterFactory.cpp
     data/database/StockDAO.cpp

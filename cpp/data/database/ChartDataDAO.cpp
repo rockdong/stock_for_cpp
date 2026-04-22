@@ -1,5 +1,5 @@
 #include "ChartDataDAO.h"
-#include "Connection.h"
+#include "ConnectionManager.h"
 #include "Logger.h"
 #include "ChartDataTable.h"
 #include <sstream>
@@ -61,7 +61,7 @@ std::vector<ChartCandle> ChartDataDAO::fromJson(const std::string& json) {
 }
 
 bool ChartDataDAO::save(const ChartData& data) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -69,7 +69,7 @@ bool ChartDataDAO::save(const ChartData& data) {
     
     try {
         ChartDataTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         std::string jsonData = toJson(data.candles);
         
@@ -92,7 +92,7 @@ std::optional<ChartData> ChartDataDAO::findByTsCodeAndFreq(
     const std::string& ts_code,
     const std::string& freq
 ) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return std::nullopt;
@@ -100,7 +100,7 @@ std::optional<ChartData> ChartDataDAO::findByTsCodeAndFreq(
     
     try {
         ChartDataTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(
             sqlpp::select(all_of(table))
@@ -125,7 +125,7 @@ std::optional<ChartData> ChartDataDAO::findByTsCodeAndFreq(
 }
 
 bool ChartDataDAO::remove(const std::string& ts_code, const std::string& freq) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -133,7 +133,7 @@ bool ChartDataDAO::remove(const std::string& ts_code, const std::string& freq) {
     
     try {
         ChartDataTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::remove_from(table)
             .where(table.tsCode == ts_code and table.freq == freq));

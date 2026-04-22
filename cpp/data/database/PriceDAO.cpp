@@ -1,11 +1,11 @@
 #include "PriceDAO.h"
-#include "Connection.h"
+#include "ConnectionManager.h"
 #include "Logger.h"
 
 namespace data {
 
 bool PriceDAO::insert(const Price& price) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -13,7 +13,7 @@ bool PriceDAO::insert(const Price& price) {
 
     try {
         PriceTable prices;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::insert_into(prices).set(
             prices.stockId = price.stock_id,
@@ -37,7 +37,7 @@ bool PriceDAO::insert(const Price& price) {
 }
 
 int PriceDAO::batchInsert(const std::vector<Price>& prices_vec) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return 0;
@@ -58,7 +58,7 @@ int PriceDAO::batchInsert(const std::vector<Price>& prices_vec) {
 }
 
 std::optional<Price> PriceDAO::findByStockAndDate(int stock_id, const std::string& trade_date) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return std::nullopt;
@@ -66,7 +66,7 @@ std::optional<Price> PriceDAO::findByStockAndDate(int stock_id, const std::strin
 
     try {
         PriceTable prices;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(prices))
                                      .from(prices)
@@ -94,7 +94,7 @@ std::optional<Price> PriceDAO::findByStockAndDate(int stock_id, const std::strin
 }
 
 std::vector<Price> PriceDAO::findByStock(int stock_id) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<Price> result;
 
     if (!conn.isConnected()) {
@@ -104,7 +104,7 @@ std::vector<Price> PriceDAO::findByStock(int stock_id) {
 
     try {
         PriceTable prices;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(prices))
                                      .from(prices)
@@ -133,7 +133,7 @@ std::vector<Price> PriceDAO::findByStock(int stock_id) {
 }
 
 std::vector<Price> PriceDAO::findByStockAndDateRange(int stock_id, const std::string& start_date, const std::string& end_date) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<Price> result;
 
     if (!conn.isConnected()) {
@@ -143,7 +143,7 @@ std::vector<Price> PriceDAO::findByStockAndDateRange(int stock_id, const std::st
 
     try {
         PriceTable prices;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(prices))
                                      .from(prices)
@@ -175,7 +175,7 @@ std::vector<Price> PriceDAO::findByStockAndDateRange(int stock_id, const std::st
 }
 
 std::optional<Price> PriceDAO::findLatestByStock(int stock_id) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return std::nullopt;
@@ -183,7 +183,7 @@ std::optional<Price> PriceDAO::findLatestByStock(int stock_id) {
 
     try {
         PriceTable prices;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(prices))
                                      .from(prices)
@@ -213,7 +213,7 @@ std::optional<Price> PriceDAO::findLatestByStock(int stock_id) {
 }
 
 bool PriceDAO::update(const Price& price) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -221,7 +221,7 @@ bool PriceDAO::update(const Price& price) {
 
     try {
         PriceTable prices;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::update(prices)
               .set(
@@ -245,7 +245,7 @@ bool PriceDAO::update(const Price& price) {
 }
 
 bool PriceDAO::remove(int stock_id, const std::string& trade_date) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -253,7 +253,7 @@ bool PriceDAO::remove(int stock_id, const std::string& trade_date) {
 
     try {
         PriceTable prices;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::remove_from(prices)
               .where(prices.stockId == stock_id and prices.tradeDate == trade_date));
@@ -267,7 +267,7 @@ bool PriceDAO::remove(int stock_id, const std::string& trade_date) {
 }
 
 int PriceDAO::removeByStock(int stock_id) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return 0;
@@ -275,7 +275,7 @@ int PriceDAO::removeByStock(int stock_id) {
 
     try {
         PriceTable prices;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         // 先统计数量
         int count = countByStock(stock_id);
@@ -292,7 +292,7 @@ int PriceDAO::removeByStock(int stock_id) {
 }
 
 int PriceDAO::countByStock(int stock_id) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return 0;
@@ -300,7 +300,7 @@ int PriceDAO::countByStock(int stock_id) {
 
     try {
         PriceTable prices;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(sqlpp::count(prices.id))
                                      .from(prices)

@@ -1,7 +1,7 @@
 #include "AnalysisProcessRecordDAO.h"
 #include "AnalysisProcessRecordTable.h"
 #include "AnalysisProgressTable.h"
-#include "Connection.h"
+#include "ConnectionManager.h"
 #include "Logger.h"
 #include <sqlpp11/sqlpp11.h>
 
@@ -29,7 +29,7 @@ namespace {
 }
 
 bool StockProcessRecordDAO::upsert(const StockProcessRecord& record) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -37,7 +37,7 @@ bool StockProcessRecordDAO::upsert(const StockProcessRecord& record) {
 
     try {
         StockProcessRecordTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::sqlite3::insert_or_replace_into(table).set(
             table.tsCode = record.ts_code,
@@ -58,7 +58,7 @@ std::optional<StockProcessRecord> StockProcessRecordDAO::findByTsCode(
     const std::string& ts_code,
     const std::string& trade_date
 ) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return std::nullopt;
@@ -66,7 +66,7 @@ std::optional<StockProcessRecord> StockProcessRecordDAO::findByTsCode(
 
     try {
         StockProcessRecordTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         if (!trade_date.empty()) {
             for (const auto& row : (*db)(sqlpp::select(all_of(table))
@@ -93,7 +93,7 @@ std::optional<StockProcessRecord> StockProcessRecordDAO::findByTsCode(
 }
 
 std::vector<StockProcessRecord> StockProcessRecordDAO::findAll(int limit) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<StockProcessRecord> results;
     
     if (!conn.isConnected()) {
@@ -103,7 +103,7 @@ std::vector<StockProcessRecord> StockProcessRecordDAO::findAll(int limit) {
 
     try {
         StockProcessRecordTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(table))
                                      .from(table)
@@ -124,7 +124,7 @@ std::vector<StockProcessRecord> StockProcessRecordDAO::findByDateRange(
     const std::string& start_date,
     const std::string& end_date
 ) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<StockProcessRecord> results;
     
     if (!conn.isConnected()) {
@@ -134,7 +134,7 @@ std::vector<StockProcessRecord> StockProcessRecordDAO::findByDateRange(
 
     try {
         StockProcessRecordTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(table))
                                      .from(table)
@@ -152,7 +152,7 @@ std::vector<StockProcessRecord> StockProcessRecordDAO::findByDateRange(
 }
 
 bool StockProcessRecordDAO::remove(const std::string& ts_code) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -160,7 +160,7 @@ bool StockProcessRecordDAO::remove(const std::string& ts_code) {
 
     try {
         StockProcessRecordTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::remove_from(table).where(table.tsCode == ts_code));
         
@@ -173,7 +173,7 @@ bool StockProcessRecordDAO::remove(const std::string& ts_code) {
 }
 
 int StockProcessRecordDAO::count() {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return 0;
@@ -181,7 +181,7 @@ int StockProcessRecordDAO::count() {
 
     try {
         StockProcessRecordTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(sqlpp::count(table.id))
                                      .from(table)
@@ -197,7 +197,7 @@ int StockProcessRecordDAO::count() {
 }
 
 AnalysisProgress StockProcessRecordDAO::getProgress() const {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     AnalysisProgress progress;
     progress.phase1 = {"idle", 0, 0, 0, 0};
     progress.phase2 = {"idle", 0, 0, 0, 0};
@@ -212,7 +212,7 @@ AnalysisProgress StockProcessRecordDAO::getProgress() const {
 
     try {
         AnalysisProgressTable table;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(table))
                                      .from(table)

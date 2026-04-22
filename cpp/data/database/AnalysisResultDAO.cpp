@@ -1,5 +1,5 @@
 #include "AnalysisResultDAO.h"
-#include "Connection.h"
+#include "ConnectionManager.h"
 #include "Logger.h"
 #include "StringUtil.h"
 #include <set>
@@ -39,7 +39,7 @@ namespace {
 }
 
 bool AnalysisResultDAO::insert(const AnalysisResult& result) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -47,7 +47,7 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         int existingId = -1;
         for (const auto& row : (*db)(
@@ -125,7 +125,7 @@ bool AnalysisResultDAO::insert(const AnalysisResult& result) {
 }
 
 int AnalysisResultDAO::batchInsert(const std::vector<AnalysisResult>& results) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return 0;
@@ -146,7 +146,7 @@ int AnalysisResultDAO::batchInsert(const std::vector<AnalysisResult>& results) {
 }
 
 std::optional<AnalysisResult> AnalysisResultDAO::findById(int id) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return std::nullopt;
@@ -154,7 +154,7 @@ std::optional<AnalysisResult> AnalysisResultDAO::findById(int id) {
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(results))
                                      .from(results)
@@ -170,7 +170,7 @@ std::optional<AnalysisResult> AnalysisResultDAO::findById(int id) {
 }
 
 std::vector<AnalysisResult> AnalysisResultDAO::findAll() {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<AnalysisResult> result;
 
     if (!conn.isConnected()) {
@@ -180,7 +180,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findAll() {
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(results))
                                      .from(results)
@@ -198,7 +198,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findAll() {
 }
 
 std::vector<AnalysisResult> AnalysisResultDAO::findByTsCode(const std::string& ts_code) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<AnalysisResult> result;
 
     if (!conn.isConnected()) {
@@ -208,7 +208,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByTsCode(const std::string& t
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(results))
                                      .from(results)
@@ -225,7 +225,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByTsCode(const std::string& t
 }
 
 std::vector<AnalysisResult> AnalysisResultDAO::findByStrategy(const std::string& strategy_name) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<AnalysisResult> result;
 
     if (!conn.isConnected()) {
@@ -235,7 +235,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByStrategy(const std::string&
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(results))
                                      .from(results)
@@ -252,7 +252,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByStrategy(const std::string&
 }
 
 std::vector<AnalysisResult> AnalysisResultDAO::findByLabel(const std::string& label) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<AnalysisResult> result;
 
     if (!conn.isConnected()) {
@@ -262,7 +262,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByLabel(const std::string& la
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(results))
                                      .from(results)
@@ -282,7 +282,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByTsCodeAndStrategy(
     const std::string& ts_code,
     const std::string& strategy_name
 ) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<AnalysisResult> result;
 
     if (!conn.isConnected()) {
@@ -292,7 +292,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByTsCodeAndStrategy(
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(results))
                                      .from(results)
@@ -313,7 +313,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByDateRange(
     const std::string& start_date,
     const std::string& end_date
 ) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<AnalysisResult> result;
 
     if (!conn.isConnected()) {
@@ -323,7 +323,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByDateRange(
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(results))
                                      .from(results)
@@ -341,7 +341,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByDateRange(
 }
 
 std::vector<AnalysisResult> AnalysisResultDAO::findByOpt(const std::string& opt) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<AnalysisResult> result;
 
     if (!conn.isConnected()) {
@@ -351,7 +351,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByOpt(const std::string& opt)
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(results))
                                      .from(results)
@@ -368,7 +368,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByOpt(const std::string& opt)
 }
 
 std::vector<AnalysisResult> AnalysisResultDAO::findByFreq(const std::string& freq) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<AnalysisResult> result;
 
     if (!conn.isConnected()) {
@@ -378,7 +378,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByFreq(const std::string& fre
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(results))
                                      .from(results)
@@ -395,7 +395,7 @@ std::vector<AnalysisResult> AnalysisResultDAO::findByFreq(const std::string& fre
 }
 
 bool AnalysisResultDAO::update(int id, const AnalysisResult& result) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -403,7 +403,7 @@ bool AnalysisResultDAO::update(int id, const AnalysisResult& result) {
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::update(results)
               .set(
@@ -425,7 +425,7 @@ bool AnalysisResultDAO::update(int id, const AnalysisResult& result) {
 }
 
 bool AnalysisResultDAO::remove(int id) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -433,7 +433,7 @@ bool AnalysisResultDAO::remove(int id) {
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::remove_from(results).where(results.id == id));
         
@@ -446,7 +446,7 @@ bool AnalysisResultDAO::remove(int id) {
 }
 
 bool AnalysisResultDAO::removeByTsCode(const std::string& ts_code) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -454,7 +454,7 @@ bool AnalysisResultDAO::removeByTsCode(const std::string& ts_code) {
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::remove_from(results).where(results.tsCode == ts_code));
         
@@ -467,7 +467,7 @@ bool AnalysisResultDAO::removeByTsCode(const std::string& ts_code) {
 }
 
 bool AnalysisResultDAO::removeByStrategy(const std::string& strategy_name) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -475,7 +475,7 @@ bool AnalysisResultDAO::removeByStrategy(const std::string& strategy_name) {
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::remove_from(results).where(results.strategyName == strategy_name));
         
@@ -488,7 +488,7 @@ bool AnalysisResultDAO::removeByStrategy(const std::string& strategy_name) {
 }
 
 int AnalysisResultDAO::count() {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return 0;
@@ -496,7 +496,7 @@ int AnalysisResultDAO::count() {
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(sqlpp::count(results.id))
                                      .from(results)
@@ -512,7 +512,7 @@ int AnalysisResultDAO::count() {
 }
 
 int AnalysisResultDAO::countByTsCode(const std::string& ts_code) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return 0;
@@ -520,7 +520,7 @@ int AnalysisResultDAO::countByTsCode(const std::string& ts_code) {
 
     try {
         AnalysisResultTable results;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(sqlpp::count(results.id))
                                      .from(results)

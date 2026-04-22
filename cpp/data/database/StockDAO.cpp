@@ -1,5 +1,5 @@
 #include "StockDAO.h"
-#include "Connection.h"
+#include "ConnectionManager.h"
 #include "Logger.h"
 #include <sstream>
 
@@ -31,7 +31,7 @@ namespace {
 }
 
 bool StockDAO::insert(const Stock& stock) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -39,7 +39,7 @@ bool StockDAO::insert(const Stock& stock) {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::insert_into(stocks).set(
             stocks.tsCode = stock.ts_code,
@@ -68,7 +68,7 @@ bool StockDAO::insert(const Stock& stock) {
 }
 
 int StockDAO::batchInsert(const std::vector<Stock>& stocks) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return 0;
@@ -89,7 +89,7 @@ int StockDAO::batchInsert(const std::vector<Stock>& stocks) {
 }
 
 std::optional<Stock> StockDAO::findByTsCode(const std::string& ts_code) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return std::nullopt;
@@ -97,7 +97,7 @@ std::optional<Stock> StockDAO::findByTsCode(const std::string& ts_code) {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(stocks))
                                      .from(stocks)
@@ -113,7 +113,7 @@ std::optional<Stock> StockDAO::findByTsCode(const std::string& ts_code) {
 }
 
 std::optional<Stock> StockDAO::findById(int id) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return std::nullopt;
@@ -121,7 +121,7 @@ std::optional<Stock> StockDAO::findById(int id) {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(stocks))
                                      .from(stocks)
@@ -137,7 +137,7 @@ std::optional<Stock> StockDAO::findById(int id) {
 }
 
 std::vector<Stock> StockDAO::findAll() {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<Stock> result;
 
     if (!conn.isConnected()) {
@@ -147,7 +147,7 @@ std::vector<Stock> StockDAO::findAll() {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(stocks))
                                      .from(stocks)
@@ -165,7 +165,7 @@ std::vector<Stock> StockDAO::findAll() {
 }
 
 std::vector<Stock> StockDAO::findByMarket(const std::string& market) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<Stock> result;
 
     if (!conn.isConnected()) {
@@ -175,7 +175,7 @@ std::vector<Stock> StockDAO::findByMarket(const std::string& market) {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(stocks))
                                      .from(stocks)
@@ -192,7 +192,7 @@ std::vector<Stock> StockDAO::findByMarket(const std::string& market) {
 }
 
 std::vector<Stock> StockDAO::findByIndustry(const std::string& industry) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     std::vector<Stock> result;
 
     if (!conn.isConnected()) {
@@ -202,7 +202,7 @@ std::vector<Stock> StockDAO::findByIndustry(const std::string& industry) {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(all_of(stocks))
                                      .from(stocks)
@@ -219,7 +219,7 @@ std::vector<Stock> StockDAO::findByIndustry(const std::string& industry) {
 }
 
 bool StockDAO::update(const Stock& stock) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -227,7 +227,7 @@ bool StockDAO::update(const Stock& stock) {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::update(stocks)
               .set(
@@ -257,7 +257,7 @@ bool StockDAO::update(const Stock& stock) {
 }
 
 bool StockDAO::remove(const std::string& ts_code) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -265,7 +265,7 @@ bool StockDAO::remove(const std::string& ts_code) {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         (*db)(sqlpp::remove_from(stocks).where(stocks.tsCode == ts_code));
         
@@ -278,7 +278,7 @@ bool StockDAO::remove(const std::string& ts_code) {
 }
 
 bool StockDAO::exists(const std::string& ts_code) {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return false;
@@ -286,7 +286,7 @@ bool StockDAO::exists(const std::string& ts_code) {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(sqlpp::count(stocks.id))
                                      .from(stocks)
@@ -302,7 +302,7 @@ bool StockDAO::exists(const std::string& ts_code) {
 }
 
 int StockDAO::count() {
-    auto& conn = Connection::getInstance();
+    auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {
         LOG_ERROR("数据库未连接");
         return 0;
@@ -310,7 +310,7 @@ int StockDAO::count() {
 
     try {
         StockTable stocks;
-        auto db = conn.getDb();
+        auto db = ConnectionManager::getInstance().getDb();
         
         for (const auto& row : (*db)(sqlpp::select(sqlpp::count(stocks.id))
                                      .from(stocks)
