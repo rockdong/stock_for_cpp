@@ -5,6 +5,10 @@
 #include "Logger.h"
 #include <sqlpp11/sqlpp11.h>
 
+#ifdef HAS_MYSQL
+#include <sqlpp11/mysql/mysql.h>
+#endif
+
 namespace data {
 
 namespace {
@@ -39,12 +43,23 @@ bool StockProcessRecordDAO::upsert(const StockProcessRecord& record) {
         StockProcessRecordTable table;
         auto db = ConnectionManager::getInstance().getDb();
         
+#ifdef HAS_MYSQL
+        (*db)(sqlpp::remove_from(table)
+            .where(table.tsCode == record.ts_code and table.tradeDate == record.trade_date));
+        (*db)(sqlpp::insert_into(table).set(
+            table.tsCode = record.ts_code,
+            table.stockName = record.stock_name,
+            table.tradeDate = record.trade_date,
+            table.data = record.dataToJson()
+        ));
+#else
         (*db)(sqlpp::sqlite3::insert_or_replace_into(table).set(
             table.tsCode = record.ts_code,
             table.stockName = record.stock_name,
             table.tradeDate = record.trade_date,
             table.data = record.dataToJson()
         ));
+#endif
         
         LOG_DEBUG("Upsert过程记录: " + record.ts_code);
         return true;
