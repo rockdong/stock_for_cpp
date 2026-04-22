@@ -178,6 +178,24 @@ bool MySQLConnection::createTables() {
         return false;
     }
     
+    std::string createTradesTable = R"(
+        CREATE TABLE IF NOT EXISTS trades (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            stock_id INT NOT NULL,
+            trade_type VARCHAR(20) NOT NULL,
+            price DECIMAL(18,4) NOT NULL,
+            quantity INT NOT NULL,
+            amount DECIMAL(20,4) NOT NULL,
+            trade_time DATETIME NOT NULL,
+            FOREIGN KEY (stock_id) REFERENCES stocks(id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    )";
+    
+    if (!executeInternal(createTradesTable)) {
+        LOG_ERROR("创建 trades 表失败");
+        return false;
+    }
+    
     std::string createAnalysisResultsTable = R"(
         CREATE TABLE IF NOT EXISTS analysis_results (
             id INT AUTO_INCREMENT PRIMARY KEY,

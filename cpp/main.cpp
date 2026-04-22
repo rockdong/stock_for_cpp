@@ -19,6 +19,7 @@
 
 // 数据层
 #include "Connection.h"
+#include "ConnectionFactory.h"
 #include "StockDAO.h"
 #include "AnalysisResultDAO.h"
 #include "ChartDataDAO.h"
@@ -219,19 +220,31 @@ void printConfiguration() {
  * @return 是否成功
  */
 bool initializeDatabase() {
-    auto& conn = data::Connection::getInstance();
+    auto& config = config::Config::getInstance();
+    std::string dbType = config.getDbType();
     
-    if (!conn.initialize("stock.db")) {
-        LOG_ERROR("数据库初始化失败");
-        return false;
+    LOG_INFO("========================================");
+    LOG_INFO("数据库配置:");
+    LOG_INFO("  类型: " + dbType);
+    
+    auto& conn = data::ConnectionFactory::createConnection();
+    
+    if (dbType == "mysql") {
+        LOG_INFO("  主机: " + config.getDbHost());
+        LOG_INFO("  端口: " + std::to_string(config.getDbPort()));
+        LOG_INFO("  数据库: " + config.getDbName());
+        LOG_INFO("  用户: " + config.getDbUser());
+    } else {
+        LOG_INFO("  文件: " + config.getDbName() + ".db");
     }
+    LOG_INFO("========================================");
     
     if (!conn.connect()) {
         LOG_ERROR("数据库连接失败");
         return false;
     }
     
-    LOG_INFO("数据库连接成功");
+    LOG_INFO("数据库连接成功，表创建完成");
     return true;
 }
 

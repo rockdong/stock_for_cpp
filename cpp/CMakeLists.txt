@@ -60,8 +60,18 @@ set(HTTPLIB_IS_USING_OPENSSL OFF CACHE BOOL "Force disable OpenSSL" FORCE)
 # 添加第三方库子目录
 add_subdirectory(thirdparty/spdlog)
 
-set(BUILD_MYSQL_CONNECTOR ON CACHE BOOL "Enable MySQL connector" FORCE)
+set(BUILD_MYSQL_CONNECTOR OFF CACHE BOOL "Disable MySQL connector (optional)" FORCE)
 add_subdirectory(thirdparty/sqlpp11)
+
+# 检查 MySQL 是否可用
+find_package(MySQL QUIET)
+if(MySQL_FOUND)
+    set(HAS_MYSQL TRUE)
+    message(STATUS "MySQL 库已找到，启用 MySQL 支持")
+else()
+    set(HAS_MYSQL FALSE)
+    message(STATUS "MySQL 库未找到，仅使用 SQLite")
+endif()
 
 add_subdirectory(thirdparty/json)
 add_subdirectory(thirdparty/cpp-httplib)
@@ -202,9 +212,10 @@ target_link_libraries(network_lib PUBLIC
 )
 
 # 添加数据层库
-add_library(data_lib STATIC
+set(DATA_LIB_SOURCES
     data/Data.cpp
     data/database/Connection.cpp
+    data/database/ConnectionFactory.cpp
     data/database/StockDAO.cpp
     data/database/PriceDAO.cpp
     data/database/AnalysisResultDAO.cpp
@@ -215,6 +226,18 @@ add_library(data_lib STATIC
     data/file/CSVReader.cpp
     data/file/CSVWriter.cpp
 )
+
+# 只有 MySQL 可用时才添加 MySQLConnection.cpp
+if(HAS_MYSQL)
+    list(APPEND DATA_LIB_SOURCES data/database/MySQLConnection.cpp)
+endif()
+
+add_library(data_lib STATIC ${DATA_LIB_SOURCES})
+
+# 如果 MySQL 可用，定义 HAS_MYSQL 编译宏
+if(HAS_MYSQL)
+    target_compile_definitions(data_lib PUBLIC HAS_MYSQL)
+endif()
 
 target_include_directories(data_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/data
@@ -232,13 +255,17 @@ target_include_directories(data_lib PUBLIC
 
 target_link_libraries(data_lib PUBLIC
     sqlpp11::sqlpp11
-    sqlpp11::mysql
     sqlite3
     nlohmann_json::nlohmann_json
     core_lib
     log_lib
     config_lib
 )
+
+# 如果 MySQL 可用，链接 MySQL 库
+if(HAS_MYSQL)
+    target_link_libraries(data_lib PUBLIC sqlpp11::mysql)
+endif()
 
 # 添加分析层库
 add_library(analysis_lib STATIC
@@ -294,7 +321,7 @@ target_link_libraries(eventbus_lib PUBLIC
 add_executable(stock_for_cpp main.cpp)
 
 # 链接第三方库
-target_link_libraries(stock_for_cpp PRIVATE
+set(STOCK_LINK_LIBS
     config_lib
     scheduler_lib
     core_lib
@@ -306,13 +333,19 @@ target_link_libraries(stock_for_cpp PRIVATE
     eventbus_lib
     spdlog::spdlog
     sqlpp11::sqlpp11
-    sqlpp11::mysql
     sqlite3
     nlohmann_json::nlohmann_json
     httplib::httplib
     dotenv
     ta-lib-static
 )
+
+# 如果 MySQL 可用，链接 MySQL 库
+if(HAS_MYSQL)
+    list(APPEND STOCK_LINK_LIBS sqlpp11::mysql)
+endif()
+
+target_link_libraries(stock_for_cpp PRIVATE ${STOCK_LINK_LIBS})
 
 # 包含第三方库头文件目录
 target_include_directories(stock_for_cpp PRIVATE

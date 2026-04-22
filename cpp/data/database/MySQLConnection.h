@@ -6,10 +6,11 @@
 #include <mutex>
 #include <sqlpp11/sqlpp11.h>
 #include <sqlpp11/mysql/mysql.h>
+#include "IConnection.h"
 
 namespace data {
 
-class MySQLConnection {
+class MySQLConnection : public IConnection {
 public:
     static MySQLConnection& getInstance();
 
@@ -17,17 +18,17 @@ public:
                     const std::string& user, const std::string& password,
                     const std::string& charset = "utf8mb4");
 
-    bool connect();
-    void disconnect();
-    bool isConnected() const;
+    bool connect() override;
+    void disconnect() override;
+    bool isConnected() const override;
 
     sqlpp::mysql::connection* getDb();
 
-    bool execute(const std::string& sql);
-    bool beginTransaction();
-    bool commit();
-    bool rollback();
-    bool createTables();
+    bool execute(const std::string& sql) override;
+    bool beginTransaction() override;
+    bool commit() override;
+    bool rollback() override;
+    bool createTables() override;
 
     MySQLConnection(const MySQLConnection&) = delete;
     MySQLConnection& operator=(const MySQLConnection&) = delete;

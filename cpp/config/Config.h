@@ -53,6 +53,7 @@ public:
     size_t getLogAsyncQueueSize() const { return log_async_queue_size_; }
 
     // ========== 数据库配置 ==========
+    std::string getDbType() const { return db_type_; }
     std::string getDbHost() const { return db_host_; }
     int getDbPort() const { return db_port_; }
     std::string getDbName() const { return db_name_; }
