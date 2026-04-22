@@ -11,7 +11,8 @@ namespace data {
 
 class SQLiteAdapter : public IDatabaseAdapter {
 public:
-    static SQLiteAdapter& getInstance();
+    SQLiteAdapter() = default;
+    ~SQLiteAdapter();
     
     bool initialize(const std::string& dbPath);
     
@@ -53,12 +54,7 @@ public:
     
     sqlpp::sqlite3::connection* getConnection();
     
-    SQLiteAdapter(const SQLiteAdapter&) = delete;
-    SQLiteAdapter& operator=(const SQLiteAdapter&) = delete;
-    
 private:
-    SQLiteAdapter() = default;
-    ~SQLiteAdapter();
     
     bool executeInternal(const std::string& sql);
     

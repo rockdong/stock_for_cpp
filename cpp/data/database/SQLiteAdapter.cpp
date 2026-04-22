@@ -6,11 +6,6 @@
 
 namespace data {
 
-SQLiteAdapter& SQLiteAdapter::getInstance() {
-    static SQLiteAdapter instance;
-    return instance;
-}
-
 bool SQLiteAdapter::initialize(const std::string& dbPath) {
     std::lock_guard<std::mutex> lock(mutex_);
     dbPath_ = dbPath;
@@ -277,7 +272,7 @@ bool SQLiteAdapter::addColumn(const std::string& tableName,
                                const ColumnDefinition& column,
                                bool ifNotExists) {
     if (ifNotExists && columnExists(tableName, column.name)) {
-        LOG_INFO("字段已存在: " + tableName << "." << column.name);
+        LOG_INFO("字段已存在: " + tableName + "." + column.name);
         return true;
     }
     
@@ -393,8 +388,6 @@ sqlpp::sqlite3::connection* SQLiteAdapter::getConnection() {
     return connection_.get();
 }
 
-SQLiteAdapter::~SQLiteAdapter() {
-    disconnect();
-}
+SQLiteAdapter::~SQLiteAdapter() = default;
 
 } // namespace data

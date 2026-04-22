@@ -131,13 +131,11 @@ bool Connection::rollback() {
 bool Connection::createTables() {
     LOG_INFO("创建数据库表");
     
-    auto& adapter = SQLiteAdapter::getInstance();
-    if (!adapter.isConnected()) {
-        adapter.initialize(dbPath_);
-        if (!adapter.connect()) {
-            LOG_ERROR("SQLiteAdapter 连接失败");
-            return false;
-        }
+    SQLiteAdapter adapter;
+    adapter.initialize(dbPath_);
+    if (!adapter.connect()) {
+        LOG_ERROR("SQLiteAdapter 连接失败");
+        return false;
     }
     
     if (!adapter.createTables()) {

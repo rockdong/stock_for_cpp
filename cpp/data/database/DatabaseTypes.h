@@ -37,10 +37,7 @@ struct ColumnDefinition {
     std::string foreignKeyTable;
     std::string foreignKeyColumn;
     
-    ColumnDefinition() = default;
-    
-    ColumnDefinition(const std::string& n, DataType t, bool pk = false, bool ai = false)
-        : name(n), type(t), primaryKey(pk), autoIncrement(ai) {}
+    // 不提供自定义构造器，允许聚合初始化
 };
 
 struct IndexDefinition {
@@ -49,11 +46,7 @@ struct IndexDefinition {
     std::vector<std::string> columns;
     bool unique = false;
     
-    IndexDefinition() = default;
-    
-    IndexDefinition(const std::string& n, const std::string& tbl, 
-                    const std::vector<std::string>& cols, bool u = false)
-        : name(n), tableName(tbl), columns(cols), unique(u) {}
+    // 不提供自定义构造器，允许聚合初始化
 };
 
 struct TableDefinition {
@@ -61,10 +54,7 @@ struct TableDefinition {
     std::vector<ColumnDefinition> columns;
     std::vector<IndexDefinition> indexes;
     
-    TableDefinition() = default;
-    
-    TableDefinition(const std::string& n, const std::vector<ColumnDefinition>& cols)
-        : name(n), columns(cols) {}
+    // 不提供自定义构造器，允许聚合初始化
 };
 
 inline std::string dataTypeToString(DataType type) {
