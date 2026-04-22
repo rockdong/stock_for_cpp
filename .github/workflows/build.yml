@@ -31,7 +31,7 @@ jobs:
       - name: 🔧 安装构建依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake libsqlite3-dev libssl-dev
+          sudo apt-get install -y build-essential cmake libsqlite3-dev libssl-dev libmysqlclient-dev
 
       - name: ⚙️ 配置 CMake (使用 cpp 目录)
         run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
@@ -64,7 +64,7 @@ jobs:
       - name: 🔧 安装构建依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake libsqlite3-dev libssl-dev
+          sudo apt-get install -y build-essential cmake libsqlite3-dev libssl-dev libmysqlclient-dev
 
       - name: ⚙️ 配置 CMake
         run: cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}

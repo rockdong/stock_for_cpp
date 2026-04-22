@@ -12,6 +12,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-0 \
     libssl3 \
+    libmysqlclient21 \
     ca-certificates \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
