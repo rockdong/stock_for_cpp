@@ -112,6 +112,29 @@ bool MySQLConnection::executeInternal(const std::string& sql) {
     }
 }
 
+bool MySQLConnection::createIndexIgnoreDuplicate(const std::string& sql) {
+    LOG_INFO("创建索引: " + sql);
+    
+    if (!connected_ || !db_) {
+        LOG_ERROR("MySQL 未连接");
+        return false;
+    }
+    
+    try {
+        db_->execute(sql);
+        LOG_INFO("索引创建成功");
+        return true;
+    } catch (const std::exception& e) {
+        std::string error = e.what();
+        if (error.find("Duplicate key name") != std::string::npos) {
+            LOG_INFO("索引已存在，跳过创建");
+            return true;
+        }
+        LOG_ERROR("创建索引失败: " + error);
+        return false;
+    }
+}
+
 bool MySQLConnection::beginTransaction() {
     return execute("START TRANSACTION");
 }
@@ -275,14 +298,14 @@ bool MySQLConnection::createTables() {
         return false;
     }
     
-    executeInternal("CREATE INDEX idx_stocks_ts_code ON stocks(ts_code)");
-    executeInternal("CREATE INDEX idx_prices_stock_date ON prices(stock_id, trade_date)");
-    executeInternal("CREATE INDEX idx_analysis_ts_code ON analysis_results(ts_code)");
-    executeInternal("CREATE INDEX idx_analysis_strategy ON analysis_results(strategy_name)");
-    executeInternal("CREATE INDEX idx_analysis_date ON analysis_results(trade_date)");
-    executeInternal("CREATE INDEX idx_chart_lookup ON chart_data(ts_code, freq, analysis_date)");
-    executeInternal("CREATE INDEX idx_process_ts_code ON analysis_process_records(ts_code)");
-    executeInternal("CREATE INDEX idx_process_date ON analysis_process_records(trade_date)");
+    createIndexIgnoreDuplicate("CREATE INDEX idx_stocks_ts_code ON stocks(ts_code)");
+    createIndexIgnoreDuplicate("CREATE INDEX idx_prices_stock_date ON prices(stock_id, trade_date)");
+    createIndexIgnoreDuplicate("CREATE INDEX idx_analysis_ts_code ON analysis_results(ts_code)");
+    createIndexIgnoreDuplicate("CREATE INDEX idx_analysis_strategy ON analysis_results(strategy_name)");
+    createIndexIgnoreDuplicate("CREATE INDEX idx_analysis_date ON analysis_results(trade_date)");
+    createIndexIgnoreDuplicate("CREATE INDEX idx_chart_lookup ON chart_data(ts_code, freq, analysis_date)");
+    createIndexIgnoreDuplicate("CREATE INDEX idx_process_ts_code ON analysis_process_records(ts_code)");
+    createIndexIgnoreDuplicate("CREATE INDEX idx_process_date ON analysis_process_records(trade_date)");
     
     LOG_INFO("MySQL 数据库表创建成功");
     return true;

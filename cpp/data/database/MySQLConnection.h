@@ -38,6 +38,7 @@ private:
     ~MySQLConnection();
 
     bool executeInternal(const std::string& sql);
+    bool createIndexIgnoreDuplicate(const std::string& sql);
 
     std::unique_ptr<sqlpp::mysql::connection> db_;
     std::unique_ptr<sqlpp::mysql::connection_config> config_;
