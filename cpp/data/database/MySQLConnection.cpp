@@ -263,7 +263,7 @@ bool MySQLConnection::createTables() {
             ts_code VARCHAR(20) NOT NULL,
             stock_name VARCHAR(100),
             trade_date DATE NOT NULL,
-            data JSON NOT NULL DEFAULT '{"strategies":[]}',
+            data JSON NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             expires_at TIMESTAMP NULL,
             UNIQUE KEY uk_process (ts_code, trade_date)
