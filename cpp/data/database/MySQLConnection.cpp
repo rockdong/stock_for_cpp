@@ -275,14 +275,14 @@ bool MySQLConnection::createTables() {
         return false;
     }
     
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_stocks_ts_code ON stocks(ts_code)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_prices_stock_date ON prices(stock_id, trade_date)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_ts_code ON analysis_results(ts_code)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_strategy ON analysis_results(strategy_name)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_analysis_date ON analysis_results(trade_date)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_chart_lookup ON chart_data(ts_code, freq, analysis_date)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_process_ts_code ON analysis_process_records(ts_code)");
-    executeInternal("CREATE INDEX IF NOT EXISTS idx_process_date ON analysis_process_records(trade_date)");
+    executeInternal("CREATE INDEX idx_stocks_ts_code ON stocks(ts_code)");
+    executeInternal("CREATE INDEX idx_prices_stock_date ON prices(stock_id, trade_date)");
+    executeInternal("CREATE INDEX idx_analysis_ts_code ON analysis_results(ts_code)");
+    executeInternal("CREATE INDEX idx_analysis_strategy ON analysis_results(strategy_name)");
+    executeInternal("CREATE INDEX idx_analysis_date ON analysis_results(trade_date)");
+    executeInternal("CREATE INDEX idx_chart_lookup ON chart_data(ts_code, freq, analysis_date)");
+    executeInternal("CREATE INDEX idx_process_ts_code ON analysis_process_records(ts_code)");
+    executeInternal("CREATE INDEX idx_process_date ON analysis_process_records(trade_date)");
     
     LOG_INFO("MySQL 数据库表创建成功");
     return true;
