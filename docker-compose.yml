@@ -8,7 +8,11 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - DB_TYPE=mysql
-      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=stock_db
+      - DB_USER=stock_user
+      - DB_PASSWORD=stock_password
     depends_on:
       mysql:
         condition: service_healthy
