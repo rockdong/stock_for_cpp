@@ -143,8 +143,20 @@ bool Connection::createTables() {
         return false;
     }
     
+    if (!adapter.ensureAnalysisProgressRecord()) {
+        LOG_ERROR("初始化 analysis_progress 记录失败");
+        return false;
+    }
+    
     LOG_INFO("数据库表创建成功");
     return true;
+}
+
+bool Connection::ensureAnalysisProgressRecord() {
+    return executeInternal(
+        "INSERT OR REPLACE INTO analysis_progress (id, phase1_status, phase2_status) "
+        "VALUES (1, 'idle', 'idle')"
+    );
 }
 
 Connection::~Connection() {

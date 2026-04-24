@@ -27,6 +27,7 @@ public:
     bool commit() override;
     bool rollback() override;
     bool createTables() override;
+    bool ensureAnalysisProgressRecord() override;
 
     // 禁用拷贝和赋值
     Connection(const Connection&) = delete;
