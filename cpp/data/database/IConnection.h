@@ -57,11 +57,9 @@ public:
      */
     virtual bool rollback() = 0;
 
-    /**
-     * @brief 创建数据库表
-     * @return 是否成功
-     */
     virtual bool createTables() = 0;
+
+    virtual bool ensureAnalysisProgressRecord() = 0;
 };
 
 } // namespace data

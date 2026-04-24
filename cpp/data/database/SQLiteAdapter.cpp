@@ -343,11 +343,7 @@ bool SQLiteAdapter::createTables() {
         }
     }
     
-    insertOrIgnore("analysis_progress", {
-        {"id", "1"},
-        {"phase1_status", "'idle'"},
-        {"phase2_status", "'idle'"}
-    });
+    ensureAnalysisProgressRecord();
     
     LOG_INFO("SQLite 表创建成功");
     return true;
@@ -381,6 +377,13 @@ bool SQLiteAdapter::setSchemaVersion(int version) {
 
 bool SQLiteAdapter::runMigrations() {
     return true;
+}
+
+bool SQLiteAdapter::ensureAnalysisProgressRecord() {
+    return executeInternal(
+        "INSERT OR REPLACE INTO analysis_progress (id, phase1_status, phase2_status) "
+        "VALUES (1, 'idle', 'idle')"
+    );
 }
 
 sqlpp::sqlite3::connection* SQLiteAdapter::getConnection() {

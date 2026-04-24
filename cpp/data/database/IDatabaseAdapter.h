@@ -46,6 +46,9 @@ public:
     virtual int getSchemaVersion() = 0;
     virtual bool setSchemaVersion(int version) = 0;
     virtual bool runMigrations() = 0;
+    
+    // 确保 analysis_progress 表有初始化记录（id=1）
+    virtual bool ensureAnalysisProgressRecord() = 0;
 };
 
 } // namespace data

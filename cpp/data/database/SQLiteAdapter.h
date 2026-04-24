@@ -52,6 +52,8 @@ public:
     bool setSchemaVersion(int version) override;
     bool runMigrations() override;
     
+    bool ensureAnalysisProgressRecord() override;
+    
     sqlpp::sqlite3::connection* getConnection();
     
 private:

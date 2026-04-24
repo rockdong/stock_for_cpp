@@ -29,6 +29,7 @@ public:
     bool commit() override;
     bool rollback() override;
     bool createTables() override;
+    bool ensureAnalysisProgressRecord() override;
 
     MySQLConnection(const MySQLConnection&) = delete;
     MySQLConnection& operator=(const MySQLConnection&) = delete;

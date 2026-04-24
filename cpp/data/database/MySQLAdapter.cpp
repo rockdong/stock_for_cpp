@@ -362,6 +362,8 @@ bool MySQLAdapter::createTables() {
         {"phase2_status", "'idle'"}
     });
     
+    ensureAnalysisProgressRecord();
+    
     LOG_INFO("MySQL 表创建成功");
     return true;
 }
@@ -384,6 +386,13 @@ bool MySQLAdapter::setSchemaVersion(int version) {
 
 bool MySQLAdapter::runMigrations() {
     return true;
+}
+
+bool MySQLAdapter::ensureAnalysisProgressRecord() {
+    return executeInternal(
+        "INSERT INTO analysis_progress (id, phase1_status, phase2_status) "
+        "VALUES (1, 'idle', 'idle') ON DUPLICATE KEY UPDATE id = id"
+    );
 }
 
 sqlpp::mysql::connection* MySQLAdapter::getConnection() {

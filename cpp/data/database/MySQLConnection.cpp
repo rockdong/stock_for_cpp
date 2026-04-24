@@ -261,7 +261,7 @@ bool MySQLConnection::createTables() {
         return false;
     }
     
-    executeInternal("INSERT IGNORE INTO analysis_progress (id, phase1_status, phase2_status) VALUES (1, 'idle', 'idle')");
+    ensureAnalysisProgressRecord();
     
     std::string createChartDataTable = R"(
         CREATE TABLE IF NOT EXISTS chart_data (
@@ -309,6 +309,13 @@ bool MySQLConnection::createTables() {
     
     LOG_INFO("MySQL 数据库表创建成功");
     return true;
+}
+
+bool MySQLConnection::ensureAnalysisProgressRecord() {
+    return executeInternal(
+        "INSERT INTO analysis_progress (id, phase1_status, phase2_status) "
+        "VALUES (1, 'idle', 'idle') ON DUPLICATE KEY UPDATE id = id"
+    );
 }
 
 MySQLConnection::~MySQLConnection() {

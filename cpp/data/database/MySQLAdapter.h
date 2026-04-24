@@ -56,6 +56,8 @@ public:
     bool setSchemaVersion(int version) override;
     bool runMigrations() override;
     
+    bool ensureAnalysisProgressRecord() override;
+    
     sqlpp::mysql::connection* getConnection();
     
 private:
