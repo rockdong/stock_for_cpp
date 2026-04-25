@@ -61,7 +61,7 @@ export default function AnalysisFilter({ onFilter }: FilterProps) {
       params.strategy = selectedStrategies.join(',')
     }
     if (selectedFreqs.length > 0) {
-      params.freq = selectedFreqs
+      params.freq = selectedFreqs.join(',')
     }
     onFilter(params)
   }

@@ -79,6 +79,6 @@ export interface FilterParams {
   start_date?: string
   end_date?: string
   signal?: SignalType
-  freq?: FreqType[]
-  strategy?: string[]
+  freq?: string
+  strategy?: string
 }
