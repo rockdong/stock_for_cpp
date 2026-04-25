@@ -93,15 +93,38 @@ export class AnalysisService {
       created_at: r.createdAt.toISOString(),
     }));
 
-    // 信号筛选：检查 data.strategies[].freqs[].signal
-    if (params.signal) {
+    // 组合筛选：signal + freq（同一个频率上要有指定信号）
+    if (params.signal && params.freq && params.freq.length > 0) {
       parsedRecords = parsedRecords.filter(record => {
         const data = record.data as any;
         const strategies = data?.strategies || [];
         return strategies.some((s: any) =>
-          (s.freqs || []).some((f: any) => f.signal === params.signal)
+          (s.freqs || []).some((f: any) =>
+            params.freq!.includes(f.freq) && f.signal === params.signal
+          )
         );
       });
+    } else {
+      // 独立筛选
+      if (params.signal) {
+        parsedRecords = parsedRecords.filter(record => {
+          const data = record.data as any;
+          const strategies = data?.strategies || [];
+          return strategies.some((s: any) =>
+            (s.freqs || []).some((f: any) => f.signal === params.signal)
+          );
+        });
+      }
+
+      if (params.freq && params.freq.length > 0) {
+        parsedRecords = parsedRecords.filter(record => {
+          const data = record.data as any;
+          const strategies = data?.strategies || [];
+          return strategies.some((s: any) =>
+            (s.freqs || []).some((f: any) => params.freq!.includes(f.freq))
+          );
+        });
+      }
     }
 
     // 策略筛选：检查 data.strategies[].name
@@ -110,17 +133,6 @@ export class AnalysisService {
         const data = record.data as any;
         const strategies = data?.strategies || [];
         return strategies.some((s: any) => params.strategy!.includes(s.name));
-      });
-    }
-
-    // 频率筛选：检查 data.strategies[].freqs[].freq
-    if (params.freq && params.freq.length > 0) {
-      parsedRecords = parsedRecords.filter(record => {
-        const data = record.data as any;
-        const strategies = data?.strategies || [];
-        return strategies.some((s: any) =>
-          (s.freqs || []).some((f: any) => params.freq!.includes(f.freq))
-        );
       });
     }
 

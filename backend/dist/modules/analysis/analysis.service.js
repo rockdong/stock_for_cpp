@@ -88,25 +88,34 @@ let AnalysisService = class AnalysisService {
             data: r.data,
             created_at: r.createdAt.toISOString(),
         }));
-        if (params.signal) {
+        if (params.signal && params.freq && params.freq.length > 0) {
             parsedRecords = parsedRecords.filter(record => {
                 const data = record.data;
                 const strategies = data?.strategies || [];
-                return strategies.some((s) => (s.freqs || []).some((f) => f.signal === params.signal));
+                return strategies.some((s) => (s.freqs || []).some((f) => params.freq.includes(f.freq) && f.signal === params.signal));
             });
+        }
+        else {
+            if (params.signal) {
+                parsedRecords = parsedRecords.filter(record => {
+                    const data = record.data;
+                    const strategies = data?.strategies || [];
+                    return strategies.some((s) => (s.freqs || []).some((f) => f.signal === params.signal));
+                });
+            }
+            if (params.freq && params.freq.length > 0) {
+                parsedRecords = parsedRecords.filter(record => {
+                    const data = record.data;
+                    const strategies = data?.strategies || [];
+                    return strategies.some((s) => (s.freqs || []).some((f) => params.freq.includes(f.freq)));
+                });
+            }
         }
         if (params.strategy && params.strategy.length > 0) {
             parsedRecords = parsedRecords.filter(record => {
                 const data = record.data;
                 const strategies = data?.strategies || [];
                 return strategies.some((s) => params.strategy.includes(s.name));
-            });
-        }
-        if (params.freq && params.freq.length > 0) {
-            parsedRecords = parsedRecords.filter(record => {
-                const data = record.data;
-                const strategies = data?.strategies || [];
-                return strategies.some((s) => (s.freqs || []).some((f) => params.freq.includes(f.freq)));
             });
         }
         return parsedRecords.slice(0, params.limit || 100);
