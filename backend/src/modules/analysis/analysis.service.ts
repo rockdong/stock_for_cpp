@@ -61,6 +61,8 @@ export class AnalysisService {
     ts_code?: string;
     start_date?: string;
     end_date?: string;
+    signal?: string;
+    strategy?: string;
     limit?: number;
   }) {
     const where: any = {};
@@ -70,13 +72,18 @@ export class AnalysisService {
     if (params.end_date)
       where.tradeDate = { ...where.tradeDate, lte: new Date(params.end_date) };
 
+    // 当需要过滤时，先获取更多记录
+    const fetchLimit = (params.signal || params.strategy)
+      ? Math.max((params.limit || 100) * 5, 500)
+      : params.limit || 100;
+
     const records = await this.prisma.analysisProcessRecord.findMany({
       where,
       orderBy: [{ tradeDate: 'desc' }, { createdAt: 'desc' }],
-      take: params.limit || 100,
+      take: fetchLimit,
     });
 
-    return records.map(r => ({
+    let parsedRecords = records.map(r => ({
       id: r.id,
       ts_code: r.tsCode,
       stock_name: r.stockName,
@@ -84,6 +91,28 @@ export class AnalysisService {
       data: r.data,
       created_at: r.createdAt.toISOString(),
     }));
+
+    // 信号筛选：检查 data.strategies[].freqs[].signal
+    if (params.signal) {
+      parsedRecords = parsedRecords.filter(record => {
+        const data = record.data as any;
+        const strategies = data?.strategies || [];
+        return strategies.some((s: any) =>
+          (s.freqs || []).some((f: any) => f.signal === params.signal)
+        );
+      });
+    }
+
+    // 策略筛选：检查 data.strategies[].name
+    if (params.strategy) {
+      parsedRecords = parsedRecords.filter(record => {
+        const data = record.data as any;
+        const strategies = data?.strategies || [];
+        return strategies.some((s: any) => s.name === params.strategy);
+      });
+    }
+
+    return parsedRecords.slice(0, params.limit || 100);
   }
 
   async getProcessById(id: number) {

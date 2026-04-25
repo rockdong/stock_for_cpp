@@ -28,12 +28,16 @@ export class AnalysisController {
     @Query('ts_code') ts_code?: string,
     @Query('start_date') start_date?: string,
     @Query('end_date') end_date?: string,
+    @Query('signal') signal?: string,
+    @Query('strategy') strategy?: string,
     @Query('limit') limit?: string,
   ) {
     const data = await this.analysisService.getProcessRecords({
       ts_code,
       start_date,
       end_date,
+      signal,
+      strategy,
       limit: parseInt(limit || '100'),
     });
     return { success: true, data };
