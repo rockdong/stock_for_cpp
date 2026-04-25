@@ -62,7 +62,7 @@ export class AnalysisService {
     start_date?: string;
     end_date?: string;
     signal?: string;
-    strategy?: string;
+    strategy?: string[];
     freq?: string[];
     limit?: number;
   }) {
@@ -105,11 +105,11 @@ export class AnalysisService {
     }
 
     // 策略筛选：检查 data.strategies[].name
-    if (params.strategy) {
+    if (params.strategy && params.strategy.length > 0) {
       parsedRecords = parsedRecords.filter(record => {
         const data = record.data as any;
         const strategies = data?.strategies || [];
-        return strategies.some((s: any) => s.name === params.strategy);
+        return strategies.some((s: any) => params.strategy!.includes(s.name));
       });
     }
 
@@ -143,9 +143,20 @@ export class AnalysisService {
   }
 
   async getStrategies() {
-    const strategiesEnv = this.config.get('STRATEGIES', '');
-    if (!strategiesEnv) return [];
-    return strategiesEnv.split(';').filter((s: string) => s.trim());
+    const records = await this.prisma.analysisProcessRecord.findMany({
+      take: 100,
+      select: { data: true },
+    });
+    const strategyNames = new Set<string>();
+    for (const record of records) {
+      const data = record.data as any;
+      if (data?.strategies) {
+        for (const s of data.strategies) {
+          if (s.name) strategyNames.add(s.name);
+        }
+      }
+    }
+    return Array.from(strategyNames);
   }
 
   async getProcessChart(tsCode: string, strategy?: string, freq: string = 'd') {

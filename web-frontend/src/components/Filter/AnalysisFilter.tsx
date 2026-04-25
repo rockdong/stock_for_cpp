@@ -58,7 +58,7 @@ export default function AnalysisFilter({ onFilter }: FilterProps) {
     if (filters.end_date) params.end_date = filters.end_date
     if (filters.signal) params.signal = filters.signal as SignalType
     if (selectedStrategies.length > 0) {
-      params.strategy = selectedStrategies
+      params.strategy = selectedStrategies.join(',')
     }
     if (selectedFreqs.length > 0) {
       params.freq = selectedFreqs

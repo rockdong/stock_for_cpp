@@ -33,14 +33,14 @@ export class AnalysisController {
     @Query('freq') freq?: string,
     @Query('limit') limit?: string,
   ) {
-    // freq 可能是数组或单值
     const freqArray = freq ? freq.split(',') : undefined;
+    const strategyArray = strategy ? strategy.split(',') : undefined;
     const data = await this.analysisService.getProcessRecords({
       ts_code,
       start_date,
       end_date,
       signal,
-      strategy,
+      strategy: strategyArray,
       freq: freqArray,
       limit: parseInt(limit || '100'),
     });
