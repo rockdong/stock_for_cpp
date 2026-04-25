@@ -63,6 +63,7 @@ export class AnalysisService {
     end_date?: string;
     signal?: string;
     strategy?: string;
+    freq?: string[];
     limit?: number;
   }) {
     const where: any = {};
@@ -109,6 +110,17 @@ export class AnalysisService {
         const data = record.data as any;
         const strategies = data?.strategies || [];
         return strategies.some((s: any) => s.name === params.strategy);
+      });
+    }
+
+    // 频率筛选：检查 data.strategies[].freqs[].freq
+    if (params.freq && params.freq.length > 0) {
+      parsedRecords = parsedRecords.filter(record => {
+        const data = record.data as any;
+        const strategies = data?.strategies || [];
+        return strategies.some((s: any) =>
+          (s.freqs || []).some((f: any) => params.freq!.includes(f.freq))
+        );
       });
     }
 

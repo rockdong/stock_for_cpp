@@ -30,14 +30,18 @@ export class AnalysisController {
     @Query('end_date') end_date?: string,
     @Query('signal') signal?: string,
     @Query('strategy') strategy?: string,
+    @Query('freq') freq?: string,
     @Query('limit') limit?: string,
   ) {
+    // freq 可能是数组或单值
+    const freqArray = freq ? freq.split(',') : undefined;
     const data = await this.analysisService.getProcessRecords({
       ts_code,
       start_date,
       end_date,
       signal,
       strategy,
+      freq: freqArray,
       limit: parseInt(limit || '100'),
     });
     return { success: true, data };
