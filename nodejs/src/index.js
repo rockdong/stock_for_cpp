@@ -7,6 +7,8 @@ const apiRoutes = require('./api');
 const authRoutes = require('./routes/auth');
 const logger = require('./logger');
 const requestLogger = require('./middleware/requestLogger');
+const wechatEventHandler = require('./webhook/wechatEventHandler');
+const wechatService = require('./services/wechatService');
 
 const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
@@ -33,6 +35,32 @@ async function main() {
   httpApp.use(requestLogger);
   httpApp.use('/api', apiRoutes);
   httpApp.use('/api/auth', authRoutes);
+  
+  httpApp.post('/api/wechat/event', express.text({ type: 'text/xml' }), async (req, res) => {
+    try {
+      const { signature, timestamp, nonce } = req.query;
+      const response = await wechatEventHandler.handleWechatEvent(
+        req.body,
+        signature,
+        timestamp,
+        nonce
+      );
+      res.set('Content-Type', 'text/xml');
+      res.send(response);
+    } catch (error) {
+      logger.error('处理微信事件失败: ' + error.message);
+      res.status(500).send('error');
+    }
+  });
+  
+  httpApp.get('/api/wechat/event', (req, res) => {
+    const { signature, timestamp, nonce, echostr } = req.query;
+    if (wechatService.verifySignature(signature, timestamp, nonce, process.env.WECHAT_TOKEN)) {
+      res.send(echostr);
+    } else {
+      res.status(403).send('invalid signature');
+    }
+  });
   
   httpApp.listen(HTTP_PORT, () => {
     logger.info(`HTTP API 服务已启动，端口: ${HTTP_PORT}`);
