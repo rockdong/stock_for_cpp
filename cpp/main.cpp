@@ -25,6 +25,10 @@
 #include "ChartDataDAO.h"
 #include "AnalysisProcessRecordDAO.h"
 
+#ifdef HAS_MYSQL
+#include "MySQLConnection.h"
+#endif
+
 // 网络层
 #include "DataSourceFactory.h"
 #include "network/TushareDataSource.h"
@@ -643,6 +647,35 @@ void analyzeStock(
 }
 
 /**
+ * @brief 执行进度更新 SQL（根据数据库类型选择正确的连接）
+ * @param sql 要执行的 SQL 语句
+ * @return 是否成功
+ */
+bool executeProgressUpdate(const std::string& sql) {
+    auto& config = config::Config::getInstance();
+    std::string dbType = config.getDbType();
+    
+#ifdef HAS_MYSQL
+    if (dbType == "mysql") {
+        auto& conn = data::MySQLConnection::getInstance();
+        if (!conn.isConnected()) {
+            LOG_ERROR("MySQL 未连接，无法更新进度");
+            return false;
+        }
+        return conn.execute(sql);
+    }
+#endif
+    
+    // SQLite 作为默认/备选
+    auto& conn = data::Connection::getInstance();
+    if (!conn.isConnected()) {
+        LOG_ERROR("SQLite 未连接，无法更新进度");
+        return false;
+    }
+    return conn.execute(sql);
+}
+
+/**
  * @brief 更新分析进度
  * @param total 总数（-1 表示不更新）
  * @param completed 已完成（-1 表示不更新）
@@ -650,33 +683,39 @@ void analyzeStock(
  * @param status 状态（空表示不更新）
  */
 void updatePhase1Progress(int total = -1, int completed = -1, int qualified = -1, const std::string& status = "") {
-    auto& conn = data::Connection::getInstance();
-    if (!conn.isConnected()) return;
+    auto& config = config::Config::getInstance();
+    std::string dbType = config.getDbType();
     
-    std::string sql = "UPDATE analysis_progress SET updated_at = CURRENT_TIMESTAMP";
+    // MySQL 使用 NOW()，SQLite 使用 CURRENT_TIMESTAMP
+    std::string timestampFunc = (dbType == "mysql") ? "NOW()" : "CURRENT_TIMESTAMP";
+    
+    std::string sql = "UPDATE analysis_progress SET updated_at = " + timestampFunc;
     if (total >= 0) sql += ", phase1_total = " + std::to_string(total);
     if (completed >= 0) sql += ", phase1_completed = " + std::to_string(completed);
     if (qualified >= 0) sql += ", phase1_qualified = " + std::to_string(qualified);
     if (!status.empty()) sql += ", phase1_status = '" + status + "'";
-    if (status == "running") sql += ", started_at = CURRENT_TIMESTAMP";
-    if (status == "completed") sql += ", phase1_completed_at = CURRENT_TIMESTAMP";
+    if (status == "running") sql += ", started_at = " + timestampFunc;
+    if (status == "completed") sql += ", phase1_completed_at = " + timestampFunc;
     sql += " WHERE id = 1";
     
-    conn.execute(sql);
+    executeProgressUpdate(sql);
 }
 
 void updatePhase2Progress(int total = -1, int completed = -1, int failed = -1, const std::string& status = "") {
-    auto& conn = data::Connection::getInstance();
-    if (!conn.isConnected()) return;
+    auto& config = config::Config::getInstance();
+    std::string dbType = config.getDbType();
     
-    std::string sql = "UPDATE analysis_progress SET updated_at = CURRENT_TIMESTAMP";
+    // MySQL 使用 NOW()，SQLite 使用 CURRENT_TIMESTAMP
+    std::string timestampFunc = (dbType == "mysql") ? "NOW()" : "CURRENT_TIMESTAMP";
+    
+    std::string sql = "UPDATE analysis_progress SET updated_at = " + timestampFunc;
     if (total >= 0) sql += ", phase2_total = " + std::to_string(total);
     if (completed >= 0) sql += ", phase2_completed = " + std::to_string(completed);
     if (failed >= 0) sql += ", phase2_failed = " + std::to_string(failed);
     if (!status.empty()) sql += ", phase2_status = '" + status + "'";
     sql += " WHERE id = 1";
     
-    conn.execute(sql);
+    executeProgressUpdate(sql);
 }
 
 /**
