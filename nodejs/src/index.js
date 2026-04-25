@@ -4,6 +4,7 @@ const cors = require('cors');
 const config = require('./config');
 const { handleMessage, handleCardAction } = require('./handler');
 const apiRoutes = require('./api');
+const authRoutes = require('./routes/auth');
 const logger = require('./logger');
 const requestLogger = require('./middleware/requestLogger');
 
@@ -31,6 +32,7 @@ async function main() {
   httpApp.use(express.json());
   httpApp.use(requestLogger);
   httpApp.use('/api', apiRoutes);
+  httpApp.use('/api/auth', authRoutes);
   
   httpApp.listen(HTTP_PORT, () => {
     logger.info(`HTTP API 服务已启动，端口: ${HTTP_PORT}`);
