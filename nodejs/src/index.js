@@ -9,12 +9,15 @@ const logger = require('./logger');
 const requestLogger = require('./middleware/requestLogger');
 const wechatEventHandler = require('./webhook/wechatEventHandler');
 const wechatService = require('./services/wechatService');
+const authService = require('./services/authService');
 
 const HTTP_PORT = process.env.HTTP_PORT || 3000;
 
 async function main() {
   logger.info('启动飞书机器人（WebSocket 长连接模式）...');
   logger.info(`App ID: ${config.appId ? config.appId.substring(0, 10) + '...' : '未配置'}`);
+  
+  await authService.initDb();
   
   if (!config.appId || !config.appSecret) {
     logger.error('飞书配置缺失！请检查 FEISHU_APP_ID 和 FEISHU_APP_SECRET 环境变量');

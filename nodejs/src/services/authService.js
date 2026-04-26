@@ -20,10 +20,76 @@ async function initDb() {
   if (dbType === 'mysql' && config.databaseUrl) {
     const mysql = require('mysql2/promise');
     mysqlPool = mysql.createPool(config.databaseUrl);
+    await ensureTablesExist();
   } else {
     const Database = require('better-sqlite3');
     const dbPath = config.dbPath || './stock.db';
     sqliteDb = new Database(dbPath);
+    await ensureTablesExist();
+  }
+}
+
+async function ensureTablesExist() {
+  if (dbType === 'mysql') {
+    await mysqlPool.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await mysqlPool.execute(`
+      CREATE TABLE IF NOT EXISTS wechat_bindings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        openid VARCHAR(50) UNIQUE NOT NULL,
+        subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        unsubscribed_at DATETIME NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    await mysqlPool.execute(`
+      CREATE TABLE IF NOT EXISTS login_sessions (
+        session_id VARCHAR(36) PRIMARY KEY,
+        status VARCHAR(20) DEFAULT 'pending',
+        user_id INT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME NOT NULL,
+        snapshot_openids TEXT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+        INDEX idx_status (status),
+        INDEX idx_expires_at (expires_at)
+      )
+    `);
+    logger.info('认证相关表已检查/创建');
+  } else {
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS wechat_bindings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        openid TEXT UNIQUE NOT NULL,
+        subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        unsubscribed_at DATETIME NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS login_sessions (
+        session_id TEXT PRIMARY KEY,
+        status TEXT DEFAULT 'pending',
+        user_id INTEGER NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME NOT NULL,
+        snapshot_openids TEXT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+    logger.info('认证相关表已检查/创建');
   }
 }
 
@@ -266,6 +332,7 @@ function stopPollingTask(sessionId) {
 }
 
 module.exports = {
+  initDb,
   createSession,
   createSessionWithSnapshot,
   getSessionStatus,
