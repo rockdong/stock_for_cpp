@@ -6,23 +6,32 @@ import { tokenStorage } from '../../utils/tokenStorage';
 export default function LoginPage() {
   const navigate = useNavigate();
   const [qrUrl, setQrUrl] = useState<string>('');
+  const [qrType, setQrType] = useState<string>('qrcode');
   const [sessionId, setSessionId] = useState<string>('');
   const [status, setStatus] = useState<'loading' | 'pending' | 'success' | 'expired' | 'error'>('loading');
-  const [countdown, setCountdown] = useState<number>(300);
+  const [countdown, setCountdown] = useState<number>(60);
 
   const generateQRCode = useCallback(async () => {
     setStatus('loading');
     try {
       const result = await authApi.getQRCode();
       setQrUrl(result.qr_url);
+      setQrType(result.qr_type || 'qrcode');
       setSessionId(result.session_id);
-      setCountdown(result.expires_in);
+      setCountdown(result.expires_in || 60);
       setStatus('pending');
     } catch (error) {
       console.error('生成二维码失败:', error);
       setStatus('error');
     }
   }, []);
+
+  const getQRCodeImageUrl = () => {
+    if (qrType === 'qrcode') {
+      return qrUrl;
+    }
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrUrl)}`;
+  };
 
   useEffect(() => {
     if (status !== 'pending' || !sessionId) return;
@@ -46,7 +55,7 @@ export default function LoginPage() {
       } catch (error) {
         console.error('轮询状态失败:', error);
       }
-    }, 2000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [status, sessionId, navigate]);
@@ -88,15 +97,18 @@ export default function LoginPage() {
         {status === 'pending' && qrUrl && (
           <>
             <img 
-              src={qrUrl} 
+              src={getQRCodeImageUrl()} 
               alt="微信登录二维码" 
               className="w-64 h-64 mx-auto mb-4 rounded-lg"
             />
             <p className="text-text-tertiary text-sm">
-              请使用微信扫描二维码
+              请使用微信扫描二维码关注公众号
+            </p>
+            <p className="text-text-tertiary text-sm mt-1">
+              关注后将自动完成登录（约5-10秒）
             </p>
             <p className="text-accent-amber text-sm mt-2">
-              二维码有效期: {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
+              等待时间: {countdown}秒
             </p>
           </>
         )}
@@ -110,12 +122,12 @@ export default function LoginPage() {
 
         {status === 'expired' && (
           <>
-            <p className="text-signal-buy mb-4">二维码已过期</p>
+            <p className="text-signal-buy mb-4">等待超时</p>
             <button 
               onClick={generateQRCode}
               className="btn-primary"
             >
-              刷新二维码
+              重新登录
             </button>
           </>
         )}

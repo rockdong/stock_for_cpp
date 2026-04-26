@@ -2,10 +2,15 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
 const logger = require('../logger');
+const wechatService = require('./wechatService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_change_this';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const SESSION_EXPIRES_SECONDS = 300;
+const POLL_INTERVAL_MS = 5000;
+const POLL_DURATION_MS = 60000;
+
+const pollingTasks = new Map();
 
 let dbType = config.dbType;
 let mysqlPool = null;
@@ -158,12 +163,117 @@ async function getUserIdByOpenid(openid) {
   }
 }
 
+async function createSessionWithSnapshot() {
+  const session = await createSession();
+
+  try {
+    const followers = await wechatService.getFollowerList();
+    const openids = followers.openids || [];
+
+    if (dbType === 'mysql') {
+      await mysqlPool.execute(
+        'UPDATE login_sessions SET snapshot_openids = ? WHERE session_id = ?',
+        [JSON.stringify(openids), session.sessionId]
+      );
+    } else {
+      sqliteDb.prepare(
+        'UPDATE login_sessions SET snapshot_openids = ? WHERE session_id = ?'
+      ).run(JSON.stringify(openids), session.sessionId);
+    }
+
+    logger.info('创建会话并记录粉丝快照: ' + session.sessionId + ', 快照数量: ' + openids.length);
+    startPollingTask(session.sessionId);
+  } catch (error) {
+    logger.error('获取粉丝快照失败: ' + error.message);
+  }
+
+  return session;
+}
+
+async function getSnapshotOpenids(sessionId) {
+  if (!mysqlPool && !sqliteDb) await initDb();
+
+  if (dbType === 'mysql') {
+    const [rows] = await mysqlPool.execute(
+      'SELECT snapshot_openids FROM login_sessions WHERE session_id = ?',
+      [sessionId]
+    );
+    const snapshot = rows[0]?.snapshot_openids;
+    return snapshot ? JSON.parse(snapshot) : [];
+  } else {
+    const row = sqliteDb.prepare(
+      'SELECT snapshot_openids FROM login_sessions WHERE session_id = ?'
+    ).get(sessionId);
+    const snapshot = row?.snapshot_openids;
+    return snapshot ? JSON.parse(snapshot) : [];
+  }
+}
+
+async function pollNewFollowers(sessionId) {
+  try {
+    const session = await getSessionStatus(sessionId);
+    if (!session || session.status !== 'pending') {
+      stopPollingTask(sessionId);
+      return;
+    }
+
+    const currentFollowers = await wechatService.getFollowerList();
+    const currentOpenids = currentFollowers.openids || [];
+    const snapshotOpenids = await getSnapshotOpenids(sessionId);
+
+    const newOpenids = currentOpenids.filter(id => !snapshotOpenids.includes(id));
+
+    if (newOpenids.length > 0) {
+      const newOpenid = newOpenids[newOpenids.length - 1];
+      const userId = await createUserWithWechatBinding(newOpenid);
+      await completeLogin(sessionId, userId);
+      stopPollingTask(sessionId);
+      logger.info('检测到新粉丝并完成登录: openid=' + newOpenid + ', userId=' + userId);
+    }
+  } catch (error) {
+    logger.error('轮询粉丝失败: ' + error.message);
+  }
+}
+
+function startPollingTask(sessionId) {
+  if (pollingTasks.has(sessionId)) {
+    return;
+  }
+
+  const startTime = Date.now();
+
+  const task = setInterval(async () => {
+    if (Date.now() - startTime > POLL_DURATION_MS) {
+      stopPollingTask(sessionId);
+      logger.info('轮询任务超时停止: ' + sessionId);
+      return;
+    }
+
+    await pollNewFollowers(sessionId);
+  }, POLL_INTERVAL_MS);
+
+  pollingTasks.set(sessionId, task);
+  logger.info('启动轮询任务: ' + sessionId);
+}
+
+function stopPollingTask(sessionId) {
+  const task = pollingTasks.get(sessionId);
+  if (task) {
+    clearInterval(task);
+    pollingTasks.delete(sessionId);
+    logger.info('停止轮询任务: ' + sessionId);
+  }
+}
+
 module.exports = {
   createSession,
+  createSessionWithSnapshot,
   getSessionStatus,
   completeLogin,
   generateToken,
   verifyToken,
   createUserWithWechatBinding,
-  getUserIdByOpenid
+  getUserIdByOpenid,
+  startPollingTask,
+  stopPollingTask
 };

@@ -76,8 +76,115 @@ function verifySignature(signature, timestamp, nonce, token) {
   return sha1 === signature;
 }
 
+async function getFollowerList(nextOpenid = null) {
+  const accessToken = await getAccessToken();
+
+  try {
+    let url = `https://api.weixin.qq.com/cgi-bin/user/get?access_token=${accessToken}`;
+    if (nextOpenid) {
+      url += `&next_openid=${nextOpenid}`;
+    }
+
+    const response = await axios.get(url);
+
+    if (response.data.data && response.data.data.openid) {
+      logger.info(`获取粉丝列表成功: ${response.data.data.openid.length} 个粉丝`);
+      return {
+        total: response.data.total,
+        count: response.data.count,
+        openids: response.data.data.openid,
+        nextOpenid: response.data.next_openid
+      };
+    } else if (response.data.total === 0) {
+      logger.info('粉丝列表为空');
+      return { total: 0, count: 0, openids: [], nextOpenid: null };
+    } else {
+      logger.error('获取粉丝列表失败: ' + JSON.stringify(response.data));
+      throw new Error('获取粉丝列表失败');
+    }
+  } catch (error) {
+    logger.error('获取粉丝列表异常: ' + error.message);
+    throw error;
+  }
+}
+
+async function getUserInfo(openid) {
+  const accessToken = await getAccessToken();
+
+  try {
+    const response = await axios.get(
+      `https://api.weixin.qq.com/cgi-bin/user/info?access_token=${accessToken}&openid=${openid}`
+    );
+
+    if (response.data.openid) {
+      return {
+        openid: response.data.openid,
+        subscribe: response.data.subscribe,
+        nickname: response.data.nickname,
+        headimgurl: response.data.headimgurl,
+        subscribeTime: response.data.subscribe_time
+      };
+    } else {
+      logger.error('获取用户信息失败: ' + JSON.stringify(response.data));
+      throw new Error('获取用户信息失败');
+    }
+  } catch (error) {
+    logger.error('获取用户信息异常: ' + error.message);
+    throw error;
+  }
+}
+
+async function getPublicAccountQRCode() {
+  const accessToken = await getAccessToken();
+
+  try {
+    // 获取公众号二维码（不带参数，普通关注二维码）
+    const response = await axios.get(
+      `https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=${accessToken}`,
+      {
+        params: {
+          action_name: 'QR_LIMIT_STR_SCENE',
+          action_info: {
+            scene: {
+              scene_str: 'subscribe'
+            }
+          }
+        }
+      }
+    );
+
+    // 如果失败，返回公众号主页二维码 URL
+    if (!response.data.ticket) {
+      // 使用公众号主页 URL 作为二维码内容
+      const publicUrl = `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${WECHAT_APP_ID}#wechat_redirect`;
+      return {
+        qrUrl: publicUrl,
+        type: 'public_url'
+      };
+    }
+
+    const qrUrl = `https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=${encodeURIComponent(response.data.ticket)}`;
+    return {
+      ticket: response.data.ticket,
+      qrUrl: qrUrl,
+      type: 'qrcode'
+    };
+  } catch (error) {
+    // 失败时返回公众号主页 URL
+    logger.warn('获取公众号二维码失败，使用主页 URL: ' + error.message);
+    const publicUrl = `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${WECHAT_APP_ID}#wechat_redirect`;
+    return {
+      qrUrl: publicUrl,
+      type: 'public_url'
+    };
+  }
+}
+
 module.exports = {
   getAccessToken,
   createQRCode,
-  verifySignature
+  verifySignature,
+  getFollowerList,
+  getUserInfo,
+  getPublicAccountQRCode
 };

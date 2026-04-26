@@ -6,16 +6,17 @@ const logger = require('../logger');
 
 router.get('/qrcode', async (req, res) => {
   try {
-    const session = await authService.createSession();
-    const qrCode = await wechatService.createQRCode(session.sessionId, 300);
+    const session = await authService.createSessionWithSnapshot();
+    const qrCode = await wechatService.getPublicAccountQRCode();
 
     res.json({
       success: true,
       data: {
         sessionId: session.sessionId,
         qrUrl: qrCode.qrUrl,
+        qrType: qrCode.type,
         expiresAt: session.expiresAt,
-        expiresIn: qrCode.expiresIn
+        expiresIn: 60
       }
     });
   } catch (error) {

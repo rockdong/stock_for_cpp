@@ -6,7 +6,7 @@ const api = axios.create({
 });
 
 export const authApi = {
-  getQRCode: async (): Promise<{ session_id: string; qr_url: string; expires_in: number }> => {
+  getQRCode: async (): Promise<{ session_id: string; qr_url: string; qr_type: string; expires_in: number }> => {
     const response = await api.get('/auth/qrcode');
     return response.data.data;
   },
