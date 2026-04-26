@@ -138,41 +138,37 @@ async function getPublicAccountQRCode() {
   const accessToken = await getAccessToken();
 
   try {
-    // 获取公众号二维码（不带参数，普通关注二维码）
-    const response = await axios.get(
+    const response = await axios.post(
       `https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=${accessToken}`,
       {
-        params: {
-          action_name: 'QR_LIMIT_STR_SCENE',
-          action_info: {
-            scene: {
-              scene_str: 'subscribe'
-            }
+        action_name: 'QR_LIMIT_STR_SCENE',
+        action_info: {
+          scene: {
+            scene_str: 'subscribe'
           }
         }
       }
     );
 
-    // 如果失败，返回公众号主页二维码 URL
-    if (!response.data.ticket) {
-      // 使用公众号主页 URL 作为二维码内容
-      const publicUrl = `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${WECHAT_APP_ID}#wechat_redirect`;
+    if (response.data.ticket) {
+      const qrUrl = `https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=${encodeURIComponent(response.data.ticket)}`;
+      logger.info('生成公众号二维码成功');
       return {
-        qrUrl: publicUrl,
-        type: 'public_url'
+        ticket: response.data.ticket,
+        qrUrl: qrUrl,
+        type: 'qrcode'
       };
     }
 
-    const qrUrl = `https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=${encodeURIComponent(response.data.ticket)}`;
+    logger.warn('生成公众号二维码失败: ' + JSON.stringify(response.data));
+    const publicUrl = `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${Buffer.from(WECHAT_APP_ID).toString('base64')}#wechat_redirect`;
     return {
-      ticket: response.data.ticket,
-      qrUrl: qrUrl,
-      type: 'qrcode'
+      qrUrl: publicUrl,
+      type: 'public_url'
     };
   } catch (error) {
-    // 失败时返回公众号主页 URL
-    logger.warn('获取公众号二维码失败，使用主页 URL: ' + error.message);
-    const publicUrl = `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${WECHAT_APP_ID}#wechat_redirect`;
+    logger.warn('生成公众号二维码异常: ' + error.message);
+    const publicUrl = `https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=${Buffer.from(WECHAT_APP_ID).toString('base64')}#wechat_redirect`;
     return {
       qrUrl: publicUrl,
       type: 'public_url'
