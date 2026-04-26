@@ -59,7 +59,7 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - DB_TYPE=mysql
-      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db
+      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db?connection_limit=10&pool_timeout=30&connect_timeout=30
       - PORT=3000
     depends_on:
       mysql:
@@ -77,7 +77,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db
+      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db?connection_limit=10&pool_timeout=30&connect_timeout=30
       - STRATEGIES=EMA25_GREATER_17_PRICE_MATCH
       - SCHEDULER_EXECUTE_TIME=20:00
       - PORT=3001
