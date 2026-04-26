@@ -96,7 +96,7 @@ services:
     container_name: stock-web-frontend
     platform: linux/amd64
     ports:
-      - "80:80"
+      - "8880:80"
     environment:
       - TZ=Asia/Shanghai
     depends_on:
