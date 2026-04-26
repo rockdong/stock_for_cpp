@@ -9,12 +9,19 @@ router.get('/qrcode', async (req, res) => {
     const session = await authService.createSessionWithSnapshot();
     const qrCode = await wechatService.getPublicAccountQRCode();
 
+    let qrImageUrl;
+    if (qrCode.type === 'qrcode') {
+      qrImageUrl = qrCode.qrUrl;
+    } else {
+      qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode.qrUrl)}`;
+    }
+
     res.json({
       success: true,
       data: {
         sessionId: session.sessionId,
-        qrUrl: qrCode.qrUrl,
-        qrType: qrCode.type,
+        qrUrl: qrImageUrl,
+        qrType: 'image',
         expiresAt: session.expiresAt,
         expiresIn: 60
       }
