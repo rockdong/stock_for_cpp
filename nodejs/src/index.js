@@ -5,6 +5,7 @@ const config = require('./config');
 const { handleMessage, handleCardAction } = require('./handler');
 const apiRoutes = require('./api');
 const authRoutes = require('./routes/auth');
+const feishuAuthRoutes = require('./routes/feishuAuth');
 const logger = require('./logger');
 const requestLogger = require('./middleware/requestLogger');
 const wechatEventHandler = require('./webhook/wechatEventHandler');
@@ -36,8 +37,9 @@ async function main() {
   httpApp.use(cors());
   httpApp.use(express.json());
   httpApp.use(requestLogger);
-  httpApp.use('/api', apiRoutes);
-  httpApp.use('/api/auth', authRoutes);
+httpApp.use('/api', apiRoutes);
+httpApp.use('/api/auth', authRoutes);
+httpApp.use('/api/auth/feishu', feishuAuthRoutes);
   
   httpApp.post('/api/wechat/event', express.text({ type: 'text/xml' }), async (req, res) => {
     try {
