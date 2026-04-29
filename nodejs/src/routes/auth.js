@@ -7,23 +7,17 @@ const logger = require('../logger');
 router.get('/qrcode', async (req, res) => {
   try {
     const session = await authService.createSessionWithSnapshot();
-    const qrCode = await wechatService.getPublicAccountQRCode();
-
-    let qrImageUrl;
-    if (qrCode.type === 'qrcode') {
-      qrImageUrl = qrCode.qrUrl;
-    } else {
-      qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode.qrUrl)}`;
-    }
+    // 创建带 session_id 的临时二维码，用户扫码后微信会推送事件到 webhook
+    const qrCode = await wechatService.createQRCode(session.sessionId, 300);
 
     res.json({
       success: true,
       data: {
         session_id: session.sessionId,
-        qr_url: qrImageUrl,
-        qr_type: 'image',
+        qr_url: qrCode.qrUrl,
+        qr_type: 'qrcode',
         expires_at: session.expiresAt,
-        expires_in: 60
+        expires_in: qrCode.expiresIn || 60
       }
     });
   } catch (error) {
