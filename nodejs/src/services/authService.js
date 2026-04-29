@@ -30,11 +30,17 @@ async function initDb() {
 }
 
 async function ensureTablesExist() {
-  if (dbType === 'mysql') {
+if (dbType === 'mysql') {
     await mysqlPool.execute(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE IF NOT EXISTS login_sessions (
+        session_id VARCHAR(36) PRIMARY KEY,
+        status VARCHAR(20) DEFAULT 'pending',
+        user_id VARCHAR(100) NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME NOT NULL,
+        snapshot_openids TEXT NULL,
+        INDEX idx_status (status),
+        INDEX idx_expires_at (expires_at)
       )
     `);
     await mysqlPool.execute(`
@@ -82,11 +88,10 @@ async function ensureTablesExist() {
       CREATE TABLE IF NOT EXISTS login_sessions (
         session_id TEXT PRIMARY KEY,
         status TEXT DEFAULT 'pending',
-        user_id INTEGER NULL,
+        user_id TEXT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         expires_at DATETIME NOT NULL,
-        snapshot_openids TEXT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+        snapshot_openids TEXT NULL
       )
     `);
     logger.info('认证相关表已检查/创建');
