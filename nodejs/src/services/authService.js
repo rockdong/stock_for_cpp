@@ -142,14 +142,22 @@ async function completeLogin(sessionId, userId) {
   if (!mysqlPool && !sqliteDb) await initDb();
 
   if (dbType === 'mysql') {
-    await mysqlPool.execute(
+    const [result] = await mysqlPool.execute(
       'UPDATE login_sessions SET status = ?, user_id = ? WHERE session_id = ?',
       ['success', userId, sessionId]
     );
+    
+    if (result.affectedRows === 0) {
+      throw new Error('Session not found: ' + sessionId);
+    }
   } else {
-    sqliteDb.prepare(
+    const result = sqliteDb.prepare(
       'UPDATE login_sessions SET status = ?, user_id = ? WHERE session_id = ?'
     ).run('success', userId, sessionId);
+    
+    if (result.changes === 0) {
+      throw new Error('Session not found: ' + sessionId);
+    }
   }
 
   logger.info('登录完成: sessionId=' + sessionId + ', userId=' + userId);
