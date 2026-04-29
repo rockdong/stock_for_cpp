@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { authApi } from '../../services/authApi';
 import { feishuAuthApi } from '../../services/feishuAuthApi';
 import { tokenStorage } from '../../utils/tokenStorage';
 
