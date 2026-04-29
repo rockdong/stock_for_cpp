@@ -23,16 +23,11 @@ const transports = [
     maxsize: 10485760,
     maxFiles: 3,
     format: logFormat
+  }),
+  new winston.transports.Console({
+    format: logFormat
   })
 ];
-
-if (NODE_ENV !== 'production') {
-  transports.push(
-    new winston.transports.Console({
-      format: logFormat
-    })
-  );
-}
 
 const logger = winston.createLogger({
   level: LOG_LEVEL.toLowerCase(),
