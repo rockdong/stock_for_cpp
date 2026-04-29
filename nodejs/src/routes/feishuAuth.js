@@ -46,7 +46,7 @@ router.get('/callback', async (req, res) => {
 
     const token = authService.generateToken(userInfo.userId);
 
-    const redirectUrl = `${process.env.FRONTEND_URL || 'http://119.3.155.216:8880'}/login/callback?token=${token}&name=${encodeURIComponent(userInfo.name)}`;
+    const redirectUrl = `${process.env.FRONTEND_URL || 'http://119.3.155.216:8880'}/login?token=${token}&name=${encodeURIComponent(userInfo.name)}`;
 
     res.redirect(redirectUrl);
   } catch (error) {

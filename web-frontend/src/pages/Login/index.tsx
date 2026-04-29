@@ -52,11 +52,6 @@ export default function LoginPage() {
         if (result.status === 'success') {
           setStatus('success');
           clearInterval(interval);
-          
-          const tokenResult = await authApi.getToken(sessionId);
-          tokenStorage.save(tokenResult.token);
-          
-          navigate('/analysis');
         } else if (result.status === 'expired' || result.is_expired) {
           setStatus('expired');
           clearInterval(interval);
