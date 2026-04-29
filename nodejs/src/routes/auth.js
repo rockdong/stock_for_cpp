@@ -19,11 +19,11 @@ router.get('/qrcode', async (req, res) => {
     res.json({
       success: true,
       data: {
-        sessionId: session.sessionId,
-        qrUrl: qrImageUrl,
-        qrType: 'image',
-        expiresAt: session.expiresAt,
-        expiresIn: 60
+        session_id: session.sessionId,
+        qr_url: qrImageUrl,
+        qr_type: 'image',
+        expires_at: session.expiresAt,
+        expires_in: 60
       }
     });
   } catch (error) {
@@ -62,10 +62,10 @@ router.get('/status', async (req, res) => {
     res.json({
       success: true,
       data: {
-        sessionId: session.session_id,
+        session_id: session.session_id,
         status: isExpired ? 'expired' : session.status,
-        userId: session.user_id || null,
-        isExpired
+        user_id: session.user_id || null,
+        is_expired: isExpired
       }
     });
   } catch (error) {
@@ -120,7 +120,7 @@ router.post('/token', async (req, res) => {
       success: true,
       data: {
         token,
-        userId: session.user_id
+        user_id: session.user_id
       }
     });
   } catch (error) {
