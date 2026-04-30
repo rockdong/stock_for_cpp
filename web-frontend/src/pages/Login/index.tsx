@@ -48,9 +48,13 @@ export default function LoginPage() {
       try {
         const result = await feishuAuthApi.getStatus(sessionId);
         
-        if (result.status === 'success') {
+        if (result.status === 'success' && result.token) {
+          tokenStorage.save(result.token);
           setStatus('success');
           clearInterval(interval);
+          setTimeout(() => {
+            navigate('/analysis');
+          }, 500);
         } else if (result.status === 'expired' || result.is_expired) {
           setStatus('expired');
           clearInterval(interval);

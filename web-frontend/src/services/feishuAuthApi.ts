@@ -11,7 +11,7 @@ export const feishuAuthApi = {
     return response.data.data;
   },
 
-  getStatus: async (sessionId: string): Promise<{ status: string; user_id?: string; is_expired: boolean }> => {
+  getStatus: async (sessionId: string): Promise<{ status: string; user_id?: string; token?: string; is_expired: boolean }> => {
     const response = await api.get('/auth/feishu/status', { params: { session_id: sessionId } });
     return response.data.data;
   },

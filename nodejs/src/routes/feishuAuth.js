@@ -78,13 +78,21 @@ router.get('/status', async (req, res) => {
     const now = new Date();
     const expiresAt = new Date(session.expires_at);
     const isExpired = now > expiresAt;
+    const status = isExpired ? 'expired' : session.status;
+
+    // 如果登录成功，生成 token 供前端使用
+    let token = null;
+    if (status === 'success' && session.user_id) {
+      token = authService.generateToken(session.user_id);
+    }
 
     res.json({
       success: true,
       data: {
         session_id: session.session_id,
-        status: isExpired ? 'expired' : session.status,
+        status: status,
         user_id: session.user_id || null,
+        token: token,
         is_expired: isExpired
       }
     });
