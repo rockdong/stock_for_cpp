@@ -46,9 +46,38 @@ router.get('/callback', async (req, res) => {
 
     const token = authService.generateToken(userInfo.userId);
 
-    const redirectUrl = `${process.env.FRONTEND_URL || 'http://119.3.155.216:8880'}/login?token=${token}&name=${encodeURIComponent(userInfo.name)}`;
+    const userAgent = req.headers['user-agent'] || '';
+    const isFeishuApp = userAgent.includes('Feishu') || userAgent.includes('Lark');
 
-    res.redirect(redirectUrl);
+    if (isFeishuApp) {
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>登录成功</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+            .container { text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            .success-icon { font-size: 48px; color: #52c41a; }
+            h1 { color: #333; margin: 20px 0 10px; }
+            p { color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="success-icon">✓</div>
+            <h1>登录成功</h1>
+            <p>欢迎，${userInfo.name}</p>
+            <p style="color:#999;font-size:14px;margin-top:20px;">请在原浏览器继续操作</p>
+          </div>
+        </body>
+        </html>
+      `);
+    } else {
+      const redirectUrl = `${process.env.FRONTEND_URL || 'http://119.3.155.216:8880'}/login?token=${token}&name=${encodeURIComponent(userInfo.name)}`;
+      res.redirect(redirectUrl);
+    }
   } catch (error) {
     logger.error('飞书登录回调处理失败: ' + error.message);
     res.redirect(`${process.env.FRONTEND_URL || 'http://119.3.155.216:8880'}/login?error=login_failed`);
