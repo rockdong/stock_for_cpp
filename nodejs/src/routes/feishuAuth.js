@@ -78,19 +78,22 @@ router.get('/status', async (req, res) => {
     const now = new Date();
     const expiresAt = new Date(session.expires_at);
     const isExpired = now > expiresAt;
-    const status = isExpired ? 'expired' : session.status;
 
-    // 如果登录成功，生成 token 供前端使用
+    // 如果登录已完成（数据库中 status='success'），即使过期也返回 token
+    // 因为用户已在飞书 App 完成登录，不应因 session 过期拒绝返回 token
     let token = null;
-    if (status === 'success' && session.user_id) {
+    if (session.status === 'success' && session.user_id) {
       token = authService.generateToken(session.user_id);
     }
+
+    // 返回给前端的 status：成功则为 success，否则才判断过期
+    const responseStatus = session.status === 'success' ? 'success' : (isExpired ? 'expired' : session.status);
 
     res.json({
       success: true,
       data: {
         session_id: session.session_id,
-        status: status,
+        status: responseStatus,
         user_id: session.user_id || null,
         token: token,
         is_expired: isExpired
