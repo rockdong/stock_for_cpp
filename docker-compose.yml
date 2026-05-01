@@ -16,10 +16,16 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
     ulimits:
       nofile:
-        soft: 65536
-        hard: 65536
+        soft: 1024
+        hard: 4096
     restart: unless-stopped
 
   mysql:
@@ -42,10 +48,16 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
     ulimits:
       nofile:
-        soft: 65536
-        hard: 65536
+        soft: 1024
+        hard: 4096
     restart: unless-stopped
 
   stock-bot:
@@ -59,15 +71,21 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - DB_TYPE=mysql
-      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db?connection_limit=10&pool_timeout=30&connect_timeout=30
+      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db?connection_limit=5&pool_timeout=30&connect_timeout=30
       - PORT=3000
     depends_on:
       mysql:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 16M
     ulimits:
       nofile:
-        soft: 65536
-        hard: 65536
+        soft: 1024
+        hard: 4096
     restart: unless-stopped
 
   api-server:
@@ -77,7 +95,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db?connection_limit=10&pool_timeout=30&connect_timeout=30
+      - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db?connection_limit=5&pool_timeout=30&connect_timeout=30
       - STRATEGIES=EMA25_GREATER_17_PRICE_MATCH
       - SCHEDULER_EXECUTE_TIME=20:00
       - PORT=3001
@@ -85,10 +103,16 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 96M
+        reservations:
+          memory: 32M
     ulimits:
       nofile:
-        soft: 65536
-        hard: 65536
+        soft: 1024
+        hard: 4096
     restart: unless-stopped
 
   web-frontend:
@@ -102,54 +126,38 @@ services:
     depends_on:
       api-server:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 32M
+        reservations:
+          memory: 8M
     ulimits:
       nofile:
-        soft: 65536
-        hard: 65536
+        soft: 1024
+        hard: 4096
     restart: unless-stopped
 
-  adminer:
-    image: adminer:latest
-    container_name: stock-db-admin
-    platform: linux/amd64
-    ports:
-      - "8080:8080"
-    environment:
-      - ADMINER_DEFAULT_SERVER=mysql
-      - TZ=Asia/Shanghai
-    depends_on:
-      mysql:
-        condition: service_healthy
-    ulimits:
-      nofile:
-        soft: 65536
-        hard: 65536
-    restart: unless-stopped
+  # adminer 已禁用 - 节省内存，需要时临时启用
+  # 启用命令: docker-compose up -d adminer
+  #
+  # adminer:
+  #   image: adminer:latest
+  #   container_name: stock-db-admin
+  #   platform: linux/amd64
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - ADMINER_DEFAULT_SERVER=mysql
+  #     - TZ=Asia/Shanghai
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 32M
+  #   restart: unless-stopped
 
 volumes:
   mysql_data:
-
-# Dozzle 已禁用 - 可能导致文件描述符泄漏
-# 如需查看日志，使用: docker logs stock-analysis-dev
-# 或临时启动: docker-compose up -d dozzle
-#
-#   dozzle:
-#     image: amir20/dozzle:latest
-#     container_name: stock-log-monitor
-#     volumes:
-#       - /var/run/docker.sock:/var/run/docker.sock:ro
-#     ports:
-#       - "9999:8080"
-#     environment:
-#       - DOZZLE_HOSTNAME=stock-analysis
-#       - DOZZLE_LEVEL=info
-#     ulimits:
-#       nofile:
-#         soft: 65536
-#         hard: 65536
-#     healthcheck:
-#       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/"]
-#       interval: 60s
-#       timeout: 10s
-#       retries: 3
-#     restart: unless-stopped
