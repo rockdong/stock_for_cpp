@@ -52,9 +52,7 @@ export default function LoginPage() {
           tokenStorage.save(result.token);
           setStatus('success');
           clearInterval(interval);
-          setTimeout(() => {
-            navigate('/analysis');
-          }, 500);
+          window.location.href = '/analysis';
         } else if (result.status === 'expired' || result.is_expired) {
           setStatus('expired');
           clearInterval(interval);
