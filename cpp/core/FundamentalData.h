@@ -50,6 +50,45 @@ struct FinancialIndicator {
 };
 
 /**
+ * @brief 资金流向数据
+ * 
+ * 来自 Tushare moneyflow 接口
+ * 小单：<5万；中单：5万~20万；大单：20万~100万；特大单：>=100万
+ */
+struct MoneyFlow {
+    std::string ts_code;           // TS股票代码
+    std::string trade_date;        // 交易日期
+    
+    // 小单（<5万）
+    int buy_sm_vol = 0;            // 小单买入量（手）
+    double buy_sm_amount = 0.0;    // 小单买入金额（万元）
+    int sell_sm_vol = 0;           // 小单卖出量（手）
+    double sell_sm_amount = 0.0;   // 小单卖出金额（万元）
+    
+    // 中单（5万~20万）
+    int buy_md_vol = 0;            // 中单买入量（手）
+    double buy_md_amount = 0.0;    // 中单买入金额（万元）
+    int sell_md_vol = 0;           // 中单卖出量（手）
+    double sell_md_amount = 0.0;   // 中单卖出金额（万元）
+    
+    // 大单（20万~100万）
+    int buy_lg_vol = 0;            // 大单买入量（手）
+    double buy_lg_amount = 0.0;    // 大单买入金额（万元）
+    int sell_lg_vol = 0;           // 大单卖出量（手）
+    double sell_lg_amount = 0.0;   // 大单卖出金额（万元）
+    
+    // 特大单（>=100万）
+    int buy_elg_vol = 0;           // 特大单买入量（手）
+    double buy_elg_amount = 0.0;   // 特大单买入金额（万元）
+    int sell_elg_vol = 0;          // 特大单卖出量（手）
+    double sell_elg_amount = 0.0;  // 特大单卖出金额（万元）
+    
+    // 净流入
+    int net_mf_vol = 0;            // 净流入量（手）
+    double net_mf_amount = 0.0;    // 净流入额（万元）
+};
+
+/**
  * @brief 基本面评分结果
  * 
  * 基于财务指标计算的4维度综合评分

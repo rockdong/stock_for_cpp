@@ -13,6 +13,7 @@ namespace network {
 using Stock = core::Stock;
 using StockData = core::StockData;
 using FinancialIndicator = core::FinancialIndicator;
+using MoneyFlow = core::MoneyFlow;
 
 /**
  * @brief 数据源接口（抽象基类）
