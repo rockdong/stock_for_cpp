@@ -119,3 +119,39 @@ model LoginSession {
   @@index([expiresAt])
   @@map("login_sessions")
 }
+
+model MoneyFlow {
+  id             Int      @id @default(autoincrement())
+  tsCode         String   @db.VarChar(20) @map("ts_code")
+  tradeDate      DateTime @db.Date @map("trade_date")
+  
+  buySmVol       Int?     @map("buy_sm_vol")
+  buySmAmount    Float?   @map("buy_sm_amount")
+  sellSmVol      Int?     @map("sell_sm_vol")
+  sellSmAmount   Float?   @map("sell_sm_amount")
+  
+  buyMdVol       Int?     @map("buy_md_vol")
+  buyMdAmount    Float?   @map("buy_md_amount")
+  sellMdVol      Int?     @map("sell_md_vol")
+  sellMdAmount   Float?   @map("sell_md_amount")
+  
+  buyLgVol       Int?     @map("buy_lg_vol")
+  buyLgAmount    Float?   @map("buy_lg_amount")
+  sellLgVol      Int?     @map("sell_lg_vol")
+  sellLgAmount   Float?   @map("sell_lg_amount")
+  
+  buyElgVol      Int?     @map("buy_elg_vol")
+  buyElgAmount   Float?   @map("buy_elg_amount")
+  sellElgVol     Int?     @map("sell_elg_vol")
+  sellElgAmount  Float?   @map("sell_elg_amount")
+  
+  netMfVol       Int?     @map("net_mf_vol")
+  netMfAmount    Float?   @map("net_mf_amount")
+  
+  createdAt      DateTime @default(now()) @map("created_at")
+  
+  @@unique([tsCode, tradeDate], name: "unique_stock_date")
+  @@index([tradeDate], name: "idx_trade_date")
+  @@index([tsCode], name: "idx_ts_code")
+  @@map("money_flow")
+}
