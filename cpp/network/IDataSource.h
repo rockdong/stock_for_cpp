@@ -102,6 +102,21 @@ public:
         const std::string& ts_code = "",
         const std::string& period = ""
     ) = 0;
+
+    /**
+     * @brief 获取资金流向数据
+     * @param ts_code 股票代码（可选，空表示全市场）
+     * @param trade_date 交易日期（可选）
+     * @param start_date 开始日期（可选）
+     * @param end_date 结束日期（可选）
+     * @return 资金流向列表
+     */
+    virtual std::vector<MoneyFlow> getMoneyFlow(
+        const std::string& ts_code = "",
+        const std::string& trade_date = "",
+        const std::string& start_date = "",
+        const std::string& end_date = ""
+    ) = 0;
 };
 
 using DataSourcePtr = std::shared_ptr<IDataSource>;

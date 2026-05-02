@@ -290,6 +290,31 @@ std::vector<core::FinancialIndicator> TushareDataSource::getFinancialIndicators(
     }
 }
 
+std::vector<MoneyFlow> TushareDataSource::getMoneyFlow(
+    const std::string& ts_code,
+    const std::string& trade_date,
+    const std::string& start_date,
+    const std::string& end_date) {
+    
+    try {
+        LOG_DEBUG("获取资金流向数据" + 
+                  (ts_code.empty() ? "" : ": " + ts_code) +
+                  (trade_date.empty() ? "" : " 日期: " + trade_date));
+        
+        auto response = client_->getMoneyFlow(ts_code, trade_date, start_date, end_date);
+        
+        if (response.isSuccess()) {
+            return parseMoneyFlow(response);
+        } else {
+            LOG_ERROR("获取资金流向失败: " + response.msg);
+            return {};
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取资金流向异常: " + std::string(e.what()));
+        return {};
+    }
+}
+
 // ========== 私有方法 ==========
 
 std::vector<Stock> TushareDataSource::parseStockBasic(const TushareResponse& response) {
@@ -516,6 +541,88 @@ std::vector<core::FinancialIndicator> TushareDataSource::parseFinancialIndicator
         
     } catch (const json::exception& e) {
         LOG_ERROR("解析财务指标失败: " + std::string(e.what()));
+    }
+    
+    return result;
+}
+
+std::vector<MoneyFlow> TushareDataSource::parseMoneyFlow(const TushareResponse& response) {
+    std::vector<MoneyFlow> result;
+    
+    try {
+        if (!response.data.contains("fields") || !response.data.contains("items")) {
+            LOG_ERROR("响应数据格式错误");
+            return result;
+        }
+        
+        auto fields = response.data["fields"].get<std::vector<std::string>>();
+        auto items = response.data["items"];
+        
+        std::unordered_map<std::string, size_t> field_index;
+        for (size_t i = 0; i < fields.size(); ++i) {
+            field_index[fields[i]] = i;
+        }
+        
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
+        
+        auto get_int = [&](const json& item, const std::string& field_name) -> int {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<int>();
+            }
+            return 0;
+        };
+        
+        auto get_double = [&](const json& item, const std::string& field_name) -> double {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<double>();
+            }
+            return 0.0;
+        };
+        
+        for (const auto& item : items) {
+            MoneyFlow flow;
+            
+            flow.ts_code = get_string(item, "ts_code");
+            flow.trade_date = get_string(item, "trade_date");
+            
+            flow.buy_sm_vol = get_int(item, "buy_sm_vol");
+            flow.buy_sm_amount = get_double(item, "buy_sm_amount");
+            flow.sell_sm_vol = get_int(item, "sell_sm_vol");
+            flow.sell_sm_amount = get_double(item, "sell_sm_amount");
+            
+            flow.buy_md_vol = get_int(item, "buy_md_vol");
+            flow.buy_md_amount = get_double(item, "buy_md_amount");
+            flow.sell_md_vol = get_int(item, "sell_md_vol");
+            flow.sell_md_amount = get_double(item, "sell_md_amount");
+            
+            flow.buy_lg_vol = get_int(item, "buy_lg_vol");
+            flow.buy_lg_amount = get_double(item, "buy_lg_amount");
+            flow.sell_lg_vol = get_int(item, "sell_lg_vol");
+            flow.sell_lg_amount = get_double(item, "sell_lg_amount");
+            
+            flow.buy_elg_vol = get_int(item, "buy_elg_vol");
+            flow.buy_elg_amount = get_double(item, "buy_elg_amount");
+            flow.sell_elg_vol = get_int(item, "sell_elg_vol");
+            flow.sell_elg_amount = get_double(item, "sell_elg_amount");
+            
+            flow.net_mf_vol = get_int(item, "net_mf_vol");
+            flow.net_mf_amount = get_double(item, "net_mf_amount");
+            
+            result.push_back(flow);
+        }
+        
+        LOG_INFO("解析资金流向成功，共 " + std::to_string(result.size()) + " 条");
+        
+    } catch (const json::exception& e) {
+        LOG_ERROR("解析资金流向失败: " + std::string(e.what()));
     }
     
     return result;

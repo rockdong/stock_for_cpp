@@ -113,7 +113,22 @@ public:
     std::vector<core::FinancialIndicator> getFinancialIndicators(
         const std::string& ts_code = "",
         const std::string& period = ""
-    );
+    ) override;
+
+    /**
+     * @brief 获取资金流向数据
+     * @param ts_code 股票代码（可选）
+     * @param trade_date 交易日期（可选）
+     * @param start_date 开始日期（可选）
+     * @param end_date 结束日期（可选）
+     * @return 资金流向列表
+     */
+    std::vector<MoneyFlow> getMoneyFlow(
+        const std::string& ts_code = "",
+        const std::string& trade_date = "",
+        const std::string& start_date = "",
+        const std::string& end_date = ""
+    ) override;
 
 private:
     /**
@@ -136,6 +151,13 @@ private:
      * @return 财务指标列表
      */
     std::vector<core::FinancialIndicator> parseFinancialIndicators(const TushareResponse& response);
+
+    /**
+     * @brief 解析资金流向数据
+     * @param response Tushare 响应
+     * @return 资金流向列表
+     */
+    std::vector<MoneyFlow> parseMoneyFlow(const TushareResponse& response);
 
     std::unique_ptr<TushareClient> client_;
 };
