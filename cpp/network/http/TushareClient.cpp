@@ -242,6 +242,23 @@ TushareResponse TushareClient::getHsConst(const std::string& ts_code,
     return query("hs_const", params);
 }
 
+// ========== 资金流向数据 ==========
+
+TushareResponse TushareClient::getMoneyFlow(
+    const std::string& ts_code,
+    const std::string& trade_date,
+    const std::string& start_date,
+    const std::string& end_date) {
+    
+    std::map<std::string, std::string> params;
+    if (!ts_code.empty()) params["ts_code"] = ts_code;
+    if (!trade_date.empty()) params["trade_date"] = trade_date;
+    if (!start_date.empty()) params["start_date"] = start_date;
+    if (!end_date.empty()) params["end_date"] = end_date;
+    
+    return query("moneyflow", params);
+}
+
 // ========== 配置方法 ==========
 
 void TushareClient::setTimeout(int seconds) {
