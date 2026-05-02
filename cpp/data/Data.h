@@ -48,6 +48,7 @@
 #include "database/AnalysisResultDAO.h"
 #include "database/AnalysisProcessRecordDAO.h"
 #include "database/ChartDataDAO.h"
+#include "database/MoneyFlowDAO.h"
 
 // 缓存管理
 #include "cache/ICache.h"

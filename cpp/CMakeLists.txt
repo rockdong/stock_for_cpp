@@ -229,6 +229,7 @@ set(DATA_LIB_SOURCES
     data/database/PriceDAO.cpp
     data/database/AnalysisResultDAO.cpp
     data/database/ChartDataDAO.cpp
+data/database/MoneyFlowDAO.cpp
     data/database/AnalysisProcessRecord.cpp
     data/database/AnalysisProcessRecordDAO.cpp
     data/cache/MemoryCache.cpp
