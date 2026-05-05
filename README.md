@@ -55,7 +55,7 @@ vim env/.env  # 填写 Tushare API Key 和飞书配置
 docker-compose up -d
 
 # 4. 查看日志
-docker-compose logs -f stock-analysis
+docker-compose logs -f stock-cpp
 ```
 
 ### 本地编译
@@ -82,7 +82,7 @@ make -j$(nproc)
 
 ```
 stock_for_cpp/
-├── cpp/                        # C++ 分析引擎
+├── cpp/                        # C++ 分析引擎（核心）
 │   ├── main.cpp               # 主程序入口
 │   ├── core/                  # 核心业务模块
 │   │   ├── strategies/        # 策略实现
@@ -96,13 +96,26 @@ stock_for_cpp/
 │   │       └── migrations/    # 数据库迁移脚本
 │   ├── scheduler/             # 任务调度
 │   └── utils/                 # 工具类
+├── backend/                    # NestJS API 服务
+│   ├── src/
+│   │   ├── modules/
+│   │   │   ├── analysis/      # 分析模块
+│   │   │   ├── charts/        # 图表模块
+│   │   │   └── stocks/        # 股票模块
+│   │   ├── prisma/            # Prisma ORM
+│   │   ├── main.ts            # 服务入口
+│   │   └── app.module.ts      # 模块配置
+│   ├── prisma/
+│   │   ├── schema.prisma      # 数据库模型
+│   │   └── migrations/        # 迁移文件
+│   └── package.json
 ├── nodejs/                    # 飞书推送服务 + REST API
 │   └── src/
 │       ├── index.js           # 服务入口
 │       ├── api.js             # REST API
 │       ├── feishu.js          # 飞书 API
 │       └── config.js          # 配置管理
-├── web-frontend/              # Web 前端
+├── web-frontend/              # Web 前端 (React + Vite)
 │   ├── src/
 │   │   ├── components/        # 组件
 │   │   ├── pages/             # 页面
@@ -112,6 +125,7 @@ stock_for_cpp/
 ├── miniprogram/               # 微信小程序
 ├── env/                       # 环境变量配置
 │   └── .env.example           # 配置模板
+├── docs/                      # 项目文档
 ├── .github/workflows/         # GitHub Actions CI/CD
 ├── docker-compose.yml         # Docker 编排
 ├── Dockerfile                 # Docker 镜像构建
@@ -161,10 +175,11 @@ STRATEGIES=EMA25_GREATER_17_PRICE_MATCH,EMA17TO25,EMA17_BREAKOUT
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| stock-analysis | 3000 | 主分析服务 / REST API |
-| web-frontend | 5173 | Web 前端（分析过程展示） |
-| sqlite-browser | 8080 | 数据库浏览器 |
-| dozzle | 8888 | 日志监控（需 `--profile tools`） |
+| stock-cpp | - | C++ 分析引擎（内部服务） |
+| mysql | 3306 | MySQL 数据库 |
+| stock-bot | 3000 | 飞书推送服务 / REST API |
+| api-server | 3001 | NestJS API 服务 |
+| web-frontend | 8880 | Web 前端（分析过程展示） |
 
 ### 启动命令
 
@@ -172,11 +187,12 @@ STRATEGIES=EMA25_GREATER_17_PRICE_MATCH,EMA17TO25,EMA17_BREAKOUT
 # 启动核心服务
 docker-compose up -d
 
-# 启动所有服务（包括工具）
-docker-compose --profile tools --profile db up -d
+# 查看服务状态
+docker-compose ps
 
-# 开发模式（挂载本地代码）
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# 查看特定服务日志
+docker-compose logs -f stock-cpp
+docker-compose logs -f api-server
 ```
 
 ## 买点预测系统
@@ -191,7 +207,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 ### 触发优化的条件
 - 连续 3 次预测失败
-- 周准确率 < 70%
+- 准确率 < 70%
 - 月准确率 < 80%
 
 ### 预测信号输出
@@ -205,13 +221,25 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 - **spdlog** - 日志库
 - **nlohmann/json** - JSON 处理
 - **TA-Lib** - 技术指标计算
-- **SQLite** - 数据存储
+- **SQLite/MySQL** - 数据存储
 - **cpp-httplib** - HTTP 客户端
 
-### Node.js 服务
+### NestJS API 服务
+- **NestJS 11** - 后端框架
+- **Prisma 5** - ORM 数据库访问
+- **TypeScript 5** - 类型安全
+
+### Node.js 飞书服务
 - **Node.js 20** - 运行时
 - **lark-api** - 飞书 SDK
 - **dotenv** - 环境变量管理
+
+### Web 前端
+- **React 18** - UI 框架
+- **Vite 5** - 构建工具
+- **TypeScript 5** - 类型安全
+- **Tailwind CSS** - 样式框架
+- **lightweight-charts** - 金融图表库
 
 ## 开发指南
 
@@ -229,8 +257,14 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 # 编译 C++
 cd cpp && mkdir build && cd build && cmake .. && make -j4
 
-# 运行 Node.js 服务
+# 运行 Node.js 飞书服务
 cd nodejs && npm install && npm start
+
+# 运行 NestJS API 服务
+cd backend && npm install && npm run dev
+
+# 运行 Web 前端
+cd web-frontend && npm install && npm run dev
 ```
 
 ## GitHub Actions
@@ -238,8 +272,9 @@ cd nodejs && npm install && npm start
 CI/CD 流程：
 1. 编译 C++ (Ubuntu + macOS)
 2. 构建 Node.js 项目
-3. 构建 Docker 镜像
-4. 推送到 Docker Hub
+3. 构建 NestJS API 项目
+4. 构建 Docker 镜像
+5. 推送到 Docker Hub
 
 触发条件：
 - Push 到 `master` 分支
@@ -250,6 +285,22 @@ CI/CD 流程：
 MIT License
 
 ## 更新日志
+
+### v2.2.0
+- 新增 Tushare API 接口（2000分）
+  - `suspend_d` 停复牌信息接口
+  - `forecast` 业绩预告接口
+  - `express` 业绩快报接口
+  - `dividend` 分红送股接口
+- 新增数据结构：SuspendInfo, Forecast, Express, Dividend
+- 更新 IDataSource 接口，新增 4 个方法
+- 更新 Network 模块文档
+
+### v2.1.0
+- 新增 NestJS API 服务模块 (backend/)
+- 支持 MySQL 数据库部署
+- 优化 Docker 服务架构
+- 更新端口映射配置
 
 ### v2.0.0
 - 新增买点预测系统

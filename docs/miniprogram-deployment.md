@@ -18,9 +18,21 @@
 
 ### 2. 服务器要求
 
-- Node.js 18+
+- Node.js 20+
+- MySQL 8.0 (生产环境)
 - 内存：512MB+
-- 存储：1GB+（SQLite 数据）
+- 存储：1GB+
+
+### 3. 域名配置
+
+小程序需要配置以下域名白名单：
+
+| 类型 | 域名 |
+|------|------|
+| request 合法域名 | `https://your-domain.com` |
+| socket 合法域名 | 如需 WebSocket |
+
+**注意**: 域名必须使用 HTTPS，不支持 HTTP。
 
 ## 二、Node.js 服务部署
 
@@ -150,7 +162,62 @@ curl http://localhost:3000/api/charts/000001.SZ?freq=d
 2. 点击「发布」
 3. 选择发布比例（全量/灰度）
 
-## 六、监控配置
+## 六、微信登录配置
+
+### 1. 公众号配置
+
+在微信公众平台配置：
+
+1. **设置服务器地址**（设置与开发 > 基本配置 > 服务器配置）：
+   ```
+   URL: https://your-domain.com/api/wechat/event
+   Token: your_token
+   EncodingAESKey: 自动生成或手动设置
+   消息加解密方式: 安全模式（推荐）
+   ```
+
+2. **获取 AppID 和 AppSecret**：
+   - 位置：设置与开发 > 基本配置
+   - 配置到 `env/.env`：
+   ```bash
+   WECHAT_APP_ID=wxxxxxxxxxxx
+   WECHAT_APP_SECRET=xxxxxxxxxxxxxxxx
+   WECHAT_TOKEN=your_token
+   ```
+
+### 2. 登录流程
+
+小程序登录流程：
+1. 小程序调用 `/api/auth/qrcode` 生成二维码
+2. 用户扫码关注公众号
+3. 公众号推送事件到 `/api/wechat/event`
+4. 小程序轮询 `/api/auth/status` 查询登录状态
+5. 登录成功后调用 `/api/auth/token` 获取 JWT
+
+## 七、飞书登录配置
+
+### 1. 创建飞书应用
+
+在飞书开放平台创建企业自建应用：
+
+1. **配置 OAuth**：
+   - 重定向 URL: `https://your-domain.com/api/auth/feishu/callback`
+   
+2. **获取配置**：
+   ```bash
+   FEISHU_APP_ID=your_app_id
+   FEISHU_APP_SECRET=your_app_secret
+   ```
+
+### 2. 登录流程
+
+飞书登录流程：
+1. 前端调用 `/api/auth/feishu/qrcode` 生成二维码
+2. 用户使用飞书 App 扫码
+3. 飞书回调 `/api/auth/feishu/callback`
+4. 前端获取 JWT Token
+
+## 八、监控配置
 
 ### 日志
 
@@ -169,7 +236,7 @@ docker-compose logs -f stock-api
 - 内存使用率告警（>80%）
 - 响应时间告警（>1s）
 
-## 七、回滚方案
+## 九、回滚方案
 
 ### 服务回滚
 
@@ -188,3 +255,7 @@ docker-compose up -d
 在微信公众平台：
 1. 开发管理 > 已发布版本
 2. 点击「回退」
+
+---
+
+**更新时间：2026年5月4日**

@@ -102,8 +102,9 @@ client.setRetryDelay(1000);  // 1秒
 **API 分类**:
 - 基础数据: 股票列表、交易日历
 - 行情数据: 日线、复权因子、每日指标
-- 财务数据: 利润表、资产负债表、现金流量表
-- 市场数据: 沪深股通成份股
+- 财务数据: 利润表、资产负债表、现金流量表、财务指标
+- 市场数据: 沪深股通成份股、资金流向
+- **新增数据**: 停复牌信息、业绩预告、业绩快报、分红送股 (2000分)
 
 **示例**:
 ```cpp
@@ -127,6 +128,20 @@ auto response = client.getDailyQuote("000001.SZ", "", "20240101", "20240131");
 
 // 获取财务数据
 auto response = client.getIncome("000001.SZ", "20231231", "", "");
+
+// ========== 新增接口 (2000分) ==========
+
+// 获取停复牌信息
+auto response = client.getSuspendD("000001.SZ", "", "", "20240101", "20241231");
+
+// 获取业绩预告
+auto response = client.getForecast("000001.SZ", "20241231");
+
+// 获取业绩快报
+auto response = client.getExpress("000001.SZ", "20241231");
+
+// 获取分红送股数据
+auto response = client.getDividend("000001.SZ", "2024");
 ```
 
 ### 3. IDataSource - 数据源接口
@@ -285,6 +300,72 @@ struct TushareResponse {
 };
 ```
 
+### SuspendInfo - 停复牌信息
+
+```cpp
+struct SuspendInfo {
+    std::string ts_code;            // TS股票代码
+    std::string suspend_date;       // 停牌日期
+    std::string resume_date;        // 复牌日期
+    std::string suspend_type;       // 停牌类型 (S-停牌, R-复牌)
+    std::string suspend_reason;     // 停牌原因
+};
+```
+
+### Forecast - 业绩预告
+
+```cpp
+struct Forecast {
+    std::string ts_code;            // TS股票代码
+    std::string ann_date;           // 公告日期
+    std::string end_date;           // 报告期
+    std::string type;               // 预告类型
+    double p_change_min;            // 预告净利润变动幅度下限 (%)
+    double p_change_max;            // 预告净利润变动幅度上限 (%)
+    double net_profit_min;          // 预告净利润下限 (万元)
+    double net_profit_max;          // 预告净利润上限 (万元)
+    std::string summary;            // 预告摘要
+    std::string change_reason;      // 变动原因
+};
+```
+
+### Express - 业绩快报
+
+```cpp
+struct Express {
+    std::string ts_code;            // TS股票代码
+    std::string ann_date;           // 公告日期
+    std::string end_date;           // 报告期
+    double revenue;                 // 营业收入 (万元)
+    double operate_profit;          // 营业利润 (万元)
+    double total_profit;            // 利润总额 (万元)
+    double n_income;                // 净利润 (万元)
+    double total_assets;            // 总资产 (万元)
+    double total_hldr_eqy_exc_min_int; // 股东权益合计 (万元)
+    double total_share;             // 总股本 (万股)
+    double eps;                     // 每股收益
+};
+```
+
+### Dividend - 分红送股
+
+```cpp
+struct Dividend {
+    std::string ts_code;            // TS股票代码
+    std::string ann_date;           // 公告日期
+    std::string end_date;           // 报告期/年度
+    std::string div_proc;           // 实施进度
+    double stk_div;                 // 送股比例 (每股送股)
+    double stk_bo_rate;             // 转增比例 (每股转增)
+    double cash_div;                // 每股现金分红 (元)
+    double cash_div_tax;            // 每股现金分红税后 (元)
+    std::string record_date;        // 公告日期
+    std::string ex_date;            // 除权除息日
+    std::string pay_date;           // 派息日
+    std::string div_listdate;       // 红股上市日
+};
+```
+
 ## ⚙️ 配置说明
 
 在 `.env` 文件中配置网络层参数：
@@ -357,6 +438,59 @@ int main() {
 }
 ```
 
+### 4. 新增接口使用示例 (2000分接口)
+
+```cpp
+#include "Network.h"
+#include "Logger.h"
+#include "Config.h"
+
+int main() {
+    // 初始化
+    auto& config = config::Config::getInstance();
+    config.initialize(".env");
+    logger::init(config);
+    
+    // 创建数据源
+    auto source = network::DataSourceFactory::createFromConfig();
+    
+    // ========== 停复牌信息 ==========
+    auto suspends = source->getSuspendInfo("000001.SZ", "20240101", "20241231");
+    for (const auto& s : suspends) {
+        LOG_INFO("停复牌: " + s.ts_code + " 停牌日期: " + s.suspend_date + 
+                 " 复牌日期: " + s.resume_date + " 原因: " + s.suspend_reason);
+    }
+    
+    // ========== 业绩预告 ==========
+    auto forecasts = source->getForecast("000001.SZ", "20241231");
+    for (const auto& f : forecasts) {
+        LOG_INFO("业绩预告: " + f.ts_code + " 报告期: " + f.end_date +
+                 " 变动幅度: " + std::to_string(f.p_change_min) + "% ~ " + 
+                 std::to_string(f.p_change_max) + "%");
+    }
+    
+    // ========== 业绩快报 ==========
+    auto expresses = source->getExpress("000001.SZ", "20241231");
+    for (const auto& e : expresses) {
+        LOG_INFO("业绩快报: " + e.ts_code + " 报告期: " + e.end_date +
+                 " 营业收入: " + std::to_string(e.revenue) + "万元" +
+                 " 净利润: " + std::to_string(e.n_income) + "万元" +
+                 " EPS: " + std::to_string(e.eps));
+    }
+    
+    // ========== 分红送股 ==========
+    auto dividends = source->getDividend("000001.SZ", "2024");
+    for (const auto& d : dividends) {
+        LOG_INFO("分红: " + d.ts_code + " 年度: " + d.end_date +
+                 " 每股现金分红: " + std::to_string(d.cash_div) + "元" +
+                 " 送股比例: " + std::to_string(d.stk_div) +
+                 " 除权日: " + d.ex_date);
+    }
+    
+    return 0;
+}
+```
+
 ## 📚 API 参考
 
 ### Tushare API 接口列表
@@ -389,6 +523,44 @@ int main() {
 | 方法 | 说明 | 参数 |
 |------|------|------|
 | `getHsConst()` | 获取沪深股通成份股 | ts_code, hs_type |
+
+#### 停复牌/业绩数据 (2000分接口)
+
+| 方法 | 说明 | 参数 | 积分要求 |
+|------|------|------|----------|
+| `getSuspendD()` | 获取停复牌信息 | ts_code, suspend_date, resume_date, start_date, end_date | 2000分 |
+| `getForecast()` | 获取业绩预告 | ts_code, period, start_date, end_date | 2000分 |
+| `getExpress()` | 获取业绩快报 | ts_code, period, start_date, end_date | 2000分 |
+| `getDividend()` | 获取分红送股数据 | ts_code, end_date, start_date, ann_date | 2000分 |
+
+### IDataSource 接口方法
+
+#### 基础接口
+
+| 方法 | 说明 | 返回类型 |
+|------|------|----------|
+| `getStockList()` | 获取股票列表 | `std::vector<Stock>` |
+| `getStockInfo()` | 获取股票信息 | `Stock` |
+| `getDailyData()` | 获取日线数据 | `std::vector<StockData>` |
+| `getQuoteData()` | 获取行情数据（日线/周线/月线） | `std::vector<StockData>` |
+| `getLatestQuote()` | 获取最新行情 | `StockData` |
+| `testConnection()` | 测试连接 | `bool` |
+
+#### 财务/市场数据接口
+
+| 方法 | 说明 | 返回类型 |
+|------|------|----------|
+| `getFinancialIndicators()` | 获取财务指标 | `std::vector<FinancialIndicator>` |
+| `getMoneyFlow()` | 获取资金流向 | `std::vector<MoneyFlow>` |
+
+#### 新增接口 (2000分)
+
+| 方法 | 说明 | 返回类型 |
+|------|------|----------|
+| `getSuspendInfo()` | 获取停复牌信息 | `std::vector<SuspendInfo>` |
+| `getForecast()` | 获取业绩预告 | `std::vector<Forecast>` |
+| `getExpress()` | 获取业绩快报 | `std::vector<Express>` |
+| `getDividend()` | 获取分红送股数据 | `std::vector<Dividend>` |
 
 ### 通用 API 调用
 
@@ -538,7 +710,18 @@ for (const auto& code : codes) {
 - ⏳ 异步请求支持
 - ⏳ 请求缓存
 - ⏳ 数据验证
-- ⏳ 更多 Tushare API 封装
+- ✅ 更多 Tushare API 封装（已完成：停复牌、业绩预告、业绩快报、分红送股）
+
+## 🎉 最近更新
+
+### v1.1.0 (2026-05-04)
+- ✅ 新增 `suspend_d` 停复牌信息接口 (2000分)
+- ✅ 新增 `forecast` 业绩预告接口 (2000分)
+- ✅ 新增 `express` 业绩快报接口 (2000分)
+- ✅ 新增 `dividend` 分红送股接口 (2000分)
+- ✅ 新增数据结构：SuspendInfo, Forecast, Express, Dividend
+- ✅ 更新 IDataSource 接口，新增 4 个方法
+- ✅ 更新 TushareDataSource 实现
 
 ## 🤝 贡献指南
 
@@ -564,7 +747,7 @@ for (const auto& code : codes) {
 
 ---
 
-**版本**: 1.0.0  
-**最后更新**: 2026-02-01  
+**版本**: 1.1.0  
+**最后更新**: 2026-05-04  
 **维护者**: Development Team
 

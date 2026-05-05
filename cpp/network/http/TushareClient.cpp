@@ -234,12 +234,68 @@ TushareResponse TushareClient::getCashFlow(const std::string& ts_code,
 // ========== 市场参考数据 ==========
 
 TushareResponse TushareClient::getHsConst(const std::string& ts_code,
-                                         const std::string& hs_type) {
+                                          const std::string& hs_type) {
     std::map<std::string, std::string> params;
     if (!ts_code.empty()) params["ts_code"] = ts_code;
     if (!hs_type.empty()) params["hs_type"] = hs_type;
     
     return query("hs_const", params);
+}
+
+// ========== 停复牌/业绩预告/快报/分红数据 ==========
+
+TushareResponse TushareClient::getSuspendD(const std::string& ts_code,
+                                           const std::string& suspend_date,
+                                           const std::string& resume_date,
+                                           const std::string& start_date,
+                                           const std::string& end_date) {
+    std::map<std::string, std::string> params;
+    if (!ts_code.empty()) params["ts_code"] = ts_code;
+    if (!suspend_date.empty()) params["suspend_date"] = suspend_date;
+    if (!resume_date.empty()) params["resume_date"] = resume_date;
+    if (!start_date.empty()) params["start_date"] = start_date;
+    if (!end_date.empty()) params["end_date"] = end_date;
+    
+    return query("suspend_d", params);
+}
+
+TushareResponse TushareClient::getForecast(const std::string& ts_code,
+                                           const std::string& period,
+                                           const std::string& start_date,
+                                           const std::string& end_date) {
+    std::map<std::string, std::string> params;
+    if (!ts_code.empty()) params["ts_code"] = ts_code;
+    if (!period.empty()) params["period"] = period;
+    if (!start_date.empty()) params["start_date"] = start_date;
+    if (!end_date.empty()) params["end_date"] = end_date;
+    
+    return query("forecast", params);
+}
+
+TushareResponse TushareClient::getExpress(const std::string& ts_code,
+                                          const std::string& period,
+                                          const std::string& start_date,
+                                          const std::string& end_date) {
+    std::map<std::string, std::string> params;
+    if (!ts_code.empty()) params["ts_code"] = ts_code;
+    if (!period.empty()) params["period"] = period;
+    if (!start_date.empty()) params["start_date"] = start_date;
+    if (!end_date.empty()) params["end_date"] = end_date;
+    
+    return query("express", params);
+}
+
+TushareResponse TushareClient::getDividend(const std::string& ts_code,
+                                           const std::string& end_date,
+                                           const std::string& start_date,
+                                           const std::string& ann_date) {
+    std::map<std::string, std::string> params;
+    if (!ts_code.empty()) params["ts_code"] = ts_code;
+    if (!end_date.empty()) params["end_date"] = end_date;
+    if (!start_date.empty()) params["start_date"] = start_date;
+    if (!ann_date.empty()) params["ann_date"] = ann_date;
+    
+    return query("dividend", params);
 }
 
 // ========== 资金流向数据 ==========

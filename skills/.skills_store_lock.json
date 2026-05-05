@@ -36,6 +36,30 @@
       "zip_url": "https://lightmake.site/api/v1/download?slug=openspec",
       "source": "skillhub",
       "version": "1.0.0"
+    },
+    "humanizer": {
+      "name": "Humanizer",
+      "zip_url": "https://wry-manatee-359.convex.site/api/v1/download?slug=humanizer",
+      "source": "clawhub",
+      "version": "1.0.0"
+    },
+    "self-improving": {
+      "name": "Self-Improving",
+      "zip_url": "https://wry-manatee-359.convex.site/api/v1/download?slug=self-improving",
+      "source": "clawhub",
+      "version": "1.0.0"
+    },
+    "superpowers-brainstorming": {
+      "name": "Superpowers Brainstorming",
+      "zip_url": "https://wry-manatee-359.convex.site/api/v1/download?slug=superpowers-brainstorming",
+      "source": "clawhub",
+      "version": "1.0.0"
+    },
+    "material-to-prd": {
+      "name": "Material to PRD",
+      "zip_url": "https://wry-manatee-359.convex.site/api/v1/download?slug=material-to-prd",
+      "source": "clawhub",
+      "version": "1.0.0"
     }
   }
 }

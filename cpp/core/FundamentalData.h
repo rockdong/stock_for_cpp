@@ -150,6 +150,80 @@ struct QualifiedPool {
     std::map<std::string, FundamentalScore> scores; // 各股票评分详情
 };
 
+/**
+ * @brief 停复牌信息
+ * 
+ * 来自 Tushare suspend_d 接口
+ * 记录股票停牌和复牌的时间和类型
+ */
+struct SuspendInfo {
+    std::string ts_code;            // TS股票代码
+    std::string suspend_date;       // 停牌日期
+    std::string resume_date;        // 复牌日期
+    std::string suspend_type;       // 停牌类型 (S-停牌, R-复牌)
+    std::string suspend_reason;     // 停牌原因（可选）
+};
+
+/**
+ * @brief 业绩预告
+ * 
+ * 来自 Tushare forecast 接口
+ * 记录上市公司业绩预告数据
+ */
+struct Forecast {
+    std::string ts_code;            // TS股票代码
+    std::string ann_date;           // 公告日期
+    std::string end_date;           // 报告期
+    std::string type;               // 预告类型 (1-业绩预告, 2-业绩快报等)
+    double p_change_min = 0.0;      // 预告净利润变动幅度下限 (%)
+    double p_change_max = 0.0;      // 预告净利润变动幅度上限 (%)
+    double net_profit_min = 0.0;    // 预告净利润下限 (万元)
+    double net_profit_max = 0.0;    // 预告净利润上限 (万元)
+    std::string summary;            // 预告摘要
+    std::string change_reason;      // 变动原因
+};
+
+/**
+ * @brief 业绩快报
+ * 
+ * 来自 Tushare express 接口
+ * 记录上市公司业绩快报数据
+ */
+struct Express {
+    std::string ts_code;            // TS股票代码
+    std::string ann_date;           // 公告日期
+    std::string end_date;           // 报告期
+    double revenue = 0.0;           // 营业收入 (万元)
+    double operate_profit = 0.0;    // 营业利润 (万元)
+    double total_profit = 0.0;      // 利润总额 (万元)
+    double n_income = 0.0;          // 净利润 (万元)
+    double total_assets = 0.0;      // 总资产 (万元)
+    double total_hldr_eqy_exc_min_int = 0.0; // 股东权益合计 (万元)
+    double total_share = 0.0;       // 总股本 (万股)
+    double eps = 0.0;               // 每股收益
+};
+
+/**
+ * @brief 分红送股
+ * 
+ * 来自 Tushare dividend 接口
+ * 记录上市公司分红送股数据
+ */
+struct Dividend {
+    std::string ts_code;            // TS股票代码
+    std::string ann_date;           // 公告日期
+    std::string end_date;           // 报告期/年度
+    std::string div_proc;           // 实施进度
+    double stk_div = 0.0;           // 送股比例 (每股送股)
+    double stk_bo_rate = 0.0;       // 转增比例 (每股转增)
+    double cash_div = 0.0;          // 每股现金分红 (元)
+    double cash_div_tax = 0.0;      // 每股现金分红税后 (元)
+    std::string record_date;        // 公告日期
+    std::string ex_date;            // 除权除息日
+    std::string pay_date;           // 派息日
+    std::string div_listdate;       // 红股上市日
+};
+
 } // namespace core
 
 #endif // CORE_FUNDAMENTAL_DATA_H

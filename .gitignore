@@ -19,6 +19,8 @@ package-lock.json
 # Data
 /data/
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 
@@ -54,3 +56,6 @@ skills/
 
 # workbuddy
 .workbuddy/
+
+# Self-improving memory (local)
+.self-improving/

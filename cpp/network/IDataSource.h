@@ -14,6 +14,10 @@ using Stock = core::Stock;
 using StockData = core::StockData;
 using FinancialIndicator = core::FinancialIndicator;
 using MoneyFlow = core::MoneyFlow;
+using SuspendInfo = core::SuspendInfo;
+using Forecast = core::Forecast;
+using Express = core::Express;
+using Dividend = core::Dividend;
 
 /**
  * @brief 数据源接口（抽象基类）
@@ -116,6 +120,64 @@ public:
         const std::string& trade_date = "",
         const std::string& start_date = "",
         const std::string& end_date = ""
+    ) = 0;
+
+    /**
+     * @brief 获取停复牌信息
+     * @param ts_code 股票代码（可选，空表示全市场）
+     * @param start_date 开始日期（可选）
+     * @param end_date 结束日期（可选）
+     * @return 停复牌信息列表
+     */
+    virtual std::vector<SuspendInfo> getSuspendInfo(
+        const std::string& ts_code = "",
+        const std::string& start_date = "",
+        const std::string& end_date = ""
+    ) = 0;
+
+    /**
+     * @brief 获取业绩预告
+     * @param ts_code 股票代码（可选，空表示全市场）
+     * @param period 报告期（可选）
+     * @param start_date 开始日期（可选）
+     * @param end_date 结束日期（可选）
+     * @return 业绩预告列表
+     */
+    virtual std::vector<Forecast> getForecast(
+        const std::string& ts_code = "",
+        const std::string& period = "",
+        const std::string& start_date = "",
+        const std::string& end_date = ""
+    ) = 0;
+
+    /**
+     * @brief 获取业绩快报
+     * @param ts_code 股票代码（可选，空表示全市场）
+     * @param period 报告期（可选）
+     * @param start_date 开始日期（可选）
+     * @param end_date 结束日期（可选）
+     * @return 业绩快报列表
+     */
+    virtual std::vector<Express> getExpress(
+        const std::string& ts_code = "",
+        const std::string& period = "",
+        const std::string& start_date = "",
+        const std::string& end_date = ""
+    ) = 0;
+
+    /**
+     * @brief 获取分红送股数据
+     * @param ts_code 股票代码（可选，空表示全市场）
+     * @param end_date 报告期/年度（可选）
+     * @param start_date 开始日期（可选）
+     * @param ann_date 公告日期（可选）
+     * @return 分红送股列表
+     */
+    virtual std::vector<Dividend> getDividend(
+        const std::string& ts_code = "",
+        const std::string& end_date = "",
+        const std::string& start_date = "",
+        const std::string& ann_date = ""
     ) = 0;
 };
 

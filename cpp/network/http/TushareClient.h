@@ -190,7 +190,7 @@ public:
                                 const std::string& start_date = "",
                                 const std::string& end_date = "");
 
-    // ========== 市场参考数据 ==========
+// ========== 市场参考数据 ==========
     
     /**
      * @brief 获取沪深股通成份股
@@ -199,7 +199,63 @@ public:
      * @return Tushare 响应
      */
     TushareResponse getHsConst(const std::string& ts_code = "",
-                               const std::string& hs_type = "");
+                                const std::string& hs_type = "");
+
+    // ========== 停复牌/业绩预告/快报/分红数据 ==========
+    
+    /**
+     * @brief 获取停复牌信息
+     * @param ts_code 股票代码
+     * @param suspend_date 停牌日期（YYYYMMDD）
+     * @param resume_date 复牌日期（YYYYMMDD）
+     * @param start_date 开始日期（YYYYMMDD）
+     * @param end_date 结束日期（YYYYMMDD）
+     * @return Tushare 响应
+     */
+    TushareResponse getSuspendD(const std::string& ts_code = "",
+                                 const std::string& suspend_date = "",
+                                 const std::string& resume_date = "",
+                                 const std::string& start_date = "",
+                                 const std::string& end_date = "");
+
+    /**
+     * @brief 获取业绩预告
+     * @param ts_code 股票代码
+     * @param period 报告期（YYYYMMDD）
+     * @param start_date 开始日期（YYYYMMDD）
+     * @param end_date 结束日期（YYYYMMDD）
+     * @return Tushare 响应
+     */
+    TushareResponse getForecast(const std::string& ts_code = "",
+                                 const std::string& period = "",
+                                 const std::string& start_date = "",
+                                 const std::string& end_date = "");
+
+    /**
+     * @brief 获取业绩快报
+     * @param ts_code 股票代码
+     * @param period 报告期（YYYYMMDD）
+     * @param start_date 开始日期（YYYYMMDD）
+     * @param end_date 结束日期（YYYYMMDD）
+     * @return Tushare 响应
+     */
+    TushareResponse getExpress(const std::string& ts_code = "",
+                                const std::string& period = "",
+                                const std::string& start_date = "",
+                                const std::string& end_date = "");
+
+    /**
+     * @brief 获取分红送股数据
+     * @param ts_code 股票代码
+     * @param end_date 报告期/年度（YYYYMMDD）
+     * @param start_date 开始日期（YYYYMMDD）
+     * @param ann_date 公告日期（YYYYMMDD）
+     * @return Tushare 响应
+     */
+    TushareResponse getDividend(const std::string& ts_code = "",
+                                 const std::string& end_date = "",
+                                 const std::string& start_date = "",
+                                 const std::string& ann_date = "");
 
     // ========== 资金流向数据 ==========
     

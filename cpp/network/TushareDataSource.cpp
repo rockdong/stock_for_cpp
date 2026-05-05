@@ -628,5 +628,358 @@ std::vector<MoneyFlow> TushareDataSource::parseMoneyFlow(const TushareResponse& 
     return result;
 }
 
+// ========== 停复牌/业绩预告/快报/分红数据 ==========
+
+std::vector<SuspendInfo> TushareDataSource::getSuspendInfo(
+    const std::string& ts_code,
+    const std::string& start_date,
+    const std::string& end_date) {
+    
+    try {
+        LOG_DEBUG("获取停复牌信息" + 
+                  (ts_code.empty() ? "" : ": " + ts_code) +
+                  (start_date.empty() ? "" : " [" + start_date + " - " + end_date + "]"));
+        
+        auto response = client_->getSuspendD(ts_code, "", "", start_date, end_date);
+        
+        if (response.isSuccess()) {
+            return parseSuspendInfo(response);
+        } else {
+            LOG_ERROR("获取停复牌信息失败: " + response.msg);
+            return {};
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取停复牌信息异常: " + std::string(e.what()));
+        return {};
+    }
+}
+
+std::vector<Forecast> TushareDataSource::getForecast(
+    const std::string& ts_code,
+    const std::string& period,
+    const std::string& start_date,
+    const std::string& end_date) {
+    
+    try {
+        LOG_DEBUG("获取业绩预告" + 
+                  (ts_code.empty() ? "" : ": " + ts_code) +
+                  (period.empty() ? "" : " 报告期: " + period));
+        
+        auto response = client_->getForecast(ts_code, period, start_date, end_date);
+        
+        if (response.isSuccess()) {
+            return parseForecast(response);
+        } else {
+            LOG_ERROR("获取业绩预告失败: " + response.msg);
+            return {};
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取业绩预告异常: " + std::string(e.what()));
+        return {};
+    }
+}
+
+std::vector<Express> TushareDataSource::getExpress(
+    const std::string& ts_code,
+    const std::string& period,
+    const std::string& start_date,
+    const std::string& end_date) {
+    
+    try {
+        LOG_DEBUG("获取业绩快报" + 
+                  (ts_code.empty() ? "" : ": " + ts_code) +
+                  (period.empty() ? "" : " 报告期: " + period));
+        
+        auto response = client_->getExpress(ts_code, period, start_date, end_date);
+        
+        if (response.isSuccess()) {
+            return parseExpress(response);
+        } else {
+            LOG_ERROR("获取业绩快报失败: " + response.msg);
+            return {};
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取业绩快报异常: " + std::string(e.what()));
+        return {};
+    }
+}
+
+std::vector<Dividend> TushareDataSource::getDividend(
+    const std::string& ts_code,
+    const std::string& end_date,
+    const std::string& start_date,
+    const std::string& ann_date) {
+    
+    try {
+        LOG_DEBUG("获取分红送股数据" + 
+                  (ts_code.empty() ? "" : ": " + ts_code) +
+                  (end_date.empty() ? "" : " 年度: " + end_date));
+        
+        auto response = client_->getDividend(ts_code, end_date, start_date, ann_date);
+        
+        if (response.isSuccess()) {
+            return parseDividend(response);
+        } else {
+            LOG_ERROR("获取分红送股数据失败: " + response.msg);
+            return {};
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取分红送股数据异常: " + std::string(e.what()));
+        return {};
+    }
+}
+
+// ========== 解析方法 ==========
+
+std::vector<SuspendInfo> TushareDataSource::parseSuspendInfo(const TushareResponse& response) {
+    std::vector<SuspendInfo> result;
+    
+    try {
+        if (!response.data.contains("fields") || !response.data.contains("items")) {
+            LOG_ERROR("响应数据格式错误");
+            return result;
+        }
+        
+        auto fields = response.data["fields"].get<std::vector<std::string>>();
+        auto items = response.data["items"];
+        
+        std::unordered_map<std::string, size_t> field_index;
+        for (size_t i = 0; i < fields.size(); ++i) {
+            field_index[fields[i]] = i;
+        }
+        
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
+        
+        for (const auto& item : items) {
+            SuspendInfo info;
+            
+            info.ts_code = get_string(item, "ts_code");
+            info.suspend_date = get_string(item, "suspend_date");
+            info.resume_date = get_string(item, "resume_date");
+            info.suspend_type = get_string(item, "suspend_type");
+            info.suspend_reason = get_string(item, "suspend_reason");
+            
+            result.push_back(info);
+        }
+        
+        LOG_INFO("解析停复牌信息成功，共 " + std::to_string(result.size()) + " 条");
+        
+    } catch (const json::exception& e) {
+        LOG_ERROR("解析停复牌信息失败: " + std::string(e.what()));
+    }
+    
+    return result;
+}
+
+std::vector<Forecast> TushareDataSource::parseForecast(const TushareResponse& response) {
+    std::vector<Forecast> result;
+    
+    try {
+        if (!response.data.contains("fields") || !response.data.contains("items")) {
+            LOG_ERROR("响应数据格式错误");
+            return result;
+        }
+        
+        auto fields = response.data["fields"].get<std::vector<std::string>>();
+        auto items = response.data["items"];
+        
+        std::unordered_map<std::string, size_t> field_index;
+        for (size_t i = 0; i < fields.size(); ++i) {
+            field_index[fields[i]] = i;
+        }
+        
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
+        
+        auto get_double = [&](const json& item, const std::string& field_name) -> double {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                if (item[it->second].is_string()) {
+                    std::string str_val = item[it->second].get<std::string>();
+                    try {
+                        return std::stod(str_val);
+                    } catch (...) {
+                        return 0.0;
+                    }
+                }
+                return item[it->second].get<double>();
+            }
+            return 0.0;
+        };
+        
+        for (const auto& item : items) {
+            Forecast forecast;
+            
+            forecast.ts_code = get_string(item, "ts_code");
+            forecast.ann_date = get_string(item, "ann_date");
+            forecast.end_date = get_string(item, "end_date");
+            forecast.type = get_string(item, "type");
+            forecast.p_change_min = get_double(item, "p_change_min");
+            forecast.p_change_max = get_double(item, "p_change_max");
+            forecast.net_profit_min = get_double(item, "net_profit_min");
+            forecast.net_profit_max = get_double(item, "net_profit_max");
+            forecast.summary = get_string(item, "summary");
+            forecast.change_reason = get_string(item, "change_reason");
+            
+            result.push_back(forecast);
+        }
+        
+        LOG_INFO("解析业绩预告成功，共 " + std::to_string(result.size()) + " 条");
+        
+    } catch (const json::exception& e) {
+        LOG_ERROR("解析业绩预告失败: " + std::string(e.what()));
+    }
+    
+    return result;
+}
+
+std::vector<Express> TushareDataSource::parseExpress(const TushareResponse& response) {
+    std::vector<Express> result;
+    
+    try {
+        if (!response.data.contains("fields") || !response.data.contains("items")) {
+            LOG_ERROR("响应数据格式错误");
+            return result;
+        }
+        
+        auto fields = response.data["fields"].get<std::vector<std::string>>();
+        auto items = response.data["items"];
+        
+        std::unordered_map<std::string, size_t> field_index;
+        for (size_t i = 0; i < fields.size(); ++i) {
+            field_index[fields[i]] = i;
+        }
+        
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
+        
+        auto get_double = [&](const json& item, const std::string& field_name) -> double {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                if (item[it->second].is_string()) {
+                    std::string str_val = item[it->second].get<std::string>();
+                    try {
+                        return std::stod(str_val);
+                    } catch (...) {
+                        return 0.0;
+                    }
+                }
+                return item[it->second].get<double>();
+            }
+            return 0.0;
+        };
+        
+        for (const auto& item : items) {
+            Express express;
+            
+            express.ts_code = get_string(item, "ts_code");
+            express.ann_date = get_string(item, "ann_date");
+            express.end_date = get_string(item, "end_date");
+            express.revenue = get_double(item, "revenue");
+            express.operate_profit = get_double(item, "operate_profit");
+            express.total_profit = get_double(item, "total_profit");
+            express.n_income = get_double(item, "n_income");
+            express.total_assets = get_double(item, "total_assets");
+            express.total_hldr_eqy_exc_min_int = get_double(item, "total_hldr_eqy_exc_min_int");
+            express.total_share = get_double(item, "total_share");
+            express.eps = get_double(item, "eps");
+            
+            result.push_back(express);
+        }
+        
+        LOG_INFO("解析业绩快报成功，共 " + std::to_string(result.size()) + " 条");
+        
+    } catch (const json::exception& e) {
+        LOG_ERROR("解析业绩快报失败: " + std::string(e.what()));
+    }
+    
+    return result;
+}
+
+std::vector<Dividend> TushareDataSource::parseDividend(const TushareResponse& response) {
+    std::vector<Dividend> result;
+    
+    try {
+        if (!response.data.contains("fields") || !response.data.contains("items")) {
+            LOG_ERROR("响应数据格式错误");
+            return result;
+        }
+        
+        auto fields = response.data["fields"].get<std::vector<std::string>>();
+        auto items = response.data["items"];
+        
+        std::unordered_map<std::string, size_t> field_index;
+        for (size_t i = 0; i < fields.size(); ++i) {
+            field_index[fields[i]] = i;
+        }
+        
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
+        
+        auto get_double = [&](const json& item, const std::string& field_name) -> double {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                if (item[it->second].is_string()) {
+                    std::string str_val = item[it->second].get<std::string>();
+                    try {
+                        return std::stod(str_val);
+                    } catch (...) {
+                        return 0.0;
+                    }
+                }
+                return item[it->second].get<double>();
+            }
+            return 0.0;
+        };
+        
+        for (const auto& item : items) {
+            Dividend dividend;
+            
+            dividend.ts_code = get_string(item, "ts_code");
+            dividend.ann_date = get_string(item, "ann_date");
+            dividend.end_date = get_string(item, "end_date");
+            dividend.div_proc = get_string(item, "div_proc");
+            dividend.stk_div = get_double(item, "stk_div");
+            dividend.stk_bo_rate = get_double(item, "stk_bo_rate");
+            dividend.cash_div = get_double(item, "cash_div");
+            dividend.cash_div_tax = get_double(item, "cash_div_tax");
+            dividend.record_date = get_string(item, "record_date");
+            dividend.ex_date = get_string(item, "ex_date");
+            dividend.pay_date = get_string(item, "pay_date");
+            dividend.div_listdate = get_string(item, "div_listdate");
+            
+            result.push_back(dividend);
+        }
+        
+        LOG_INFO("解析分红送股数据成功，共 " + std::to_string(result.size()) + " 条");
+        
+    } catch (const json::exception& e) {
+        LOG_ERROR("解析分红送股数据失败: " + std::string(e.what()));
+    }
+    
+    return result;
+}
+
 } // namespace network
 
