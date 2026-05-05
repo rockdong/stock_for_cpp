@@ -943,6 +943,100 @@ GET /api/charts/:code
 
 ---
 
+### 认证模块 - 管理员登录
+
+#### 管理员账号登录
+
+```
+POST /api/auth/admin/login
+```
+
+**请求体：**
+```json
+{
+  "username": "admin",
+  "password": "admin123"
+}
+```
+
+**响应示例（成功）：**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": "admin",
+    "expiresIn": "7d"
+  }
+}
+```
+
+**响应示例（失败）：**
+```json
+{
+  "statusCode": 401,
+  "message": "用户名或密码错误",
+  "error": "Unauthorized"
+}
+```
+
+**默认账号信息：**
+- 用户名：`admin`
+- 默认密码：`admin123`
+
+**注意事项：**
+- 密码使用 bcrypt 加密存储在环境变量 `ADMIN_PASSWORD_HASH` 中
+- Token 有效期为 7 天（可在环境变量 `JWT_EXPIRES_IN` 中配置）
+- 修改密码方法：POST `/api/auth/admin/generate-hash` 生成新的密码 hash
+
+#### 生成密码 hash（配置新密码）
+
+```
+POST /api/auth/admin/generate-hash
+```
+
+**请求体：**
+```json
+{
+  "password": "your_new_password"
+}
+```
+
+**响应示例：**
+```json
+{
+  "success": true,
+  "data": {
+    "hash": "$2a$10$...",
+    "message": "请将此 hash 设置到环境变量 ADMIN_PASSWORD_HASH 中"
+  }
+}
+```
+
+#### 验证 Token
+
+```
+POST /api/auth/admin/verify
+```
+
+**请求体：**
+```json
+{
+  "token": "jwt-token-string"
+}
+```
+
+**响应示例：**
+```json
+{
+  "valid": true,
+  "user": "admin",
+  "expiresAt": "2024-01-22T00:00:00Z"
+}
+```
+
+---
+
 ## 统一响应格式
 
 所有 API 接口返回统一的 JSON 格式：
@@ -978,4 +1072,4 @@ GET /api/charts/:code
 
 ---
 
-**更新时间：2026年5月4日**
+**更新时间：2026年5月6日**

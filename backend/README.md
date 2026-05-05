@@ -8,6 +8,8 @@
 - **Prisma 5** - ORM 数据库访问
 - **TypeScript 5** - 类型安全
 - **MySQL 8** - 数据库
+- **@nestjs/jwt 11** - JWT 认证
+- **bcryptjs** - 密码加密
 
 ## 项目结构
 
@@ -17,7 +19,8 @@ backend/
 │   ├── modules/
 │   │   ├── analysis/      # 分析模块
 │   │   ├── charts/        # 图表模块
-│   │   └── stocks/        # 股票模块
+│   │   ├── stocks/        # 股票模块
+│   │   └── auth/          # 认证模块（管理员登录）
 │   ├── prisma/            # Prisma 服务
 │   ├── main.ts            # 服务入口
 │   └── app.module.ts      # 模块配置
@@ -75,6 +78,11 @@ backend/
 - 支持微信小程序登录
 - 用户绑定和会话管理
 
+### 玡Auth (认证系统)
+- 管理员账号密码登录
+- JWT Token 认证
+- 密码 bcrypt 加密存储
+
 ## 快速开始
 
 ### 本地开发
@@ -128,6 +136,11 @@ docker-compose up -d api-server
 ### 图表模块
 - `GET /charts/:tsCode` - 获取图表数据
 
+### 认证模块
+- `POST /auth/admin/login` - 管理员账号登录
+- `POST /auth/admin/generate-hash` - 生成密码 hash
+- `POST /auth/admin/verify` - 验证 Token
+
 ## 环境变量
 
 | 变量 | 说明 | 默认值 |
@@ -137,6 +150,10 @@ docker-compose up -d api-server
 | STRATEGIES | 启用的策略 | EMA25_GREATER_17_PRICE_MATCH |
 | SCHEDULER_EXECUTE_TIME | 调度执行时间 | 20:00 |
 | TZ | 时区 | Asia/Shanghai |
+| JWT_SECRET | JWT 密钥 | (需配置) |
+| JWT_EXPIRES_IN | Token 有效期 | 7d |
+| ADMIN_USERNAME | 管理员用户名 | admin |
+| ADMIN_PASSWORD_HASH | 管理员密码 hash | (需配置) |
 
 ## Prisma 命令
 

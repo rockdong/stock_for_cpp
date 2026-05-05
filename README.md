@@ -286,6 +286,19 @@ MIT License
 
 ## 更新日志
 
+### v2.3.0
+- 新增管理员账号登录功能（支持账号密码登录）
+  - 管理员登录 API：`POST /api/auth/admin/login`
+  - 默认账号：admin / admin123
+  - JWT Token 认证机制
+- 新增 NestJS auth 模块
+  - 管理员登录控制器
+  - 密码 bcrypt 加密验证
+  - Token 生成和验证接口
+- 修复 SurgeSignalStrategy 编译错误（删除孤立代码片段）
+- 升级 @nestjs/jwt 至 11.0.0（兼容 NestJS 11）
+- 优化前端管理员登录页面（隐藏入口）
+
 ### v2.2.0
 - 新增 Tushare API 接口（2000分）
   - `suspend_d` 停复牌信息接口
