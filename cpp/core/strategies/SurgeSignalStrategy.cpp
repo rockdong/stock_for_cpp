@@ -1,4 +1,5 @@
 #include "SurgeSignalStrategy.h"
+#include "../StrategyManager.h"
 #include <algorithm>
 #include <cmath>
 
@@ -31,7 +32,9 @@ std::optional<AnalysisResult> SurgeSignalStrategy::analyze(
                           analysis.shrinkBack.description + ";" +
                           analysis.maConvergence.description + ";" +
                           analysis.macdDivergence.description + ";" +
-                          analysis.obvDivergence.description;
+                          analysis.obvDivergence.description + ";" +
+                          analysis.limitUpTrack.description + ";" +
+                          analysis.sectorHeat.description;
         
         return createResult(
             tsCode,
@@ -287,6 +290,153 @@ SurgeSignalStrategy::SignalResult SurgeSignalStrategy::detectOBVDivergence(const
     for (const auto& d : data) {
         prices.push_back(d.close);
     }
+    
+    size_t recentStart = data.size() - lookback;
+    size_t prevStart = data.size() - lookback * 2;
+    
+    double recentLowPrice = prices[recentStart];
+    size_t recentLowIdx = recentStart;
+    for (size_t i = recentStart; i < prices.size(); ++i) {
+        if (prices[i] < recentLowPrice) {
+            recentLowPrice = prices[i];
+            recentLowIdx = i;
+        }
+    }
+    
+    double prevLowPrice = prices[prevStart];
+    size_t prevLowIdx = prevStart;
+    for (size_t i = prevStart; i < recentStart; ++i) {
+        if (prices[i] < prevLowPrice) {
+            prevLowPrice = prices[i];
+            prevLowIdx = i;
+        }
+    }
+    
+    if (recentLowPrice < prevLowPrice) {
+        double recentOBV = obv[recentLowIdx];
+        double prevOBV = obv[prevLowIdx];
+        
+        if (recentOBV > prevOBV) {
+            result.detected = true;
+            result.strength = (recentOBV - prevOBV) / std::abs(prevOBV + 0.001);
+            result.strength = std::min(result.strength, 1.0);
+            result.description = "OBV底背离";
+        }
+    }
+    
+    return result;
+}
+
+// ========== 市场热度检测（新增） ==========
+
+SurgeSignalStrategy::SignalResult SurgeSignalStrategy::detectLimitUpTrack(
+    const std::string& ts_code,
+    const MarketHeatData& heat_data) const {
+    
+    SignalResult result;
+    
+    int limitCount = heat_data.getStockLimitCount(ts_code);
+    
+    if (limitCount > 0) {
+        result.detected = true;
+        result.strength = std::min(static_cast<double>(limitCount) / 3.0, 1.0);
+        result.description = "涨停追踪(近5日" + std::to_string(limitCount) + "次涨停)";
+    }
+    
+    return result;
+}
+
+SurgeSignalStrategy::SignalResult SurgeSignalStrategy::detectSectorHeat(
+    const std::string& ts_code,
+    const MarketHeatData& heat_data) const {
+    
+    SignalResult result;
+    
+    if (heat_data.isInHotSector(ts_code)) {
+        auto sector = heat_data.getStockSector(ts_code);
+        result.detected = true;
+        result.strength = std::min(static_cast<double>(sector.limit_count) / 5.0, 1.0);
+        result.description = "板块热度(" + sector.sector_name + "涨停" + std::to_string(sector.limit_count) + "只)";
+    }
+    
+    return result;
+}
+
+SurgeSignalStrategy::SurgeAnalysis SurgeSignalStrategy::performAnalysis(
+    const std::string& tsCode, const std::vector<StockData>& data) const {
+    SurgeAnalysis analysis;
+    
+    analysis.volumeTest = detectVolumeTest(data);
+    analysis.shrinkBack = detectShrinkBack(data);
+    
+    std::vector<double> prices;
+    prices.reserve(data.size());
+    for (const auto& d : data) {
+        prices.push_back(d.close);
+    }
+    
+    analysis.maConvergence = detectMAConvergence(prices);
+    analysis.macdDivergence = detectMACDDivergence(prices);
+    analysis.obvDivergence = detectOBVDivergence(data);
+    
+    // 市场热度检测（从 StrategyManager 获取）
+    try {
+        const auto& heat_data = StrategyManager::getInstance().getMarketHeatData();
+        if (!heat_data.trade_date.empty()) {
+            analysis.limitUpTrack = detectLimitUpTrack(tsCode, heat_data);
+            analysis.sectorHeat = detectSectorHeat(tsCode, heat_data);
+        }
+    } catch (...) {
+        // StrategyManager 未设置市场热度数据，跳过
+    }
+    
+    int score = 0;
+    double totalStrength = 0.0;
+    
+    if (analysis.volumeTest.detected) {
+        score += 2;
+        totalStrength += analysis.volumeTest.strength;
+    }
+    if (analysis.shrinkBack.detected) {
+        score += 1;
+        totalStrength += analysis.shrinkBack.strength;
+    }
+    if (analysis.maConvergence.detected) {
+        score += 1;
+        totalStrength += analysis.maConvergence.strength;
+    }
+    if (analysis.macdDivergence.detected) {
+        score += 2;
+        totalStrength += analysis.macdDivergence.strength;
+    }
+    if (analysis.obvDivergence.detected) {
+        score += 1;
+        totalStrength += analysis.obvDivergence.strength;
+    }
+    // 市场热度信号（新增）
+    if (analysis.limitUpTrack.detected) {
+        score += 2;
+        totalStrength += analysis.limitUpTrack.strength;
+    }
+    if (analysis.sectorHeat.detected) {
+        score += 1;
+        totalStrength += analysis.sectorHeat.strength;
+    }
+    
+    analysis.totalScore = score;
+    
+    int detectedCount = (analysis.volumeTest.detected ? 1 : 0) +
+                        (analysis.shrinkBack.detected ? 1 : 0) +
+                        (analysis.maConvergence.detected ? 1 : 0) +
+                        (analysis.macdDivergence.detected ? 1 : 0) +
+                        (analysis.obvDivergence.detected ? 1 : 0) +
+                        (analysis.limitUpTrack.detected ? 1 : 0) +
+                        (analysis.sectorHeat.detected ? 1 : 0);
+    
+    analysis.confidence = detectedCount > 0 ? totalStrength / detectedCount : 0.0;
+    
+    return analysis;
+}
     
     size_t recentStart = data.size() - lookback;
     size_t prevStart = data.size() - lookback * 2;

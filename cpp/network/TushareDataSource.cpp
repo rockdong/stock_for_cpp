@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "Logger.h"
 #include "../utils/KLineAggregator.h"
+#include "../utils/TimeUtil.h"
 #include <unordered_map>
 #include <algorithm>
 
@@ -976,6 +977,240 @@ std::vector<Dividend> TushareDataSource::parseDividend(const TushareResponse& re
         
     } catch (const json::exception& e) {
         LOG_ERROR("解析分红送股数据失败: " + std::string(e.what()));
+    }
+    
+    return result;
+}
+
+// ========== 市场热度数据（暴涨预警专用） ==========
+
+MarketHeatData TushareDataSource::getMarketHeatData(
+    const std::string& trade_date,
+    int lookback_days) {
+    
+    MarketHeatData result;
+    
+    try {
+        // 计算日期范围
+        std::string end_date = trade_date.empty() ? utils::TimeUtil::today() : trade_date;
+        std::string start_date = utils::TimeUtil::addDays(end_date, -lookback_days + 1);
+        
+        result.trade_date = end_date;
+        
+        LOG_INFO("获取市场热度数据: " + start_date + " - " + end_date + " (回溯" + std::to_string(lookback_days) + "天)");
+        
+        // 1. 获取涨停板数据（近N日）
+        auto limit_response = client_->getLimitListD("", "", start_date, end_date, "U");
+        
+        if (limit_response.isSuccess()) {
+            result.limit_up_stocks = parseLimitListStock(limit_response);
+            result.limit_up_count = static_cast<int>(result.limit_up_stocks.size());
+            
+            // 统计各股票涨停次数
+            for (const auto& stock : result.limit_up_stocks) {
+                result.stock_limit_count[stock.ts_code]++;
+            }
+            
+            LOG_INFO("涨停股票: " + std::to_string(result.limit_up_count) + " 条");
+        } else {
+            LOG_ERROR("获取涨停板数据失败: " + limit_response.msg);
+        }
+        
+        // 2. 获取板块热度数据（当日）
+        auto sector_response = client_->getLimitCptList(end_date, "", "");
+        
+        if (sector_response.isSuccess()) {
+            result.hot_sectors = parseSectorHeat(sector_response);
+            
+            // 按涨停数排序（热门板块）
+            std::sort(result.hot_sectors.begin(), result.hot_sectors.end(),
+                [](const core::SectorHeat& a, const core::SectorHeat& b) {
+                    return a.limit_count > b.limit_count;
+                });
+            
+            LOG_INFO("热门板块: " + std::to_string(result.hot_sectors.size()) + " 个");
+            
+            // TODO: 建立股票-板块映射（需要概念板块成分股数据）
+            // 暂时跳过，后续可通过 dc_concept 接口获取
+            
+        } else {
+            LOG_ERROR("获取板块热度数据失败: " + sector_response.msg);
+        }
+        
+        LOG_INFO("市场热度数据获取完成: 涨停" + std::to_string(result.limit_up_count) + "只, 板块" + std::to_string(result.hot_sectors.size()) + "个");
+        
+    } catch (const std::exception& e) {
+        LOG_ERROR("获取市场热度数据异常: " + std::string(e.what()));
+    }
+    
+    return result;
+}
+
+std::vector<core::LimitListStock> TushareDataSource::parseLimitListStock(const TushareResponse& response) {
+    std::vector<core::LimitListStock> result;
+    
+    try {
+        if (!response.data.contains("fields") || !response.data.contains("items")) {
+            LOG_ERROR("响应数据格式错误");
+            return result;
+        }
+        
+        auto fields = response.data["fields"].get<std::vector<std::string>>();
+        auto items = response.data["items"];
+        
+        std::unordered_map<std::string, size_t> field_index;
+        for (size_t i = 0; i < fields.size(); ++i) {
+            field_index[fields[i]] = i;
+        }
+        
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
+        
+        auto get_double = [&](const json& item, const std::string& field_name) -> double {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                if (item[it->second].is_string()) {
+                    std::string str_val = item[it->second].get<std::string>();
+                    try {
+                        return std::stod(str_val);
+                    } catch (...) {
+                        return 0.0;
+                    }
+                }
+                return item[it->second].get<double>();
+            }
+            return 0.0;
+        };
+        
+        auto get_int = [&](const json& item, const std::string& field_name) -> int {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                if (item[it->second].is_string()) {
+                    std::string str_val = item[it->second].get<std::string>();
+                    try {
+                        return std::stoi(str_val);
+                    } catch (...) {
+                        return 0;
+                    }
+                }
+                return item[it->second].get<int>();
+            }
+            return 0;
+        };
+        
+        for (const auto& item : items) {
+            core::LimitListStock stock;
+            
+            stock.ts_code = get_string(item, "ts_code");
+            stock.trade_date = get_string(item, "trade_date");
+            stock.name = get_string(item, "name");
+            stock.close = get_double(item, "close");
+            stock.pct_chg = get_double(item, "pct_chg");
+            stock.amp = get_double(item, "amp");
+            stock.fc_ratio = get_double(item, "fc_ratio");
+            stock.fl_ratio = get_double(item, "fl_ratio");
+            stock.fd_amount = get_double(item, "fd_amount");
+            stock.first_time = get_double(item, "first_time");
+            stock.last_time = get_double(item, "last_time");
+            stock.limit_times = get_int(item, "limit_times");
+            stock.up_stat = get_string(item, "up_stat");
+            stock.limit = get_string(item, "limit");
+            
+            result.push_back(stock);
+        }
+        
+        LOG_INFO("解析涨停板数据成功，共 " + std::to_string(result.size()) + " 条");
+        
+    } catch (const json::exception& e) {
+        LOG_ERROR("解析涨停板数据失败: " + std::string(e.what()));
+    }
+    
+    return result;
+}
+
+std::vector<core::SectorHeat> TushareDataSource::parseSectorHeat(const TushareResponse& response) {
+    std::vector<core::SectorHeat> result;
+    
+    try {
+        if (!response.data.contains("fields") || !response.data.contains("items")) {
+            LOG_ERROR("响应数据格式错误");
+            return result;
+        }
+        
+        auto fields = response.data["fields"].get<std::vector<std::string>>();
+        auto items = response.data["items"];
+        
+        std::unordered_map<std::string, size_t> field_index;
+        for (size_t i = 0; i < fields.size(); ++i) {
+            field_index[fields[i]] = i;
+        }
+        
+        auto get_string = [&](const json& item, const std::string& field_name) -> std::string {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                return item[it->second].get<std::string>();
+            }
+            return "";
+        };
+        
+        auto get_int = [&](const json& item, const std::string& field_name) -> int {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                if (item[it->second].is_string()) {
+                    std::string str_val = item[it->second].get<std::string>();
+                    try {
+                        return std::stoi(str_val);
+                    } catch (...) {
+                        return 0;
+                    }
+                }
+                return item[it->second].get<int>();
+            }
+            return 0;
+        };
+        
+        auto get_double = [&](const json& item, const std::string& field_name) -> double {
+            auto it = field_index.find(field_name);
+            if (it != field_index.end() && it->second < item.size() && !item[it->second].is_null()) {
+                if (item[it->second].is_string()) {
+                    std::string str_val = item[it->second].get<std::string>();
+                    try {
+                        return std::stod(str_val);
+                    } catch (...) {
+                        return 0.0;
+                    }
+                }
+                return item[it->second].get<double>();
+            }
+            return 0.0;
+        };
+        
+        for (const auto& item : items) {
+            core::SectorHeat sector;
+            
+            sector.trade_date = get_string(item, "trade_date");
+            sector.sector_name = get_string(item, "sector_name");
+            sector.sector_code = get_string(item, "sector_code");
+            sector.limit_count = get_int(item, "limit_count");
+            sector.total_count = get_int(item, "total_count");
+            sector.limit_ratio = get_double(item, "limit_ratio");
+            sector.avg_pct_chg = get_double(item, "avg_pct_chg");
+            sector.avg_amount = get_double(item, "avg_amount");
+            sector.top_stock = get_string(item, "top_stock");
+            sector.top_stock_name = get_string(item, "top_stock_name");
+            
+            result.push_back(sector);
+        }
+        
+        LOG_INFO("解析板块热度数据成功，共 " + std::to_string(result.size()) + " 条");
+        
+    } catch (const json::exception& e) {
+        LOG_ERROR("解析板块热度数据失败: " + std::string(e.what()));
     }
     
     return result;

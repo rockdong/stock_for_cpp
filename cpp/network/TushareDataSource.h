@@ -188,6 +188,18 @@ public:
         const std::string& ann_date = ""
     ) override;
 
+    /**
+     * @brief 获取市场热度数据（涨停板+板块热度）
+     * 用于暴涨预警策略
+     * @param trade_date 交易日期（YYYYMMDD，可选，默认当日）
+     * @param lookback_days 回溯天数（用于统计涨停次数，默认5天）
+     * @return 市场热度数据
+     */
+    MarketHeatData getMarketHeatData(
+        const std::string& trade_date = "",
+        int lookback_days = 5
+    ) override;
+
 private:
     /**
      * @brief 解析股票基本信息
@@ -244,6 +256,20 @@ private:
      * @return 分红送股列表
      */
     std::vector<Dividend> parseDividend(const TushareResponse& response);
+
+    /**
+     * @brief 解析涨停板数据
+     * @param response Tushare 响应
+     * @return 涨停股票列表
+     */
+    std::vector<core::LimitListStock> parseLimitListStock(const TushareResponse& response);
+
+    /**
+     * @brief 解析板块热度数据
+     * @param response Tushare 响应
+     * @return 板块热度列表
+     */
+    std::vector<core::SectorHeat> parseSectorHeat(const TushareResponse& response);
 
     std::unique_ptr<TushareClient> client_;
 };

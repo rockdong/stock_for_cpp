@@ -257,7 +257,7 @@ public:
                                  const std::string& start_date = "",
                                  const std::string& ann_date = "");
 
-    // ========== 资金流向数据 ==========
+// ========== 资金流向数据 ==========
     
     /**
      * @brief 获取个股资金流向
@@ -271,6 +271,34 @@ public:
                                   const std::string& trade_date = "",
                                   const std::string& start_date = "",
                                   const std::string& end_date = "");
+
+    // ========== 涨停板数据（暴涨预警专用） ==========
+    
+    /**
+     * @brief 获取涨停跌停股票列表
+     * @param trade_date 交易日期（YYYYMMDD）
+     * @param ts_code 股票代码（可选）
+     * @param start_date 开始日期（YYYYMMDD）
+     * @param end_date 结束日期（YYYYMMDD）
+     * @param limit_type 涨跌停类型（U涨停，D跌停，默认U）
+     * @return Tushare 响应
+     */
+    TushareResponse getLimitListD(const std::string& trade_date = "",
+                                   const std::string& ts_code = "",
+                                   const std::string& start_date = "",
+                                   const std::string& end_date = "",
+                                   const std::string& limit_type = "U");
+
+    /**
+     * @brief 获取涨停板块排行
+     * @param trade_date 交易日期（YYYYMMDD）
+     * @param start_date 开始日期（YYYYMMDD）
+     * @param end_date 结束日期（YYYYMMDD）
+     * @return Tushare 响应
+     */
+    TushareResponse getLimitCptList(const std::string& trade_date = "",
+                                     const std::string& start_date = "",
+                                     const std::string& end_date = "");
 
     /**
      * @brief 设置超时时间

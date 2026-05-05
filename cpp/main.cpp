@@ -737,6 +737,18 @@ void performBatchAnalysis(
     LOG_INFO("开始技术面分析，共 " + std::to_string(stockList.size()) + " 只股票");
     LOG_INFO("========================================");
     
+    // 获取市场热度数据（用于暴涨预警）
+    std::string analysisDate = calculateAnalysisDate();
+    try {
+        LOG_INFO("获取市场热度数据...");
+        auto heatData = dataSource->getMarketHeatData(analysisDate, 5);
+        strategyManager.setMarketHeatData(heatData);
+        LOG_INFO("市场热度数据已注入: 涨停" + std::to_string(heatData.limit_up_count) + "只, 板块" + std::to_string(heatData.hot_sectors.size()) + "个");
+    } catch (const std::exception& e) {
+        LOG_WARN("获取市场热度数据失败: " + std::string(e.what()) + "，将跳过市场热度检测");
+        strategyManager.clearMarketHeatData();
+    }
+    
     int total = static_cast<int>(stockList.size());
     updatePhase2Progress(total, 0, 0, "running");
     
@@ -774,6 +786,9 @@ void performBatchAnalysis(
     }
     
     pool.wait();
+    
+    // 清除市场热度数据
+    strategyManager.clearMarketHeatData();
     
     updatePhase2Progress(-1, successCount.load(), failCount.load(), "completed");
     

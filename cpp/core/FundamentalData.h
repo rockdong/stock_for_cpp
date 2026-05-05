@@ -224,6 +224,110 @@ struct Dividend {
     std::string div_listdate;       // 红股上市日
 };
 
+/**
+ * @brief 涨停板个股数据
+ * 
+ * 来自 Tushare limit_list_d 接口
+ * 记录每日涨停/跌停股票详情
+ * 用于暴涨预警：追踪近期涨停股票
+ */
+struct LimitListStock {
+    std::string ts_code;            // TS股票代码
+    std::string trade_date;         // 交易日期
+    std::string name;               // 股票名称
+    double close = 0.0;             // 收盘价
+    double pct_chg = 0.0;           // 涨跌幅 (%)
+    double amp = 0.0;               // 振幅 (%)
+    double fc_ratio = 0.0;          // 封板时间比（涨停封住时间占比）
+    double fl_ratio = 0.0;          // 第一次涨停时间比
+    double fd_amount = 0.0;         // 封板金额（万元）
+    double first_time = 0.0;        // 第一次涨停时间
+    double last_time = 0.0;         // 最后一次涨停时间
+    int limit_times = 0;            // 当日涨停次数
+    std::string up_stat;            // 涨跌停状态（U-涨停，D-跌停）
+    std::string limit;              // 涨跌停类型（1-首板，2-二板，3-三板等）
+};
+
+/**
+ * @brief 板块热度数据
+ * 
+ * 来自 Tushare limit_cpt_list 接口
+ * 记录涨停板块排行数据
+ * 用于暴涨预警：判断所属板块热度
+ */
+struct SectorHeat {
+    std::string trade_date;         // 交易日期
+    std::string sector_name;        // 板块名称（概念板块）
+    std::string sector_code;        // 板块代码
+    int limit_count = 0;            // 板块内涨停股票数
+    int total_count = 0;            // 板块内股票总数
+    double limit_ratio = 0.0;       // 涨停比例 (%)
+    double avg_pct_chg = 0.0;       // 板块平均涨跌幅 (%)
+    double avg_amount = 0.0;        // 板块平均成交额（万元）
+    std::string top_stock;          // 板块领涨股票代码
+    std::string top_stock_name;     // 板块领涨股票名称
+};
+
+/**
+ * @brief 市场热度数据
+ * 
+ * 整合涨停板和板块热度的市场整体数据
+ * 用于暴涨预警策略的上下文数据
+ */
+struct MarketHeatData {
+    std::string trade_date;         // 交易日期
+    
+    // 涨停板数据
+    std::vector<LimitListStock> limit_up_stocks;   // 涨停股票列表
+    int limit_up_count = 0;                        // 涨停股票总数
+    
+    // 板块热度数据
+    std::vector<SectorHeat> hot_sectors;           // 热门板块列表（按涨停数排序）
+    
+    // 快速查询索引
+    std::map<std::string, int> stock_limit_count;  // 各股票近期涨停次数
+    std::map<std::string, SectorHeat> stock_sector; // 各股票所属热门板块
+    
+    /**
+     * @brief 获取指定股票近期涨停次数
+     * @param ts_code 股票代码
+     * @return 近5日涨停次数
+     */
+    int getStockLimitCount(const std::string& ts_code) const {
+        auto it = stock_limit_count.find(ts_code);
+        return it != stock_limit_count.end() ? it->second : 0;
+    }
+    
+    /**
+     * @brief 获取指定股票所属热门板块
+     * @param ts_code 股票代码
+     * @return 所属板块热度数据（如果不在热门板块返回空）
+     */
+    SectorHeat getStockSector(const std::string& ts_code) const {
+        auto it = stock_sector.find(ts_code);
+        return it != stock_sector.end() ? it->second : SectorHeat();
+    }
+    
+    /**
+     * @brief 判断股票是否在热门板块
+     * @param ts_code 股票代码
+     * @return 是否在热门板块（板块涨停数>=3）
+     */
+    bool isInHotSector(const std::string& ts_code) const {
+        auto sector = getStockSector(ts_code);
+        return sector.limit_count >= 3;
+    }
+    
+    /**
+     * @brief 判断股票是否近期有涨停
+     * @param ts_code 股票代码
+     * @return 近5日是否涨停
+     */
+    bool hasRecentLimitUp(const std::string& ts_code) const {
+        return getStockLimitCount(ts_code) > 0;
+    }
+};
+
 } // namespace core
 
 #endif // CORE_FUNDAMENTAL_DATA_H

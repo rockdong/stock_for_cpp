@@ -122,6 +122,18 @@ size_t StrategyManager::count() const {
     return strategies_.size();
 }
 
+void StrategyManager::setMarketHeatData(const MarketHeatData& heat_data) {
+    market_heat_data_ = heat_data;
+}
+
+const MarketHeatData& StrategyManager::getMarketHeatData() const {
+    return market_heat_data_;
+}
+
+void StrategyManager::clearMarketHeatData() {
+    market_heat_data_ = MarketHeatData();
+}
+
 std::map<std::string, std::optional<AnalysisResult>> StrategyManager::analyzeAll(
     const std::string& tsCode,
     const std::vector<StockData>& data

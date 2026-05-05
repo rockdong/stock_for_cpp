@@ -18,6 +18,7 @@ using SuspendInfo = core::SuspendInfo;
 using Forecast = core::Forecast;
 using Express = core::Express;
 using Dividend = core::Dividend;
+using MarketHeatData = core::MarketHeatData;
 
 /**
  * @brief 数据源接口（抽象基类）
@@ -178,6 +179,18 @@ public:
         const std::string& end_date = "",
         const std::string& start_date = "",
         const std::string& ann_date = ""
+    ) = 0;
+
+    /**
+     * @brief 获取市场热度数据（涨停板+板块热度）
+     * 用于暴涨预警策略
+     * @param trade_date 交易日期（YYYYMMDD，可选，默认当日）
+     * @param lookback_days 回溯天数（用于统计涨停次数，默认5天）
+     * @return 市场热度数据（包含涨停股票列表、板块热度、快速查询索引）
+     */
+    virtual MarketHeatData getMarketHeatData(
+        const std::string& trade_date = "",
+        int lookback_days = 5
     ) = 0;
 };
 

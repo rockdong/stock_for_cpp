@@ -315,6 +315,38 @@ TushareResponse TushareClient::getMoneyFlow(
     return query("moneyflow", params);
 }
 
+// ========== 涨停板数据（暴涨预警专用） ==========
+
+TushareResponse TushareClient::getLimitListD(
+    const std::string& trade_date,
+    const std::string& ts_code,
+    const std::string& start_date,
+    const std::string& end_date,
+    const std::string& limit_type) {
+    
+    std::map<std::string, std::string> params;
+    if (!trade_date.empty()) params["trade_date"] = trade_date;
+    if (!ts_code.empty()) params["ts_code"] = ts_code;
+    if (!start_date.empty()) params["start_date"] = start_date;
+    if (!end_date.empty()) params["end_date"] = end_date;
+    if (!limit_type.empty()) params["limit_type"] = limit_type;
+    
+    return query("limit_list_d", params);
+}
+
+TushareResponse TushareClient::getLimitCptList(
+    const std::string& trade_date,
+    const std::string& start_date,
+    const std::string& end_date) {
+    
+    std::map<std::string, std::string> params;
+    if (!trade_date.empty()) params["trade_date"] = trade_date;
+    if (!start_date.empty()) params["start_date"] = start_date;
+    if (!end_date.empty()) params["end_date"] = end_date;
+    
+    return query("limit_cpt_list", params);
+}
+
 // ========== 配置方法 ==========
 
 void TushareClient::setTimeout(int seconds) {

@@ -6,6 +6,7 @@
 #include <memory>
 #include <map>
 #include "Strategy.h"
+#include "FundamentalData.h"
 
 namespace core {
 
@@ -81,6 +82,23 @@ public:
     size_t count() const;
 
     /**
+     * @brief 设置市场热度数据（用于暴涨预警）
+     * @param heat_data 市场热度数据
+     */
+    void setMarketHeatData(const MarketHeatData& heat_data);
+
+    /**
+     * @brief 获取当前市场热度数据
+     * @return 市场热度数据
+     */
+    const MarketHeatData& getMarketHeatData() const;
+
+    /**
+     * @brief 清除市场热度数据
+     */
+    void clearMarketHeatData();
+
+    /**
      * @brief 对所有策略进行分析
      * @param tsCode 股票代码
      * @param data 历史数据
@@ -121,6 +139,7 @@ private:
     std::string normalizeName(const std::string& name) const;
 
     std::map<std::string, StrategyPtr> strategies_;
+    MarketHeatData market_heat_data_;  // 市场热度数据（用于暴涨预警）
 };
 
 } // namespace core

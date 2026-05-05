@@ -2,6 +2,8 @@
 #define CORE_STRATEGIES_SURGE_SIGNAL_STRATEGY_H
 
 #include "../Strategy.h"
+#include "../StrategyManager.h"
+#include "../FundamentalData.h"
 
 namespace core {
 
@@ -19,6 +21,10 @@ namespace core {
  * - 均线粘合：5/10/20日均线偏离度≤2%（⭐⭐⭐⭐）
  * - MACD底背离：股价新低+MACD不新低（⭐⭐⭐⭐⭐）
  * - OBV底背离：股价新低+OBV不新低（⭐⭐⭐⭐）
+ * 
+ * 市场热度维度（新增）：
+ * - 涨停板追踪：近5日涨停次数（⭐⭐⭐⭐⭐）
+ * - 板块热度：所属板块涨停数≥3（⭐⭐⭐⭐）
  * 
  * 参数：
  * - volume_multiplier: 倍量试盘倍数（默认 2.0）
@@ -56,6 +62,8 @@ private:
         SignalResult maConvergence;    // 均线粘合
         SignalResult macdDivergence;   // MACD底背离
         SignalResult obvDivergence;    // OBV底背离
+        SignalResult limitUpTrack;     // 涨停板追踪（新增）
+        SignalResult sectorHeat;       // 板块热度（新增）
         int totalScore = 0;            // 总分
         double confidence = 0.0;       // 置信度
     };
@@ -109,6 +117,20 @@ private:
      * @brief 检测OBV底背离
      */
     SignalResult detectOBVDivergence(const std::vector<StockData>& data) const;
+    
+    /**
+     * @brief 检测涨停板追踪（新增）
+     * @param ts_code 股票代码
+     * @param heat_data 市场热度数据
+     */
+    SignalResult detectLimitUpTrack(const std::string& ts_code, const MarketHeatData& heat_data) const;
+    
+    /**
+     * @brief 检测板块热度（新增）
+     * @param ts_code 股票代码
+     * @param heat_data 市场热度数据
+     */
+    SignalResult detectSectorHeat(const std::string& ts_code, const MarketHeatData& heat_data) const;
     
     /**
      * @brief 综合分析
