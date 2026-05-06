@@ -4,6 +4,43 @@ const authService = require('../services/authService');
 const wechatService = require('../services/wechatService');
 const logger = require('../logger');
 
+router.post('/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        error: '用户名和密码必填'
+      });
+    }
+
+    if (username !== 'admin' || password !== 'admin123') {
+      return res.status(401).json({
+        success: false,
+        error: '用户名或密码错误'
+      });
+    }
+
+    const token = authService.generateToken(1);
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        user_id: 1,
+        username: 'admin'
+      }
+    });
+  } catch (error) {
+    logger.error('管理员登录失败: ' + error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 router.get('/qrcode', async (req, res) => {
   try {
     const session = await authService.createSessionWithSnapshot();
