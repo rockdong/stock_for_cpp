@@ -1,160 +1,151 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { feishuAuthApi } from '../../services/feishuAuthApi';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { userAuthApi } from '../../services/userAuthApi';
 import { tokenStorage } from '../../utils/tokenStorage';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [qrUrl, setQrUrl] = useState<string>('');
-  const [sessionId, setSessionId] = useState<string>('');
-  const [status, setStatus] = useState<'loading' | 'pending' | 'success' | 'expired' | 'error'>('loading');
-  const [countdown, setCountdown] = useState<number>(300);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const callbackToken = searchParams.get('token');
-  const callbackName = searchParams.get('name');
-  const callbackError = searchParams.get('error');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
-  useEffect(() => {
-    if (callbackToken) {
-      tokenStorage.save(callbackToken);
-      setStatus('success');
-      setTimeout(() => {
-        navigate('/analysis');
-      }, 1000);
-    } else if (callbackError) {
-      setStatus('error');
-    }
-  }, [callbackToken, callbackError, navigate]);
-
-  const generateQRCode = useCallback(async () => {
-    setStatus('loading');
     try {
-      const result = await feishuAuthApi.getQRCode();
-      setQrUrl(result.qr_url);
-      setSessionId(result.session_id);
-      setCountdown(result.expires_in || 300);
-      setStatus('pending');
-    } catch (error) {
-      console.error('生成飞书登录二维码失败:', error);
-      setStatus('error');
-    }
-  }, []);
+      const result = await userAuthApi.login({ username, password });
 
-  useEffect(() => {
-    if (status !== 'pending' || !sessionId) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const result = await feishuAuthApi.getStatus(sessionId);
-        
-        if (result.status === 'success' && result.token) {
-          tokenStorage.save(result.token);
-          setStatus('success');
-          clearInterval(interval);
-          window.location.href = '/analysis';
-        } else if (result.status === 'expired' || result.is_expired) {
-          setStatus('expired');
-          clearInterval(interval);
-        }
-      } catch (error) {
-        console.error('轮询状态失败:', error);
+      if (result.success && result.data?.token) {
+        tokenStorage.save(result.data.token);
+        navigate('/analysis');
+      } else {
+        setError(result.message || '登录失败，请检查用户名和密码');
       }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [status, sessionId, navigate]);
-
-  useEffect(() => {
-    if (status !== 'pending') return;
-
-    const interval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          setStatus('expired');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [status]);
-
-  useEffect(() => {
-    if (!callbackToken && !callbackError) {
-      generateQRCode();
+    } catch (err: any) {
+      console.error('登录错误:', err);
+      setError(err.response?.data?.message || '网络错误，请稍后重试');
+    } finally {
+      setIsLoading(false);
     }
-  }, [generateQRCode, callbackToken, callbackError]);
+  };
 
   return (
-    <div className="min-h-screen bg-base flex items-center justify-center">
-      <div className="bg-surface rounded-xl border border-border-default p-8 max-w-md w-full text-center">
-        <h1 className="text-2xl font-semibold text-text-primary mb-2">
-          飞书扫码登录
+    <div className="min-h-screen bg-base flex items-center justify-center relative overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-accent-blue/5 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-blue/3 rounded-full blur-3xl" />
+      </div>
+
+      <div className="bg-surface rounded-xl border border-border-default p-8 max-w-md w-full mx-4 relative z-10">
+        <h1 className="text-2xl font-semibold text-text-primary text-center mb-2">
+          登录
         </h1>
-        <p className="text-text-tertiary mb-6">
-          扫码后请在飞书 App 内确认授权
+        <p className="text-text-tertiary text-center text-sm mb-6">
+          登录后查看股票分析结果
         </p>
 
-        {status === 'loading' && (
-          <div className="text-text-tertiary">正在生成登录二维码...</div>
-        )}
-
-        {status === 'pending' && qrUrl && (
-          <>
-            <img 
-              src={qrUrl} 
-              alt="飞书登录二维码" 
-              className="w-64 h-64 mx-auto mb-4 rounded-lg"
-            />
-            <p className="text-text-tertiary text-sm">
-              请使用飞书 App 扫描二维码
-            </p>
-            <p className="text-text-tertiary text-sm mt-1">
-              扫码后在飞书 App 内点击"确认授权"
-            </p>
-            <p className="text-accent-amber text-sm mt-2">
-              有效时间: {countdown}秒
-            </p>
-          </>
-        )}
-
-        {status === 'success' && (
-          <div className="text-signal-sell">
-            <span className="text-4xl mb-4">✓</span>
-            <p>登录成功，正在跳转...</p>
-            {callbackName && (
-              <p className="text-text-secondary text-sm mt-2">
-                欢迎，{callbackName}
-              </p>
-            )}
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            {error}
           </div>
         )}
 
-        {status === 'expired' && (
-          <>
-            <p className="text-signal-buy mb-4">二维码已过期</p>
-            <button 
-              onClick={generateQRCode}
-              className="btn-primary"
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-text-secondary mb-1.5"
             >
-              重新登录
-            </button>
-          </>
-        )}
+              用户名
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-3 bg-elevated border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 transition-colors"
+              placeholder="请输入用户名"
+              required
+              disabled={isLoading}
+              autoComplete="username"
+            />
+          </div>
 
-        {status === 'error' && (
-          <>
-            <p className="text-signal-buy mb-4">登录失败</p>
-            <button 
-              onClick={generateQRCode}
-              className="btn-primary"
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-text-secondary mb-1.5"
             >
-              重试
-            </button>
-          </>
-        )}
+              密码
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-elevated border border-border-default rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-blue focus:ring-1 focus:ring-accent-blue/30 transition-colors"
+              placeholder="请输入密码"
+              required
+              disabled={isLoading}
+              autoComplete="current-password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading || !username || !password}
+            className="w-full btn--primary py-3 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                登录中...
+              </span>
+            ) : (
+              '登录'
+            )}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <span className="text-text-tertiary text-sm">没有账号？</span>
+          <Link
+            to="/register"
+            className="text-sm text-accent-blue hover:text-accent-blue/80 ml-1 transition-colors"
+          >
+            点击注册
+          </Link>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-border-default text-center">
+          <p className="text-xs text-text-tertiary">
+            需要管理员登录？
+            <Link
+              to="/admin-login"
+              className="text-accent-blue hover:text-accent-blue/80 ml-1 transition-colors"
+            >
+              点击这里
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
