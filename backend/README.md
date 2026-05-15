@@ -78,7 +78,15 @@ backend/
 - 支持微信小程序登录
 - 用户绑定和会话管理
 
-### 玡Auth (认证系统)
+### Account (用户账号)
+- `userId` - 关联用户 ID（一对一）
+- `username` - 用户名（唯一）
+- `password` - bcrypt 加密密码
+- `role` - 角色（user / admin）
+- `isActive` - 账号是否激活
+
+### Auth (认证系统)
+- 用户账号密码注册和登录
 - 管理员账号密码登录
 - JWT Token 认证
 - 密码 bcrypt 加密存储
@@ -137,7 +145,9 @@ docker-compose up -d api-server
 - `GET /charts/:tsCode` - 获取图表数据
 
 ### 认证模块
-- `POST /auth/admin/login` - 管理员账号登录
+- `POST /auth/register` - 用户注册
+- `POST /auth/login` - 用户登录（账号密码）
+- `POST /auth/admin/login` - 管理员登录（保留）
 - `POST /auth/admin/generate-hash` - 生成密码 hash
 - `POST /auth/admin/verify` - 验证 Token
 
