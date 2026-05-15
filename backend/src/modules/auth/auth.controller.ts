@@ -1,9 +1,27 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Post('register')
+  async register(@Body() body: { username: string; password: string }) {
+    if (!body.username || !body.password) {
+      throw new BadRequestException('请提供用户名和密码');
+    }
+
+    return await this.authService.register(body.username, body.password);
+  }
+
+  @Post('login')
+  async login(@Body() body: { username: string; password: string }) {
+    if (!body.username || !body.password) {
+      throw new UnauthorizedException('请提供用户名和密码');
+    }
+
+    return await this.authService.login(body.username, body.password);
+  }
 
   /**
    * 管理员账号密码登录
@@ -12,12 +30,10 @@ export class AuthController {
    */
   @Post('admin/login')
   async adminLogin(@Body() body: { username: string; password: string }) {
-    // 参数验证
     if (!body.username || !body.password) {
       throw new UnauthorizedException('请提供用户名和密码');
     }
 
-    // 验证账号密码并生成 token
     return await this.authService.adminLogin(body.username, body.password);
   }
 
