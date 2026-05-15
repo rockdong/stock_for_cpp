@@ -15,7 +15,7 @@ import { PrismaModule } from '../../prisma/prisma.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'stock-analysis-jwt-secret-key',
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d',
+          expiresIn: '7d',
         },
       }),
     }),
