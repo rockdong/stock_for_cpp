@@ -2,6 +2,8 @@
 build/
 cpp/build/
 web-frontend/dist/
+backend/dist/
+dist/
 
 # MCP
 .playwright-mcp/
