@@ -1,5 +1,5 @@
 #include "StrategyEmojiMapper.h"
-#include "log/Logger.h"
+#include "../log/Logger.h"
 
 namespace core {
 

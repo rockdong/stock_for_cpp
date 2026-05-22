@@ -157,14 +157,25 @@ target_include_directories(core_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${CMAKE_CURRENT_SOURCE_DIR}/analysis/indicators
+    ${CMAKE_CURRENT_SOURCE_DIR}/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/network/http
+    ${CMAKE_CURRENT_SOURCE_DIR}/config
+    ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ta-lib/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/json/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-httplib
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/dotenv-cpp/include
 )
 
 target_link_libraries(core_lib PUBLIC
     utils_lib
     analysis_lib
+    network_lib
+    log_lib
+    config_lib
     nlohmann_json::nlohmann_json
+    httplib::httplib
+    dotenv
 )
 
 # 添加日志库

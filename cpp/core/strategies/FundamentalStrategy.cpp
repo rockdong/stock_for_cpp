@@ -1,7 +1,8 @@
 #include "FundamentalStrategy.h"
-#include "../network/DataSourceFactory.h"
-#include "../utils/TimeUtil.h"
-#include "../log/Logger.h"
+#include "../../network/DataSourceFactory.h"
+#include "../../network/TushareDataSource.h"
+#include "../../utils/TimeUtil.h"
+#include "../../log/Logger.h"
 
 namespace core {
 
@@ -88,7 +89,7 @@ std::optional<FinancialIndicator> FundamentalStrategy::getFinancialIndicator(
         auto get_double = [&](const auto& item, const std::string& fieldName) -> double {
             auto it = fieldIndex.find(fieldName);
             if (it != fieldIndex.end() && it->second < item.size() && !item[it->second].is_null()) {
-                return item[it->second].get<double>();
+                return item[it->second].template get<double>();
             }
             return 0.0;
         };
