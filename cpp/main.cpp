@@ -35,7 +35,7 @@
 
 // 核心业务
 #include "Core.h"
-#include "core/FundamentalFilter.h"
+#include "core/StrategyEmojiMapper.h"
 #include "indicators/EMA.h"
 
 // JSON
@@ -54,7 +54,6 @@
 using json = nlohmann::json;
 
 // 前置声明
-void updatePhase1Progress(int total, int completed, int qualified, const std::string& status);
 void updatePhase2Progress(int total, int completed, int failed, const std::string& status);
 
 // 全局调度器指针（用于信号处理）
@@ -119,26 +118,23 @@ bool checkStartupAnalysisNeeded(scheduler::Scheduler& sched, data::AnalysisProce
             
             auto progress = dao.getProgress();
             
-            bool phase1Completed = progress.phase1.status == "completed";
             bool phase2Completed = progress.phase2.status == "completed" &&
                                    progress.phase2.completed == progress.phase2.total &&
                                    progress.phase2.total > 0;
             
-            if (phase1Completed && phase2Completed) {
+            if (phase2Completed) {
                 auto endCheck = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endCheck - startCheck);
                 
                 LOG_INFO("今天已完成分析，跳过首次执行，进入调度等待");
                 LOG_INFO("分析日期: " + analysisDate + 
-                         ", Phase1: " + progress.phase1.status + " (" + std::to_string(progress.phase1.qualified) + " 只优质股)" +
                          ", Phase2: " + std::to_string(progress.phase2.completed) + "/" + std::to_string(progress.phase2.total) +
                          ", 检查耗时: " + std::to_string(duration.count()) + "ms");
                 
                 return false;
             } else {
                 LOG_WARN("文件记录与数据库状态不一致，将重新执行分析");
-                LOG_WARN("Phase1: " + progress.phase1.status + 
-                         ", Phase2: " + progress.phase2.status + 
+                LOG_WARN("Phase2: " + progress.phase2.status + 
                          ", 完成: " + std::to_string(progress.phase2.completed) + 
                          ", 总数: " + std::to_string(progress.phase2.total));
                 return true;
@@ -309,120 +305,9 @@ std::string calculateAnalysisDate() {
     // 格式化为 YYYYMMDD
     char buffer[9];
     std::strftime(buffer, sizeof(buffer), "%Y%m%d", nowTm);
-    return std::string(buffer);
+return std::string(buffer);
 }
 
-/**
- * @brief 执行基本面筛选
- * 获取全市场财务指标，计算评分，筛选优质股票池
- * @param dataSource 数据源
- * @return 优质股票代码列表（如果失败返回空列表）
- */
-std::vector<std::string> performFundamentalScreening(
-    std::shared_ptr<network::IDataSource> dataSource,
-    const std::vector<core::Stock>& allStocks,
-    const std::string& tradeDate
-) {
-    LOG_INFO("========================================");
-    LOG_INFO("开始基本面筛选...");
-    LOG_INFO("========================================");
-    
-    updatePhase1Progress(static_cast<int>(allStocks.size()), 0, 0, "running");
-    
-    try {
-        LOG_INFO("获取每日指标数据 (daily_basic)...");
-        
-        auto tushareSource = std::dynamic_pointer_cast<network::TushareDataSource>(dataSource);
-        if (!tushareSource) {
-            LOG_WARN("数据源类型不支持基本面筛选，降级到全市场分析");
-            updatePhase1Progress(-1, -1, -1, "completed");
-            return {};
-        }
-        
-        auto response = tushareSource->getClient()->getDailyBasic("", tradeDate, "", "");
-        
-        if (!response.isSuccess()) {
-            LOG_ERROR("获取每日指标失败: " + response.msg);
-            updatePhase1Progress(-1, -1, -1, "completed");
-            return {};
-        }
-        
-        std::vector<std::string> qualifiedCodes;
-        int processedCount = 0;
-        
-        if (response.data.contains("fields") && response.data.contains("items")) {
-            auto fields = response.data["fields"].get<std::vector<std::string>>();
-            auto items = response.data["items"];
-            
-            std::unordered_map<std::string, size_t> fieldIndex;
-            for (size_t i = 0; i < fields.size(); ++i) {
-                fieldIndex[fields[i]] = i;
-            }
-            
-            auto get_double = [&](const json& item, const std::string& fieldName) -> double {
-                auto it = fieldIndex.find(fieldName);
-                if (it != fieldIndex.end() && it->second < item.size() && !item[it->second].is_null()) {
-                    return item[it->second].get<double>();
-                }
-                return 0.0;
-            };
-            
-            for (const auto& item : items) {
-                std::string tsCode = item[fieldIndex["ts_code"]].get<std::string>();
-                
-                double pe = get_double(item, "pe");
-                double peTtm = get_double(item, "pe_ttm");
-                double pb = get_double(item, "pb");
-                double totalMv = get_double(item, "total_mv");
-                double circMv = get_double(item, "circ_mv");
-                double turnoverRate = get_double(item, "turnover_rate");
-                
-                double score = 0.0;
-                
-                if (pe > 0 && pe < 30) score += 10.0;
-                else if (peTtm > 0 && peTtm < 30) score += 10.0;
-                
-                if (pb > 0 && pb < 5) score += 8.0;
-                
-                if (totalMv >= 50 && totalMv <= 5000) score += 5.0;
-                
-                if (turnoverRate >= 1 && turnoverRate <= 10) score += 2.0;
-                
-                if (score >= 15.0) {
-                    qualifiedCodes.push_back(tsCode);
-                }
-                
-                processedCount++;
-                if (processedCount % 500 == 0) {
-                    updatePhase1Progress(-1, processedCount, static_cast<int>(qualifiedCodes.size()), "");
-                }
-            }
-            
-            LOG_INFO("处理了 " + std::to_string(processedCount) + " 只股票的估值数据");
-        }
-        
-        updatePhase1Progress(-1, processedCount, static_cast<int>(qualifiedCodes.size()), "completed");
-        
-        LOG_INFO("========================================");
-        LOG_INFO("基本面筛选完成");
-        LOG_INFO("  优质股票数量: " + std::to_string(qualifiedCodes.size()));
-        LOG_INFO("========================================");
-        
-        return qualifiedCodes;
-        
-    } catch (const std::exception& e) {
-        LOG_ERROR("基本面筛选失败: " + std::string(e.what()));
-        updatePhase1Progress(-1, -1, -1, "completed");
-        return {};
-    }
-}
-
-/**
- * @brief 加载或获取股票列表
- * @param stockDao 股票 DAO
- * @param dataSource 数据源
- * @return 股票列表
- */
 std::vector<core::Stock> loadStockList(
     std::shared_ptr<network::IDataSource> dataSource
 ) { 
@@ -541,15 +426,13 @@ void analyzeStock(
             for (const auto& pair : strategyResults) {
                 if (pair.second.has_value()) {
                     auto result = *pair.second;
-                    // 设置分析日期（不是股票交易日期）
                     result.trade_date = analysisDate;
-                    // 设置频率
                     result.freq = freq;
-                    // opt 使用 freq 值，后续会转为 emoji
                     result.opt = freq;
+                    result.strategy_name = core::StrategyEmojiMapper::getEmoji(pair.first);
                     
                     results.push_back(result);
-                    LOG_INFO("  " + freqName + " - " + pair.first + ": " + result.label);
+                    LOG_INFO("  " + freqName + " - " + result.strategy_name + ": " + result.label);
                 }
             }
             
@@ -574,7 +457,7 @@ void analyzeStock(
         auto strategies = strategyManager.getStrategies();
         for (const auto& strategy : strategies) {
             data::StrategyData strategyData;
-            strategyData.name = strategy->getName();
+            strategyData.name = core::StrategyEmojiMapper::getEmoji(strategy->getName());
             
             for (const auto& freq : {"d", "w", "m"}) {
                 data::StrategyFreqData freqData;
@@ -675,37 +558,10 @@ bool executeProgressUpdate(const std::string& sql) {
     return conn.execute(sql);
 }
 
-/**
- * @brief 更新分析进度
- * @param total 总数（-1 表示不更新）
- * @param completed 已完成（-1 表示不更新）
- * @param failed 失败数（-1 表示不更新）
- * @param status 状态（空表示不更新）
- */
-void updatePhase1Progress(int total = -1, int completed = -1, int qualified = -1, const std::string& status = "") {
-    auto& config = config::Config::getInstance();
-    std::string dbType = config.getDbType();
-    
-    // MySQL 使用 NOW()，SQLite 使用 CURRENT_TIMESTAMP
-    std::string timestampFunc = (dbType == "mysql") ? "NOW()" : "CURRENT_TIMESTAMP";
-    
-    std::string sql = "UPDATE analysis_progress SET updated_at = " + timestampFunc;
-    if (total >= 0) sql += ", phase1_total = " + std::to_string(total);
-    if (completed >= 0) sql += ", phase1_completed = " + std::to_string(completed);
-    if (qualified >= 0) sql += ", phase1_qualified = " + std::to_string(qualified);
-    if (!status.empty()) sql += ", phase1_status = '" + status + "'";
-    if (status == "running") sql += ", started_at = " + timestampFunc;
-    if (status == "completed") sql += ", phase1_completed_at = " + timestampFunc;
-    sql += " WHERE id = 1";
-    
-    executeProgressUpdate(sql);
-}
-
 void updatePhase2Progress(int total = -1, int completed = -1, int failed = -1, const std::string& status = "") {
     auto& config = config::Config::getInstance();
     std::string dbType = config.getDbType();
     
-    // MySQL 使用 NOW()，SQLite 使用 CURRENT_TIMESTAMP
     std::string timestampFunc = (dbType == "mysql") ? "NOW()" : "CURRENT_TIMESTAMP";
     
     std::string sql = "UPDATE analysis_progress SET updated_at = " + timestampFunc;
@@ -821,37 +677,14 @@ void performDailyAnalysis(
     LOG_INFO("开始每日分析流程");
     LOG_INFO("========================================");
     
-    std::string analysisDate = calculateAnalysisDate();
-    
-    std::vector<core::Stock> analysisStockList;
-    
-    auto qualifiedCodes = performFundamentalScreening(dataSource, stockList, analysisDate);
-    
-    if (qualifiedCodes.empty()) {
-        LOG_WARN("基本面筛选未返回优质股票，降级到全市场分析");
-        analysisStockList = stockList;
-    } else {
-        LOG_INFO("基本面筛选成功，优质股票: " + std::to_string(qualifiedCodes.size()) + " 只");
-        
-        std::set<std::string> qualifiedSet(qualifiedCodes.begin(), qualifiedCodes.end());
-        
-        for (const auto& stock : stockList) {
-            if (qualifiedSet.count(stock.ts_code) > 0) {
-                analysisStockList.push_back(stock);
-            }
-        }
-        
-        LOG_INFO("从股票列表中匹配到 " + std::to_string(analysisStockList.size()) + " 只优质股票");
-    }
-    
-    if (analysisStockList.empty()) {
-        LOG_WARN("分析股票列表为空，跳过技术分析");
+    if (stockList.empty()) {
+        LOG_WARN("股票列表为空，跳过分析");
         return;
     }
     
-    LOG_INFO("开始技术分析，股票数量: " + std::to_string(analysisStockList.size()));
+    LOG_INFO("开始技术分析，股票数量: " + std::to_string(stockList.size()));
     
-    performBatchAnalysis(analysisStockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
+    performBatchAnalysis(stockList, dataSource, strategyManager, analysisResultDao, chartDataDao, processRecordDao);
     
     LOG_INFO("========================================");
     LOG_INFO("每日分析流程完成");
