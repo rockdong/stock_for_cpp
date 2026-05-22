@@ -10,6 +10,8 @@
 #include "strategies/EMA25Greater17PriceMatchStrategy.h"
 #include "strategies/EMA25CrossoverStrategy.h"
 #include "strategies/SurgeSignalStrategy.h"
+#include "strategies/FundamentalStrategy.h"
+#include "StrategyEmojiMapper.h"
 #include <stdexcept>
 
 namespace core {
@@ -53,6 +55,9 @@ StrategyPtr StrategyFactory::create(StrategyType type, const std::map<std::strin
         case StrategyType::SURGE_SIGNAL:
             return std::make_shared<SurgeSignalStrategy>(params);
         
+        case StrategyType::FUNDAMENTAL:
+            return std::make_shared<FundamentalStrategy>(params);
+        
         default:
             throw std::invalid_argument("Unknown strategy type");
     }
@@ -88,6 +93,8 @@ StrategyPtr StrategyFactory::create(const std::string& name, const std::map<std:
         return create(StrategyType::EMA25_CROSSOVER, params);
     } else if (name == "SURGE_SIGNAL" || name == "SurgeSignal" || name == "surge_signal" || name == "暴涨预兆") {
         return create(StrategyType::SURGE_SIGNAL, params);
+    } else if (name == "FUNDAMENTAL" || name == "FundamentalStrategy" || name == "基本面") {
+        return create(StrategyType::FUNDAMENTAL, params);
     }
     
     throw std::invalid_argument("Unknown strategy name: " + name);
@@ -112,13 +119,17 @@ std::vector<std::string> StrategyFactory::getSupportedStrategies() {
         "EMA_CONVERGENCE",
         "EMA25_GREATER_17_PRICE_MATCH",
         "EMA25_CROSSOVER",
-        "SURGE_SIGNAL"
+        "SURGE_SIGNAL",
+        "FUNDAMENTAL"
     };
     
     // 添加自定义策略
     for (const auto& [name, _] : creators_) {
         strategies.push_back(name);
     }
+    
+    // 初始化 emoji 映射
+    StrategyEmojiMapper::initialize();
     
     return strategies;
 }
@@ -136,6 +147,7 @@ std::string StrategyFactory::getStrategyName(StrategyType type) {
         case StrategyType::EMA25_GREATER_17_PRICE_MATCH: return "EMA25_GREATER_17_PRICE_MATCH";
         case StrategyType::EMA25_CROSSOVER: return "EMA25_CROSSOVER";
         case StrategyType::SURGE_SIGNAL: return "SURGE_SIGNAL";
+        case StrategyType::FUNDAMENTAL: return "FUNDAMENTAL";
         case StrategyType::CUSTOM: return "CUSTOM";
         default: return "UNKNOWN";
     }

@@ -32,6 +32,7 @@ public:
         EMA25_GREATER_17_PRICE_MATCH, // EMA25 大于 EMA17 且收盘价与 EMA17 小数点后两位相等策略
         EMA25_CROSSOVER,      // EMA17 上穿 EMA25 金叉策略
         SURGE_SIGNAL,         // 暴涨预兆策略
+        FUNDAMENTAL,          // 基本面策略
         CUSTOM          // 自定义策略
     };
     
