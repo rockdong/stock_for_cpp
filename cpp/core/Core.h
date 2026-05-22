@@ -8,10 +8,7 @@
 #include "Strategy.h"
 #include "StrategyFactory.h"
 #include "StrategyManager.h"
-
-#include "PredictionHistory.h"
-#include "AccuracyAnalyzer.h"
-#include "ParameterOptimizer.h"
+#include "StrategyEmojiMapper.h"
 
 #include "strategies/MACrossStrategy.h"
 #include "strategies/MACDStrategy.h"
@@ -21,5 +18,6 @@
 #include "strategies/EMA17TO25Strategy.h"
 #include "strategies/EMA17BreakoutStrategy.h"
 #include "strategies/EMAConvergenceStrategy.h"
+#include "strategies/FundamentalStrategy.h"
 
 #endif // CORE_CORE_H

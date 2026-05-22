@@ -135,9 +135,7 @@ add_library(core_lib STATIC
     core/Strategy.cpp
     core/StrategyFactory.cpp
     core/StrategyManager.cpp
-    core/PredictionHistory.cpp
-    core/AccuracyAnalyzer.cpp
-    core/ParameterOptimizer.cpp
+    core/StrategyEmojiMapper.cpp
     core/FundamentalFilter.cpp
     core/strategies/MACrossStrategy.cpp
     core/strategies/MACDStrategy.cpp
@@ -150,6 +148,7 @@ add_library(core_lib STATIC
     core/strategies/EMA25Greater17PriceMatchStrategy.cpp
     core/strategies/EMA25CrossoverStrategy.cpp
     core/strategies/SurgeSignalStrategy.cpp
+    core/strategies/FundamentalStrategy.cpp
 )
 
 target_include_directories(core_lib PUBLIC
