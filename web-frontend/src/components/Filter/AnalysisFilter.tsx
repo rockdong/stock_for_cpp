@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { analysisApi } from '../../services/api'
 import { FilterParams, FreqType, SignalType } from '../../types/analysis'
 import { DatePicker } from '@/components/ui/date-picker'
+import { getStrategyDescription } from '../../lib/strategyEmoji'
 
 interface FilterProps {
   onFilter: (params: FilterParams) => void
@@ -178,6 +179,7 @@ export default function AnalysisFilter({ onFilter }: FilterProps) {
                     key={strategy}
                     type="button"
                     onClick={() => toggleStrategy(strategy)}
+                    title={getStrategyDescription(strategy)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border ${
                       selectedStrategies.includes(strategy)
                         ? 'bg-accent-blue text-white border-accent-blue shadow-glow-blue'

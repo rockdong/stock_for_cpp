@@ -3,6 +3,7 @@ import { AnalysisProcessRecord, FreqType, ChartDataPoint } from '../../types/ana
 import ModalHeader from './ModalHeader'
 import CandlestickChart from '../Chart/CandlestickChart'
 import IndicatorPanel from './IndicatorPanel'
+import { getStrategyDescription } from '../../lib/strategyEmoji'
 
 interface DrillLevel {
   id: number
@@ -186,6 +187,7 @@ export default function ChartModal({
                       onStrategyChange(s)
                       setDrillStack([])
                     }}
+                    title={getStrategyDescription(s)}
                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
                       strategy === s
                         ? 'bg-accent-blue-bg text-accent-blue border border-accent-blue/20'
