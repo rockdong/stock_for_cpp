@@ -35,36 +35,85 @@ function initSQLite() {
   }
 }
 
-// MySQL 初始化
+const MYSQL_RETRY_ATTEMPTS = 5;
+const MYSQL_RETRY_DELAY_MS = 3000;
+const MYSQL_POOL_CONFIG = {
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  connectTimeout: 30000,
+  acquireTimeout: 30000,
+};
+
 async function initMySQL() {
   if (mysqlPool) {
     return mysqlPool;
   }
   
+  for (let attempt = 1; attempt <= MYSQL_RETRY_ATTEMPTS; attempt++) {
+    try {
+      const mysql = require('mysql2/promise');
+      logger.info(`MySQL 连接尝试 ${attempt}/${MYSQL_RETRY_ATTEMPTS}`);
+      
+      const poolConfig = config.databaseUrl.includes('?') 
+        ? config.databaseUrl 
+        : `${config.databaseUrl}?${Object.entries(MYSQL_POOL_CONFIG).map(([k, v]) => `${k}=${v}`).join('&')}`;
+      
+      mysqlPool = mysql.createPool(poolConfig);
+      
+      const conn = await mysqlPool.getConnection();
+      await conn.ping();
+      conn.release();
+      
+      logger.info('MySQL 数据库连接成功');
+      return mysqlPool;
+    } catch (error) {
+      logger.error(`MySQL 连接失败 (${attempt}/${MYSQL_RETRY_ATTEMPTS}): ${error.message}`);
+      
+      if (mysqlPool) {
+        await mysqlPool.end().catch(() => {});
+        mysqlPool = null;
+      }
+      
+      if (attempt === MYSQL_RETRY_ATTEMPTS) {
+        logger.error('MySQL 连接失败，已达到最大重试次数');
+        return null;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, MYSQL_RETRY_DELAY_MS));
+    }
+  }
+  
+  return null;
+}
+
+async function checkMySQLConnection() {
+  if (!mysqlPool) {
+    return await initMySQL();
+  }
+  
   try {
-    const mysql = require('mysql2/promise');
-    logger.info('连接 MySQL 数据库: ' + config.databaseUrl);
-    
-    mysqlPool = mysql.createPool(config.databaseUrl);
-    
-    // 测试连接
     const conn = await mysqlPool.getConnection();
     await conn.ping();
     conn.release();
-    
-    logger.info('MySQL 数据库连接成功');
     return mysqlPool;
   } catch (error) {
-    logger.error('MySQL 数据库连接失败: ' + error.message);
-    return null;
+    logger.error('MySQL 连接检查失败，尝试重连: ' + error.message);
+    
+    if (mysqlPool) {
+      await mysqlPool.end().catch(() => {});
+      mysqlPool = null;
+    }
+    
+    return await initMySQL();
   }
 }
 
 // 查询股票
 async function findStockByTsCode(tsCode) {
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return null;
+    const pool = await checkMySQLConnection();
+    if (!pool) return null;
     
     try {
       const symbol = tsCode.replace('.SZ', '').replace('.SH', '');
@@ -102,8 +151,8 @@ async function findStockByTsCode(tsCode) {
 // 查询股票列表
 async function findAllStocks(limit = 20) {
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return [];
+    const pool = await checkMySQLConnection();
+    if (!pool) return [];
     
     try {
       const [rows] = await mysqlPool.execute(`
@@ -139,8 +188,8 @@ async function findAllStocks(limit = 20) {
 // 按行业查询
 async function findStocksByIndustry(industry, limit = 20) {
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return [];
+    const pool = await checkMySQLConnection();
+    if (!pool) return [];
     
     try {
       const [rows] = await mysqlPool.execute(`
@@ -178,8 +227,8 @@ async function findStocksByIndustry(industry, limit = 20) {
 // 按市场查询
 async function findStocksByMarket(market, limit = 20) {
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return [];
+    const pool = await checkMySQLConnection();
+    if (!pool) return [];
     
     try {
       const [rows] = await mysqlPool.execute(`
@@ -219,8 +268,8 @@ async function searchStocks(keyword, limit = 10) {
   const searchPattern = `%${keyword}%`;
   
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return [];
+    const pool = await checkMySQLConnection();
+    if (!pool) return [];
     
     try {
       const [rows] = await mysqlPool.execute(`
@@ -258,8 +307,8 @@ async function searchStocks(keyword, limit = 10) {
 // 查询分析结果
 async function findAnalysisResults(tsCode, strategyName = null, limit = 20) {
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return [];
+    const pool = await checkMySQLConnection();
+    if (!pool) return [];
     
     try {
       let sql = `
@@ -317,8 +366,8 @@ async function findAnalysisResults(tsCode, strategyName = null, limit = 20) {
 // 查询所有分析结果
 async function findAllAnalysisResults(limit = 20) {
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return [];
+    const pool = await checkMySQLConnection();
+    if (!pool) return [];
     
     try {
       const [rows] = await mysqlPool.execute(`
@@ -356,8 +405,8 @@ async function findAllAnalysisResults(limit = 20) {
 // 查询最新分析结果
 async function findLatestAnalysisResults() {
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return [];
+    const pool = await checkMySQLConnection();
+    if (!pool) return [];
     
     try {
       const [rows] = await mysqlPool.execute(`
@@ -395,8 +444,8 @@ async function findLatestAnalysisResults() {
 // 查询分析进度
 async function getAnalysisProgress() {
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return null;
+    const pool = await checkMySQLConnection();
+    if (!pool) return null;
     
     try {
       const [rows] = await mysqlPool.execute(`
@@ -430,8 +479,8 @@ async function getAnalysisProgress() {
 // 查询图表数据
 async function getChartData(tsCode, freq = 'd') {
   if (dbType === 'mysql') {
-    if (!mysqlPool) await initMySQL();
-    if (!mysqlPool) return null;
+    const pool = await checkMySQLConnection();
+    if (!pool) return null;
     
     try {
       const [rows] = await mysqlPool.execute(`
@@ -518,6 +567,7 @@ async function closeDatabase() {
 
 module.exports = {
   initDatabase,
+  checkMySQLConnection,
   findStockByTsCode,
   findAllStocks,
   findStocksByIndustry,

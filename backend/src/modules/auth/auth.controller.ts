@@ -1,9 +1,24 @@
-import { Controller, Post, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private configService: ConfigService,
+  ) {}
+
+  @Get('config')
+  async getAuthConfig() {
+    const authRequired = this.configService.get<string>('AUTH_REQUIRED');
+    return {
+      success: true,
+      data: {
+        authRequired: authRequired === 'true' || authRequired === '1',
+      },
+    };
+  }
 
   @Post('register')
   async register(@Body() body: { username: string; password: string }) {
