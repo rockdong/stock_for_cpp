@@ -79,6 +79,7 @@ services:
     env_file:
       - ./env/.env
     environment:
+      - PORT=3001
       - DATABASE_URL=mysql://stock_user:stock_password@mysql:3306/stock_db?connection_limit=10&pool_timeout=30&connect_timeout=30
       - TZ=Asia/Shanghai
     depends_on:

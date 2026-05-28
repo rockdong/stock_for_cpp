@@ -2,7 +2,7 @@ import { Controller, Post, Get, Body, UnauthorizedException, BadRequestException
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
 
-@Controller('auth')
+@Controller('api/auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
