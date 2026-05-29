@@ -1,6 +1,6 @@
 {
   "name": "stock-api-server",
-  "version": "1.0.0",
+  "version": "2.4.1",
   "description": "Stock Analysis API Server - NestJS + Prisma",
   "scripts": {
     "build": "nest build",

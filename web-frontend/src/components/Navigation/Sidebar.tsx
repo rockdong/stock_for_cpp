@@ -77,6 +77,7 @@ export default function Sidebar({ activeId, onNavChange, collapsed, onCollapsedC
           <div className="overflow-hidden">
             <h1 className="text-sm font-semibold text-text-primary truncate">StockLens</h1>
             <p className="text-2xs text-text-tertiary truncate">A股智能分析平台</p>
+            <p className="text-2xs text-text-quaternary truncate opacity-60">v2.4.1</p>
           </div>
         )}
       </div>
