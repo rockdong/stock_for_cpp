@@ -88,6 +88,10 @@ export default function AnalysisPage() {
             <span className="text-xs text-text-tertiary tabular-nums">
               {new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
             </span>
+            <div className="h-3 w-px bg-border-default" />
+            <span className="px-2 py-0.5 rounded bg-surface-secondary text-xs text-text-quaternary font-medium">
+              v2.4.1
+            </span>
           </div>
         </header>
 
