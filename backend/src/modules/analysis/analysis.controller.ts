@@ -53,6 +53,13 @@ export class AnalysisController {
     return { success: true, data };
   }
 
+  @Get('strategies/config')
+  async getConfigStrategies() {
+    const strategiesEnv = process.env.STRATEGIES || '';
+    const strategies = strategiesEnv.split(';').filter(s => s.trim());
+    return { success: true, data: strategies };
+  }
+
   @Get('process/chart/:tsCode')
   async getProcessChart(
     @Param('tsCode') tsCode: string,
