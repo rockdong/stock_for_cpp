@@ -28,7 +28,7 @@ export const analysisApi = {
   },
 
   getStrategies: async (): Promise<string[]> => {
-    const response = await api.get('/analysis/process/strategies')
+    const response = await api.get('/analysis/strategies/config')
     return response.data.data
   },
 
