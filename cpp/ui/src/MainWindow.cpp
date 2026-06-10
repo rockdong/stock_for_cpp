@@ -13,8 +13,7 @@
 #include <QSettings>
 #include <QHeaderView>
 #include <QSplitter>
-
-using namespace QtCharts;
+#include <QVBoxLayout>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)

@@ -6,6 +6,7 @@
  */
 
 #include "StockListModel.h"
+#include <QColor>
 #include <algorithm>
 
 StockListModel::StockListModel(QObject* parent)
@@ -70,9 +71,9 @@ QVariant StockListModel::data(const QModelIndex& index, int role) const {
     // 文本对齐
     if (role == Qt::TextAlignmentRole) {
         if (col == ColLastPrice) {
-            return Qt::AlignRight | Qt::AlignVCenter;
+            return QVariant(Qt::AlignRight | Qt::AlignVCenter);
         }
-        return Qt::AlignLeft | Qt::AlignVCenter;
+        return QVariant(Qt::AlignLeft | Qt::AlignVCenter);
     }
 
     // 前景色（信号颜色）
