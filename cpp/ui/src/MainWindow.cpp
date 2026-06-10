@@ -7,6 +7,8 @@
 
 #include "MainWindow.h"
 #include "adapters/StockListModel.h"
+#include "widgets/CandlestickWidget.h"
+#include "widgets/StrategyPanel.h"
 
 #include <QMessageBox>
 #include <QFileDialog>
@@ -14,6 +16,9 @@
 #include <QHeaderView>
 #include <QSplitter>
 #include <QVBoxLayout>
+
+// 使用 ui namespace
+using namespace ui;
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
@@ -107,15 +112,14 @@ void MainWindow::setupDockWidgets() {
     stockListDock->setWidget(m_stockListView);
     addDockWidget(Qt::LeftDockWidgetArea, stockListDock);
 
-    // ========== 中央区域：图表 ==========
+    // ========== 中央区域：K线图表 ==========
     QWidget* centralWidget = new QWidget(this);
     QVBoxLayout* centralLayout = new QVBoxLayout(centralWidget);
     centralLayout->setContentsMargins(0, 0, 0, 0);
     
-    // 图表占位符（Phase 2 实现）
-    m_chartContainer = new QWidget(this);
-    m_chartContainer->setStyleSheet("background-color: #f5f5f5;");
-    centralLayout->addWidget(m_chartContainer);
+    // 实际的 K线图表控件
+    m_candlestickWidget = new CandlestickWidget(this);
+    centralLayout->addWidget(m_candlestickWidget);
     
     setCentralWidget(centralWidget);
 
@@ -123,18 +127,48 @@ void MainWindow::setupDockWidgets() {
     m_strategyDock = new QDockWidget("策略配置", this);
     m_strategyDock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::RightDockWidgetArea);
     
-    // 策略面板占位符（Phase 2 实现）
-    QWidget* strategyPlaceholder = new QWidget(m_strategyDock);
-    strategyPlaceholder->setStyleSheet("background-color: #fafafa;");
-    m_strategyDock->setWidget(strategyPlaceholder);
+    // 实际的策略面板控件
+    m_strategyPanel = new StrategyPanel(m_strategyDock);
+    m_strategyDock->setWidget(m_strategyPanel);
     
     addDockWidget(Qt::BottomDockWidgetArea, m_strategyDock);
+    
+    // 设置默认策略列表（示例）
+    std::vector<std::string> strategies = {
+        "EMA17Breakout",
+        "MACD",
+        "RSI",
+        "BOLL",
+        "KDJ"
+    };
+    m_strategyPanel->setAvailableStrategies(strategies);
 }
 
 void MainWindow::setupConnections() {
     // 股票列表点击 → 选股信号
     connect(m_stockListView, &QTreeView::clicked, 
             this, &MainWindow::onStockClicked);
+    
+    // 策略面板信号
+    if (m_strategyPanel) {
+        connect(m_strategyPanel, &StrategyPanel::strategyChanged,
+                this, [this](const QString& strategy) {
+                    statusBar()->showMessage(QString("切换策略: %1").arg(strategy));
+                });
+        
+        connect(m_strategyPanel, &StrategyPanel::paramChanged,
+                this, [this](const QString& param, double value) {
+                    statusBar()->showMessage(
+                        QString("参数变更: %1 = %2").arg(param).arg(value, 0, 'f', 2));
+                });
+        
+        connect(m_strategyPanel, &StrategyPanel::calculateRequested,
+                this, [this]() {
+                    statusBar()->showMessage("计算策略信号...");
+                    // TODO: 调用核心库计算
+                    emit strategyResultUpdated();
+                });
+    }
 }
 
 void MainWindow::onStockClicked(const QModelIndex& index) {

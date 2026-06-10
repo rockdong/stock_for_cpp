@@ -24,6 +24,12 @@ message(STATUS "Qt6 路径: ${Qt6_DIR}")
 qt_add_library(ui_lib STATIC
     src/adapters/StockListModel.cpp
     src/adapters/StockListModel.h
+    src/adapters/ChartDataAdapter.cpp
+    src/adapters/ChartDataAdapter.h
+    src/widgets/CandlestickWidget.cpp
+    src/widgets/CandlestickWidget.h
+    src/widgets/StrategyPanel.cpp
+    src/widgets/StrategyPanel.h
 )
 
 target_include_directories(ui_lib PUBLIC

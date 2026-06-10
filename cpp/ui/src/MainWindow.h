@@ -22,13 +22,12 @@
 #include <QLineSeries>
 
 // 前向声明
-namespace Ui {
-class MainWindow;
-}
+class StockListModel;  // 全局 namespace
 
-class StockListModel;
+namespace ui {
 class CandlestickWidget;
 class StrategyPanel;
+}
 
 /**
  * @class MainWindow
@@ -60,14 +59,14 @@ private:
 
     // 核心组件
     QTreeView* m_stockListView = nullptr;
-    StockListModel* m_stockModel = nullptr;
+    StockListModel* m_stockModel = nullptr;  // 全局 namespace
     
     // 图表区域
     QWidget* m_chartContainer = nullptr;
-    CandlestickWidget* m_candlestickWidget = nullptr;
+    ui::CandlestickWidget* m_candlestickWidget = nullptr;
     
     // 策略面板
-    StrategyPanel* m_strategyPanel = nullptr;
+    ui::StrategyPanel* m_strategyPanel = nullptr;
     QDockWidget* m_strategyDock = nullptr;
     
     // 状态信息
