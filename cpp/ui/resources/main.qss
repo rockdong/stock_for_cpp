@@ -1,0 +1,97 @@
+/* Stock for C++ Qt UI - 主样式表 */
+
+/* ========== 主窗口 ========== */
+QMainWindow {
+    background-color: #fafafa;
+}
+
+/* ========== 菜单栏 ========== */
+QMenuBar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 4px;
+}
+
+QMenuBar::item {
+    padding: 6px 12px;
+    background-color: transparent;
+}
+
+QMenuBar::item:selected {
+    background-color: #f3f4f6;
+}
+
+QMenu {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+}
+
+QMenu::item {
+    padding: 6px 24px;
+}
+
+QMenu::item:selected {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+/* ========== 工具栏 ========== */
+QToolBar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    spacing: 8px;
+    padding: 4px;
+}
+
+QToolBar QToolButton {
+    padding: 8px;
+    border-radius: 4px;
+    background-color: transparent;
+}
+
+QToolBar QToolButton:hover {
+    background-color: #f3f4f6;
+}
+
+/* ========== 停靠窗口 ========== */
+QDockWidget {
+    titlebar-close-icon: url(:/icons/close.png);
+    titlebar-normal-icon: url(:/icons/float.png);
+}
+
+QDockWidget::title {
+    background-color: #ffffff;
+    padding: 8px;
+    text-align: left;
+}
+
+/* ========== 树视图 ========== */
+QTreeView {
+    background-color: #ffffff;
+    border: none;
+    alternate-background-color: #f9fafb;
+    selection-background-color: #eff6ff;
+    selection-color: #1e40af;
+}
+
+QTreeView::item {
+    padding: 6px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+QTreeView::item:selected {
+    background-color: #eff6ff;
+}
+
+/* ========== 状态栏 ========== */
+QStatusBar {
+    background-color: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    padding: 4px 12px;
+    color: #6b7280;
+}
+
+/* ========== 消息框 ========== */
+QMessageBox {
+    background-color: #ffffff;
+}

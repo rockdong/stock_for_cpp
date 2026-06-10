@@ -387,3 +387,13 @@ target_include_directories(stock_for_cpp PRIVATE
 
 # 把 .env 拷贝到可执行文件所在目录
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/.env DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
+
+# ========== Qt UI 版本（可选） ==========
+option(BUILD_QT_UI "Build Qt UI version" OFF)
+
+if(BUILD_QT_UI)
+    message(STATUS "Qt UI 版本已启用 (BUILD_QT_UI=ON)")
+    add_subdirectory(ui)
+else()
+    message(STATUS "Qt UI 版本未启用 (BUILD_QT_UI=OFF)")
+endif()
