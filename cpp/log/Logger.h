@@ -1,3 +1,6 @@
+// 修改 Logger.h 以支持流式操作
+// 使用 spdlog 的 fmt 格式化，避免流式操作问题
+
 #ifndef LOGGER_H
 #define LOGGER_H
 
@@ -14,6 +17,8 @@
 #include "ILogger.h"
 #include "LoggerFactory.h"
 #include "LoggerManager.h"
+#include <sstream>
+#include <string>
 
 namespace logger {
 
@@ -28,7 +33,6 @@ namespace logger {
  * @endcode
  */
 inline void init(const LogConfig& config) {
-    // 使用提供的配置初始化日志管理器
     LoggerManager::getInstance().initialize(config);
 }
 
@@ -41,52 +45,31 @@ inline void init(const LogConfig& config) {
  * @endcode
  */
 inline void init() {
-    // 创建配置（从环境变量读取）并初始化日志管理器
     LogConfig config;
     LoggerManager::getInstance().initialize(config);
 }
 
 /**
- * @brief 便捷的日志宏定义
+ * @brief 支持流式操作的日志宏
+ * 使用 std::ostringstream 来支持 << 操作
  */
-#define LOG_TRACE(msg)    logger::getLogger()->trace(msg)
-#define LOG_DEBUG(msg)    logger::getLogger()->debug(msg)
-#define LOG_INFO(msg)     logger::getLogger()->info(msg)
-#define LOG_WARN(msg)     logger::getLogger()->warn(msg)
-#define LOG_ERROR(msg)    logger::getLogger()->error(msg)
-#define LOG_CRITICAL(msg) logger::getLogger()->critical(msg)
+#define LOG_TRACE(msg)    do { std::ostringstream oss; oss << msg; logger::getLogger()->trace(oss.str()); } while(0)
+#define LOG_DEBUG(msg)    do { std::ostringstream oss; oss << msg; logger::getLogger()->debug(oss.str()); } while(0)
+#define LOG_INFO(msg)     do { std::ostringstream oss; oss << msg; logger::getLogger()->info(oss.str()); } while(0)
+#define LOG_WARN(msg)     do { std::ostringstream oss; oss << msg; logger::getLogger()->warn(oss.str()); } while(0)
+#define LOG_ERROR(msg)    do { std::ostringstream oss; oss << msg; logger::getLogger()->error(oss.str()); } while(0)
+#define LOG_CRITICAL(msg) do { std::ostringstream oss; oss << msg; logger::getLogger()->critical(oss.str()); } while(0)
 
 /**
  * @brief 带日志器名称的日志宏定义
  */
-#define LOG_TRACE_N(name, msg)    logger::getLogger(name)->trace(msg)
-#define LOG_DEBUG_N(name, msg)    logger::getLogger(name)->debug(msg)
-#define LOG_INFO_N(name, msg)     logger::getLogger(name)->info(msg)
-#define LOG_WARN_N(name, msg)     logger::getLogger(name)->warn(msg)
-#define LOG_ERROR_N(name, msg)    logger::getLogger(name)->error(msg)
-#define LOG_CRITICAL_N(name, msg) logger::getLogger(name)->critical(msg)
+#define LOG_TRACE_N(name, msg)    do { std::ostringstream oss; oss << msg; logger::getLogger(name)->trace(oss.str()); } while(0)
+#define LOG_DEBUG_N(name, msg)    do { std::ostringstream oss; oss << msg; logger::getLogger(name)->debug(oss.str()); } while(0)
+#define LOG_INFO_N(name, msg)     do { std::ostringstream oss; oss << msg; logger::getLogger(name)->info(oss.str()); } while(0)
+#define LOG_WARN_N(name, msg)     do { std::ostringstream oss; oss << msg; logger::getLogger(name)->warn(oss.str()); } while(0)
+#define LOG_ERROR_N(name, msg)    do { std::ostringstream oss; oss << msg; logger::getLogger(name)->error(oss.str()); } while(0)
+#define LOG_CRITICAL_N(name, msg) do { std::ostringstream oss; oss << msg; logger::getLogger(name)->critical(oss.str()); } while(0)
 
 } // namespace logger
 
-/**
- * @brief 便捷的日志宏定义
- */
-#define LOG_TRACE(msg)    logger::getLogger()->trace(msg)
-#define LOG_DEBUG(msg)    logger::getLogger()->debug(msg)
-#define LOG_INFO(msg)     logger::getLogger()->info(msg)
-#define LOG_WARN(msg)     logger::getLogger()->warn(msg)
-#define LOG_ERROR(msg)    logger::getLogger()->error(msg)
-#define LOG_CRITICAL(msg) logger::getLogger()->critical(msg)
-
-/**
- * @brief 带日志器名称的日志宏定义
- */
-#define LOG_TRACE_N(name, msg)    logger::getLogger(name)->trace(msg)
-#define LOG_DEBUG_N(name, msg)    logger::getLogger(name)->debug(msg)
-#define LOG_INFO_N(name, msg)     logger::getLogger(name)->info(msg)
-#define LOG_WARN_N(name, msg)     logger::getLogger(name)->warn(msg)
-#define LOG_ERROR_N(name, msg)    logger::getLogger(name)->error(msg)
-#define LOG_CRITICAL_N(name, msg) logger::getLogger(name)->critical(msg)
-
 #endif // LOGGER_H
-

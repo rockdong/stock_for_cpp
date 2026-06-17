@@ -80,17 +80,25 @@ export class AnalysisService {
 
     const records = await this.prisma.analysisProcessRecord.findMany({
       where,
-      orderBy: [{ tradeDate: 'desc' }, { createdAt: 'desc' }],
+      orderBy: { tradeDate: 'desc' },
       take: fetchLimit,
+      select: {
+        id: true,
+        tsCode: true,
+        stockName: true,
+        tradeDate: true,
+        data: true,
+        createdAt: true,
+      },
     });
 
     let parsedRecords = records.map(r => ({
       id: r.id,
       ts_code: r.tsCode,
       stock_name: r.stockName,
-      trade_date: r.tradeDate.toISOString().split('T')[0],
+      trade_date: r.tradeDate ? r.tradeDate.toISOString().split('T')[0] : '',
       data: r.data,
-      created_at: r.createdAt.toISOString(),
+      created_at: r.createdAt ? r.createdAt.toISOString() : '',
     }));
 
     // 组合筛选：signal + freq（同一个频率上要有指定信号）
@@ -148,9 +156,9 @@ export class AnalysisService {
       id: record.id,
       ts_code: record.tsCode,
       stock_name: record.stockName,
-      trade_date: record.tradeDate.toISOString().split('T')[0],
+      trade_date: record.tradeDate ? record.tradeDate.toISOString().split('T')[0] : '',
       data: record.data,
-      created_at: record.createdAt.toISOString(),
+      created_at: record.createdAt ? record.createdAt.toISOString() : '',
     };
   }
 
@@ -204,7 +212,7 @@ export class AnalysisService {
       strategy_name: result.strategyName,
       label: result.label,
       freq: result.freq,
-      trade_date: result.tradeDate.toISOString().split('T')[0],
+      trade_date: result.tradeDate ? result.tradeDate.toISOString().split('T')[0] : '',
     };
   }
 }

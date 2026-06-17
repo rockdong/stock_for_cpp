@@ -63,7 +63,25 @@ void SpdlogLogger::initialize(const LogConfig& config, const std::string& logger
         spdlog::register_logger(logger_);
 
     } catch (const spdlog::spdlog_ex& ex) {
-        std::cerr << "日志初始化失败: " << ex.what() << std::endl;
+        std::cerr << "日志初始化失败 (spdlog): " << ex.what() << std::endl;
+    } catch (const std::exception& ex) {
+        std::cerr << "日志初始化失败 (filesystem): " << ex.what() << std::endl;
+        // 如果文件日志失败，尝试只使用控制台日志
+        if (config.isConsoleEnabled()) {
+            try {
+                auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+                console_sink->set_level(toSpdlogLevel(config.getLogLevel()));
+                console_sink->set_pattern(config.getLogPattern());
+                logger_ = std::make_shared<spdlog::logger>(logger_name, console_sink);
+                logger_->set_level(toSpdlogLevel(config.getLogLevel()));
+                spdlog::register_logger(logger_);
+                std::cerr << "降级为控制台日志" << std::endl;
+            } catch (...) {
+                std::cerr << "日志系统完全初始化失败" << std::endl;
+            }
+        }
+    } catch (...) {
+        std::cerr << "日志初始化失败 (未知异常)" << std::endl;
     }
 }
 

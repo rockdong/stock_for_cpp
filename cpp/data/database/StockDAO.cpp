@@ -112,6 +112,35 @@ std::optional<Stock> StockDAO::findByTsCode(const std::string& ts_code) {
     }
 }
 
+std::optional<StockEntity> StockDAO::findByTsCodeWithId(const std::string& ts_code) {
+    auto& conn = ConnectionManager::getInstance().getConnection();
+    if (!conn.isConnected()) {
+        LOG_ERROR("数据库未连接");
+        return std::nullopt;
+    }
+
+    try {
+        StockTable stocks;
+        auto db = ConnectionManager::getInstance().getDb();
+        
+        for (const auto& row : (*db)(sqlpp::select(all_of(stocks))
+                                     .from(stocks)
+                                     .where(stocks.tsCode == ts_code))) {
+            StockEntity entity;
+            entity.id = row.id;
+            entity.stock = buildStockFromRow(row);
+            entity.created_at = row.createdAt.is_null() ? "" : row.createdAt.value();
+            entity.updated_at = row.updatedAt.is_null() ? "" : row.updatedAt.value();
+            return entity;
+        }
+        
+        return std::nullopt;
+    } catch (const std::exception& e) {
+        LOG_ERROR("查询股票失败: " + std::string(e.what()));
+        return std::nullopt;
+    }
+}
+
 std::optional<Stock> StockDAO::findById(int id) {
     auto& conn = ConnectionManager::getInstance().getConnection();
     if (!conn.isConnected()) {

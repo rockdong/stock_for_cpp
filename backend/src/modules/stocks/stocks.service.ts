@@ -7,16 +7,21 @@ export class StocksService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(dto: GetStocksDto) {
-    const stocks = await this.prisma.stock.findMany({
-      take: dto.limit,
-      select: {
-        tsCode: true,
-        name: true,
-        industry: true,
-        market: true,
-      },
-    });
-    return stocks;
+    try {
+      const stocks = await this.prisma.stock.findMany({
+        take: dto.limit,
+        select: {
+          tsCode: true,
+          name: true,
+          industry: true,
+          market: true,
+        },
+      });
+      return stocks;
+    } catch (error: any) {
+      console.error('findAll error:', error.message, error.stack);
+      throw error;
+    }
   }
 
   async search(dto: SearchStocksDto) {

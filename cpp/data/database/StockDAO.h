@@ -44,6 +44,13 @@ public:
      * @return 股票对象（可选）
      */
     std::optional<Stock> findByTsCode(const std::string& ts_code);
+    
+    /**
+     * @brief 根据股票代码查找（含数据库 ID）
+     * @param ts_code 股票代码
+     * @return 股票实体对象（可选，包含 id）
+     */
+    std::optional<StockEntity> findByTsCodeWithId(const std::string& ts_code);
 
     /**
      * @brief 根据 ID 查找

@@ -1,8 +1,10 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
+import { Controller, Get, Query, Param, Logger } from '@nestjs/common';
 import { AnalysisService } from './analysis.service';
 
 @Controller('api/analysis')
 export class AnalysisController {
+  private readonly logger = new Logger(AnalysisController.name);
+
   constructor(private analysisService: AnalysisService) {}
 
   @Get('signals')
@@ -33,18 +35,23 @@ export class AnalysisController {
     @Query('freq') freq?: string,
     @Query('limit') limit?: string,
   ) {
-    const freqArray = freq ? freq.split(',') : undefined;
-    const strategyArray = strategy ? strategy.split(',') : undefined;
-    const data = await this.analysisService.getProcessRecords({
-      ts_code,
-      start_date,
-      end_date,
-      signal,
-      strategy: strategyArray,
-      freq: freqArray,
-      limit: parseInt(limit || '100'),
-    });
-    return { success: true, data };
+    try {
+      const freqArray = freq ? freq.split(',') : undefined;
+      const strategyArray = strategy ? strategy.split(',') : undefined;
+      const data = await this.analysisService.getProcessRecords({
+        ts_code,
+        start_date,
+        end_date,
+        signal,
+        strategy: strategyArray,
+        freq: freqArray,
+        limit: parseInt(limit || '100'),
+      });
+      return { success: true, data };
+    } catch (err: any) {
+      this.logger.error(`getProcess failed: ${err.message}`, err.stack);
+      return { success: false, error: err.message || 'Internal error', data: [] };
+    }
   }
 
   @Get('process/strategies')

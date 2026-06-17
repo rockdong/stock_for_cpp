@@ -1,8 +1,21 @@
 cmake_minimum_required(VERSION 3.10)
-project(stock_for_cpp)
+project(stock_for_cpp VERSION 2.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ========== 构建选项 ==========
+
+option(BUILD_CORE "构建核心库" ON)
+option(BUILD_TUI "构建 TUI 客户端 (FTXUI终端界面)" ON)
+option(BUILD_GUI "构建 GUI 客户端 (Qt图形界面)" ON)
+option(BUILD_EXE "构建 exe 客户端 (命令行执行)" ON)
+option(BUILD_TESTS "构建测试" OFF)
+
+# 默认: 如果没有指定任何客户端,构建 exe
+if(NOT BUILD_TUI AND NOT BUILD_GUI AND NOT BUILD_EXE)
+    set(BUILD_EXE ON)
+endif()
 
 # ========== 版本信息 ==========
 # 读取 VERSION 文件
@@ -317,10 +330,13 @@ add_library(utils_lib STATIC
     utils/KLineAggregator.cpp
     utils/ThreadPool.cpp
     utils/RateLimiter.cpp
+    util/CSVParser.cpp  # CSV 解析器（位于 util 目录）
 )
 
+# 添加 util 目录的包含路径
 target_include_directories(utils_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/util  # CSVParser 头文件目录
 )
 
 add_library(eventbus_lib STATIC
@@ -338,42 +354,99 @@ target_link_libraries(eventbus_lib PUBLIC
     log_lib
 )
 
-add_executable(stock_for_cpp main.cpp)
+# ========== 核心库 ==========
 
-# 链接第三方库
-set(STOCK_LINK_LIBS
-    config_lib
-    scheduler_lib
-    core_lib
-    log_lib
-    network_lib
-    data_lib
-    analysis_lib
-    utils_lib
-    eventbus_lib
-    spdlog::spdlog
-    sqlpp11::sqlpp11
-    sqlite3
-    nlohmann_json::nlohmann_json
-    httplib::httplib
-    dotenv
-    ta-lib-static
-)
-
-# 如果 MySQL 可用，链接 MySQL 库
-if(HAS_MYSQL)
-    list(APPEND STOCK_LINK_LIBS sqlpp11::mysql)
+if(BUILD_CORE)
+    message(STATUS "构建核心库 (stock_core)")
+    add_subdirectory(stock_core)
+else()
+    message(STATUS "跳过核心库构建")
 endif()
 
-target_link_libraries(stock_for_cpp PRIVATE ${STOCK_LINK_LIBS})
+# ========== 客户端 ==========
 
-# 包含第三方库头文件目录
-target_include_directories(stock_for_cpp PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/config
-    ${CMAKE_CURRENT_SOURCE_DIR}/core
-    ${CMAKE_CURRENT_SOURCE_DIR}/log
-    ${CMAKE_CURRENT_SOURCE_DIR}/network
-    ${CMAKE_CURRENT_SOURCE_DIR}/data
+# TUI 客户端 (FTXUI 终端界面)
+if(BUILD_TUI)
+    message(STATUS "构建 TUI 客户端 (FTXUI 终端界面)")
+    add_subdirectory(stock_tui)
+endif()
+
+# GUI 客户端 (Qt 图形界面)
+if(BUILD_GUI)
+    message(STATUS "构建 GUI 客户端 (Qt 图形界面)")
+    add_subdirectory(stock_gui)
+endif()
+
+# exe 客户端 (命令行执行)
+if(BUILD_EXE)
+    message(STATUS "构建 exe 客户端 (命令行执行)")
+    add_subdirectory(stock_exe)
+endif()
+
+# ========== 测试 ==========
+
+if(BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
+
+# ========== 构建信息 ==========
+
+message(STATUS "========================================")
+message(STATUS "Stock for C++ v${VERSION_STRING}.${VERSION_BUILD}")
+message(STATUS "========================================")
+message(STATUS "构建目标:")
+message(STATUS "  核心库: ${BUILD_CORE}")
+message(STATUS "  TUI 客户端: ${BUILD_TUI}")
+message(STATUS "  GUI 客户端: ${BUILD_GUI}")
+message(STATUS "  exe 客户端: ${BUILD_EXE}")
+message(STATUS "========================================")
+
+# ========== 旧版兼容 (临时保留) ==========
+
+# 为了兼容性,保留旧的 stock_for_cpp 可执行文件
+# 当所有客户端实现完成后,将删除此部分
+
+option(BUILD_LEGACY "构建旧版 stock_for_cpp (兼容模式)" OFF)
+
+if(BUILD_LEGACY)
+    message(STATUS "构建旧版 stock_for_cpp (兼容模式)")
+    
+    add_executable(stock_for_cpp main.cpp)
+    
+    # 链接第三方库
+    set(STOCK_LINK_LIBS
+        config_lib
+        scheduler_lib
+        core_lib
+        log_lib
+        network_lib
+        data_lib
+        analysis_lib
+        utils_lib
+        eventbus_lib
+        spdlog::spdlog
+        sqlpp11::sqlpp11
+        sqlite3
+        nlohmann_json::nlohmann_json
+        httplib::httplib
+        dotenv
+        ta-lib-static
+    )
+    
+    # 如果 MySQL 可用，链接 MySQL 库
+    if(HAS_MYSQL)
+        list(APPEND STOCK_LINK_LIBS sqlpp11::mysql)
+    endif()
+    
+    target_link_libraries(stock_for_cpp PRIVATE ${STOCK_LINK_LIBS})
+    
+    # 包含第三方库头文件目录
+    target_include_directories(stock_for_cpp PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/config
+        ${CMAKE_CURRENT_SOURCE_DIR}/core
+        ${CMAKE_CURRENT_SOURCE_DIR}/log
+        ${CMAKE_CURRENT_SOURCE_DIR}/network
+        ${CMAKE_CURRENT_SOURCE_DIR}/data
     ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     ${CMAKE_CURRENT_SOURCE_DIR}/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/spdlog/include
@@ -388,12 +461,4 @@ target_include_directories(stock_for_cpp PRIVATE
 # 把 .env 拷贝到可执行文件所在目录
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/.env DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
 
-# ========== Qt UI 版本（可选） ==========
-option(BUILD_QT_UI "Build Qt UI version" OFF)
-
-if(BUILD_QT_UI)
-    message(STATUS "Qt UI 版本已启用 (BUILD_QT_UI=ON)")
-    add_subdirectory(ui)
-else()
-    message(STATUS "Qt UI 版本未启用 (BUILD_QT_UI=OFF)")
-endif()
+endif() # BUILD_LEGACY
