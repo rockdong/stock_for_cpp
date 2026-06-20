@@ -678,10 +678,6 @@ void MainScreen::StartAnalysis() {
                     std::lock_guard<std::mutex> lock(statusMutex_);
                     analysisStatus_ = status;
                 }
-
-                std::cerr << "[DEBUG] 分析进度: " << completed << "/" << total
-                          << " (" << analysisProgressPercent_ << "%)"
-                          << " 失败: " << failed << std::endl;
             });
 
             // 执行批量分析
