@@ -10,7 +10,7 @@ LogConfig::LogConfig() {
 
     log_pattern_ = getEnvString("LOG_PATTERN", "[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [%t] %v");
     log_file_path_ = getEnvString("LOG_FILE_PATH", "logs/app.log");
-    console_enabled_ = getEnvBool("LOG_CONSOLE_ENABLED", true);
+    console_enabled_ = getEnvBool("LOG_CONSOLE_ENABLED", false);  // 默认禁用（TUI 模式安全）
     file_enabled_ = getEnvBool("LOG_FILE_ENABLED", true);
     max_file_size_ = getEnvSize("LOG_MAX_FILE_SIZE", 1048576 * 10); // 默认 10MB
     max_files_ = getEnvSize("LOG_MAX_FILES", 3);

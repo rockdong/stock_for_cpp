@@ -27,17 +27,16 @@ bool StockCoreContext::initialize(const std::string& configPath) {
         return true;
     }
 
-    // 1. 先初始化配置系统（加载 .env 文件到环境变量）
-    // 这样 logger 初始化时才能正确读取 LOG_CONSOLE_ENABLED 等配置
-    if (!initializeConfig(configPath)) {
-        std::cerr << "配置系统初始化失败" << std::endl;
-        return false;
-    }
-
-    // 2. 再初始化日志系统（此时环境变量已加载，LogConfig 能正确读取配置）
+    // 1. 先初始化日志系统（允许基本输出到 stdout/stderr）
     if (!initializeLogger()) {
         // logger 初始化失败，只能用 std::cerr 输出
         std::cerr << "日志系统初始化失败" << std::endl;
+        return false;
+    }
+
+    // 2. 初始化配置系统
+    if (!initializeConfig(configPath)) {
+        LOG_ERROR("配置系统初始化失败");
         return false;
     }
 
