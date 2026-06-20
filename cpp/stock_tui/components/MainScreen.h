@@ -57,6 +57,13 @@ private:
     std::thread analysisThread_;  // 分析线程
     std::mutex statusMutex_;  // 状态文本互斥锁（保护 analysisStatus_ 和 currentAnalyzingStock_）
     
+    // 日志缓存（性能优化）
+    std::vector<std::string> cachedLogLines_;  // 缓存的日志内容
+    std::thread logUpdateThread_;  // 后台日志更新线程
+    std::atomic<bool> logUpdateRunning_{false};  // 线程运行标志
+    std::mutex logMutex_;  // 日志缓存互斥锁
+    std::atomic<long> lastLogFileSize_{0};  // 上次日志文件大小（用于检测更新）
+    
     // UI 状态
     int selectedTab_ = 0;
     int currentMenu_ = 0;  // 新增：当前菜单索引

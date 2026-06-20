@@ -13,12 +13,58 @@ using namespace ftxui;
 namespace stock_tui {
 
 MainScreen::MainScreen() {
-    LoadCurrentConfig();  // 先加载配置值，再初始化Input组件
+    LoadCurrentConfig();  // 先加载配置值,再初始化Input组件
     BuildUI();
     RefreshData();
+    
+    // 启动日志更新线程（性能优化）
+    logUpdateRunning_ = true;
+    logUpdateThread_ = std::thread([this]() {
+        while (logUpdateRunning_) {
+            // 检查日志文件是否更新
+            std::ifstream logFile("logs/app.log", std::ios::binary | std::ios::ate);
+            if (logFile.is_open()) {
+                long currentSize = logFile.tellg();
+                logFile.close();
+                
+                // 文件大小变化时更新缓存
+                if (currentSize != lastLogFileSize_) {
+                    lastLogFileSize_ = currentSize;
+                    
+                    // 读取最后50行日志
+                    std::ifstream file("logs/app.log");
+                    if (file.is_open()) {
+                        std::vector<std::string> allLines;
+                        std::string line;
+                        while (std::getline(file, line)) {
+                            allLines.push_back(line);
+                        }
+                        file.close();
+                        
+                        // 更新缓存（加锁）
+                        std::lock_guard<std::mutex> lock(logMutex_);
+                        cachedLogLines_.clear();
+                        int startIdx = std::max(0, (int)allLines.size() - 50);
+                        for (int i = startIdx; i < allLines.size(); ++i) {
+                            cachedLogLines_.push_back(allLines[i]);
+                        }
+                    }
+                }
+            }
+            
+            // 每500ms检查一次
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+    });
 }
 
 MainScreen::~MainScreen() {
+    // 停止日志更新线程
+    logUpdateRunning_ = false;
+    if (logUpdateThread_.joinable()) {
+        logUpdateThread_.join();
+    }
+    
     // 确保分析线程安全退出
     if (analysisThread_.joinable()) {
         isAnalyzing_ = false;  // 设置停止标志
@@ -361,42 +407,28 @@ Element MainScreen::RenderConfiguration() {
 }
 
 Element MainScreen::RenderLogs() {
-    // 尝试读取完整日志文件（显示最近50条，便于滚动查看）
+    // 使用缓存的日志内容（性能优化：后台线程已更新缓存）
     std::vector<std::string> logLines;
-    std::ifstream logFile("logs/app.log");
     
-    if (logFile.is_open()) {
-        std::string line;
-        std::vector<std::string> allLines;
-        while (std::getline(logFile, line)) {
-            allLines.push_back(line);
-        }
-        
-        // 显示最近 50 条日志（提供滚动空间）
-        int startIdx = std::max(0, (int)allLines.size() - 50);
-        for (int i = startIdx; i < allLines.size(); ++i) {
-            logLines.push_back(allLines[i]);
-        }
-        logFile.close();
-    } else {
-        // 日志文件不存在，显示模拟日志
+    // 加锁读取缓存（避免数据竞争）
+    {
+        std::lock_guard<std::mutex> lock(logMutex_);
+        logLines = cachedLogLines_;  // 复制缓存内容
+    }
+    
+    // 如果缓存为空，显示默认提示
+    if (logLines.empty()) {
         logLines = {
-            "[INFO] 系统启动成功",
-            "[INFO] 核心库初始化完成",
-            "[WARN] DATA_SOURCE_API_KEY 未配置",
-            "[WARN] 系统运行在降级模式",
-            "[INFO] 数据库连接成功: data/stock.db",
-            "[INFO] 策略管理器初始化: 3 个策略",
-            "[INFO] EventBus 初始化成功",
-            "[INFO] DAOs 初始化完成",
-            "[INFO] TUI界面渲染完成",
-            "[INFO] 导航菜单初始化完成",
+            "[INFO] 日志系统初始化中...",
+            "[INFO] 后台日志加载线程已启动",
+            "[INFO] 日志文件: logs/app.log",
+            "[INFO] 更新频率: 500ms",
         };
     }
     
     // 构建日志显示元素（可滚动）
     std::vector<Element> logElements;
-    logElements.push_back(text("实时日志 (可滚动)") | bold | color(Color::Cyan));
+    logElements.push_back(text("实时日志 (异步加载)") | bold | color(Color::Cyan));
     logElements.push_back(separator());
     logElements.push_back(text("日志条目总数: " + std::to_string(logLines.size())) | color(Color::GrayLight));
     logElements.push_back(separator());
@@ -419,7 +451,7 @@ Element MainScreen::RenderLogs() {
     logElements.push_back(text("完整日志文件: logs/app.log") | color(Color::GrayLight));
     
     // 使用 frame 和 vscroll_indicator 实现滚动功能
-    return vbox(logElements) | frame | vscroll_indicator;
+    return vbox(logElements) | frame | vscroll_indicator | flex;
 }
 
 Element MainScreen::RenderStatus() {
