@@ -197,6 +197,7 @@ add_library(log_lib STATIC
     log/LoggerFactory.cpp
     log/LoggerManager.cpp
     log/SpdlogLogger.cpp
+    log/UILogSink.cpp  # 新增：UI sink 实现
 )
 
 target_include_directories(log_lib PUBLIC

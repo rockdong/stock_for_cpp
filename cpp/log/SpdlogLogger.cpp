@@ -1,4 +1,5 @@
 #include "SpdlogLogger.h"
+#include "UILogSink.h"  // 新增：UI sink 头文件
 #include <iostream>
 #include <filesystem>
 
@@ -38,6 +39,17 @@ void SpdlogLogger::initialize(const LogConfig& config, const std::string& logger
             file_sink->set_level(toSpdlogLevel(config.getLogLevel()));
             file_sink->set_pattern(config.getLogPattern());
             sinks.push_back(file_sink);
+        }
+
+        // 新增：添加 UI 缓冲区输出（供 TUI/GUI 客户端使用）
+        if (config.isUIEnabled()) {
+            auto ui_sink = std::make_shared<UILogSinkMt>();
+            ui_sink->set_level(toSpdlogLevel(config.getLogLevel()));
+            ui_sink->set_pattern(config.getLogPattern());
+            sinks.push_back(ui_sink);
+            
+            // 设置 UI 缓冲区大小
+            LogBufferManager::getInstance().setMaxBufferSize(config.getUIBufferSize());
         }
 
         // 创建日志器

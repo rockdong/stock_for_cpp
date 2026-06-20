@@ -17,52 +17,18 @@ MainScreen::MainScreen() {
     BuildUI();
     RefreshData();
     
-    // 启动日志更新线程（性能优化）
-    logUpdateRunning_ = true;
-    logUpdateThread_ = std::thread([this]() {
-        while (logUpdateRunning_) {
-            // 检查日志文件是否更新
-            std::ifstream logFile("logs/app.log", std::ios::binary | std::ios::ate);
-            if (logFile.is_open()) {
-                long currentSize = logFile.tellg();
-                logFile.close();
-                
-                // 文件大小变化时更新缓存
-                if (currentSize != lastLogFileSize_) {
-                    lastLogFileSize_ = currentSize;
-                    
-                    // 读取最后50行日志
-                    std::ifstream file("logs/app.log");
-                    if (file.is_open()) {
-                        std::vector<std::string> allLines;
-                        std::string line;
-                        while (std::getline(file, line)) {
-                            allLines.push_back(line);
-                        }
-                        file.close();
-                        
-                        // 更新缓存（加锁）
-                        std::lock_guard<std::mutex> lock(logMutex_);
-                        cachedLogLines_.clear();
-                        int startIdx = std::max(0, (int)allLines.size() - 50);
-                        for (int i = startIdx; i < allLines.size(); ++i) {
-                            cachedLogLines_.push_back(allLines[i]);
-                        }
-                    }
-                }
-            }
-            
-            // 每500ms检查一次
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        }
+    // 新增：订阅 LogBufferManager 的更新通知（性能优化）
+    logSubscriptionId_ = logger::LogBufferManager::getInstance().subscribe([this]() {
+        // 日志更新时设置标志（通知UI刷新）
+        logUpdated_ = true;
     });
 }
 
 MainScreen::~MainScreen() {
-    // 停止日志更新线程
-    logUpdateRunning_ = false;
-    if (logUpdateThread_.joinable()) {
-        logUpdateThread_.join();
+    // 新增：取消订阅 LogBufferManager
+    if (logSubscriptionId_ >= 0) {
+        logger::LogBufferManager::getInstance().unsubscribe(logSubscriptionId_);
+        logSubscriptionId_ = -1;
     }
     
     // 确保分析线程安全退出
@@ -407,28 +373,23 @@ Element MainScreen::RenderConfiguration() {
 }
 
 Element MainScreen::RenderLogs() {
-    // 使用缓存的日志内容（性能优化：后台线程已更新缓存）
-    std::vector<std::string> logLines;
+    // 新增：使用 LogBufferManager 获取日志内容（替代文件读取）
+    auto& bufferManager = logger::LogBufferManager::getInstance();
+    std::vector<std::string> logLines = bufferManager.getRecentLogs(50);
     
-    // 加锁读取缓存（避免数据竞争）
-    {
-        std::lock_guard<std::mutex> lock(logMutex_);
-        logLines = cachedLogLines_;  // 复制缓存内容
-    }
-    
-    // 如果缓存为空，显示默认提示
+    // 如果缓冲区为空，显示默认提示
     if (logLines.empty()) {
         logLines = {
             "[INFO] 日志系统初始化中...",
-            "[INFO] 后台日志加载线程已启动",
-            "[INFO] 日志文件: logs/app.log",
-            "[INFO] 更新频率: 500ms",
+            "[INFO] UI 缓冲区已启用",
+            "[INFO] 配置: LOG_UI_ENABLED=true",
+            "[INFO] 缓冲区大小: 1000 行",
         };
     }
     
     // 构建日志显示元素（可滚动）
     std::vector<Element> logElements;
-    logElements.push_back(text("实时日志 (异步加载)") | bold | color(Color::Cyan));
+    logElements.push_back(text("实时日志 (UI 缓冲区)") | bold | color(Color::Cyan));
     logElements.push_back(separator());
     logElements.push_back(text("日志条目总数: " + std::to_string(logLines.size())) | color(Color::GrayLight));
     logElements.push_back(separator());
@@ -448,7 +409,7 @@ Element MainScreen::RenderLogs() {
     
     logElements.push_back(separator());
     logElements.push_back(text("快捷键: [R] 刷新  [↓] 滚动  [End] 跳到底部") | color(Color::Cyan));
-    logElements.push_back(text("完整日志文件: logs/app.log") | color(Color::GrayLight));
+    logElements.push_back(text("日志配置: UI 缓冲区 + 文件记录") | color(Color::GrayLight));
     
     // 使用 frame 和 vscroll_indicator 实现滚动功能
     return vbox(logElements) | frame | vscroll_indicator | flex;

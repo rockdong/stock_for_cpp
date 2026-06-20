@@ -25,6 +25,8 @@ public:
     const std::string& getLogFilePath() const { return log_file_path_; }
     bool isConsoleEnabled() const { return console_enabled_; }
     bool isFileEnabled() const { return file_enabled_; }
+    bool isUIEnabled() const { return ui_enabled_; }  // 新增：UI 缓冲区输出开关
+    size_t getUIBufferSize() const { return ui_buffer_size_; }  // 新增：UI 缓冲区大小
     size_t getMaxFileSize() const { return max_file_size_; }
     size_t getMaxFiles() const { return max_files_; }
     bool isAsyncEnabled() const { return async_enabled_; }
@@ -60,6 +62,8 @@ private:
     std::string log_file_path_;
     bool console_enabled_;
     bool file_enabled_;
+    bool ui_enabled_;           // 新增：UI 缓冲区输出开关
+    size_t ui_buffer_size_;     // 新增：UI 缓冲区大小（默认1000行）
     size_t max_file_size_;
     size_t max_files_;
     bool async_enabled_;

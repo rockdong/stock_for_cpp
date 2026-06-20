@@ -7,6 +7,7 @@
 #include <atomic>
 #include <mutex>
 #include "../core/Stock.h"  // 包含 Stock 定义（核心数据结构）
+#include "../log/UILogSink.h"  // 新增：包含 UI log sink（访问 LogBufferManager）
 
 namespace stock_tui {
 
@@ -57,12 +58,9 @@ private:
     std::thread analysisThread_;  // 分析线程
     std::mutex statusMutex_;  // 状态文本互斥锁（保护 analysisStatus_ 和 currentAnalyzingStock_）
     
-    // 日志缓存（性能优化）
-    std::vector<std::string> cachedLogLines_;  // 缓存的日志内容
-    std::thread logUpdateThread_;  // 后台日志更新线程
-    std::atomic<bool> logUpdateRunning_{false};  // 线程运行标志
-    std::mutex logMutex_;  // 日志缓存互斥锁
-    std::atomic<long> lastLogFileSize_{0};  // 上次日志文件大小（用于检测更新）
+    // 日志订阅机制（性能优化）
+    int logSubscriptionId_{-1};  // LogBufferManager订阅ID
+    std::atomic<bool> logUpdated_{false};  // 日志更新标志（通知UI刷新）
     
     // UI 状态
     int selectedTab_ = 0;

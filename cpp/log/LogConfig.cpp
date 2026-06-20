@@ -12,6 +12,8 @@ LogConfig::LogConfig() {
     log_file_path_ = getEnvString("LOG_FILE_PATH", "logs/app.log");
     console_enabled_ = getEnvBool("LOG_CONSOLE_ENABLED", false);  // 默认禁用（TUI 模式安全）
     file_enabled_ = getEnvBool("LOG_FILE_ENABLED", true);
+    ui_enabled_ = getEnvBool("LOG_UI_ENABLED", true);  // 新增：UI 缓冲区默认启用
+    ui_buffer_size_ = getEnvSize("LOG_UI_BUFFER_SIZE", 1000);  // 新增：UI 缓冲区默认1000行
     max_file_size_ = getEnvSize("LOG_MAX_FILE_SIZE", 1048576 * 10); // 默认 10MB
     max_files_ = getEnvSize("LOG_MAX_FILES", 3);
     async_enabled_ = getEnvBool("LOG_ASYNC_ENABLED", false);
