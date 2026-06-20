@@ -620,9 +620,7 @@ void MainScreen::StartAnalysis() {
     std::strftime(timeBuffer, sizeof(timeBuffer), "%H:%M:%S", std::localtime(&time_t_now));
     analysisStartTime_ = std::string(timeBuffer);
 
-    currentAnalyzingStock_ = "";
-
-    std::cerr << "[DEBUG] 开始批量分析，总数: " << stocksData_.size() << std::endl;
+    // currentAnalyzingStock_ 会在 progress callback 中设置
 
     // 启动后台分析线程
     analysisThread_ = std::thread([this]() {
@@ -638,6 +636,26 @@ void MainScreen::StartAnalysis() {
                 {
                     std::lock_guard<std::mutex> lock(statusMutex_);
                     analysisStatus_ = status;
+                    
+                    // 根据股票代码找到对应的股票名称，显示格式：【股票代码】股票名
+                    if (!status.empty() && status.find("失败:") == std::string::npos) {
+                        // 从 stocksData_ 中查找对应的股票
+                        for (const auto& stock : stocksData_) {
+                            if (stock.ts_code == status) {
+                                currentAnalyzingStock_ = "【" + stock.ts_code + "】" + stock.name;
+                                break;
+                            }
+                        }
+                    } else if (status.find("失败:") != std::string::npos) {
+                        // 失败状态：提取股票代码并查找名称
+                        std::string ts_code = status.substr(status.find(":") + 2);
+                        for (const auto& stock : stocksData_) {
+                            if (stock.ts_code == ts_code) {
+                                currentAnalyzingStock_ = "【" + stock.ts_code + "】" + stock.name + " (失败)";
+                                break;
+                            }
+                        }
+                    }
                 }
             });
 
