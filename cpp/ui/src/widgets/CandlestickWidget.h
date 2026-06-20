@@ -69,6 +69,19 @@ public:
      * @param count 显示数量（默认 100）
      */
     void setVisibleRange(int count);
+    
+    /**
+     * @brief 获取图表视图（用于导出 PNG）
+     * @return QChartView 指针
+     */
+    QChartView* getChartView() const { return m_chartView; }
+    
+    /**
+     * @brief 导出图表为 PNG 图片
+     * @param fileName 文件路径
+     * @return 是否成功
+     */
+    bool exportToPNG(const QString& fileName);
 
 signals:
     /**

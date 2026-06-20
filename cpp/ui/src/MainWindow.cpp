@@ -1,208 +1,185 @@
 /**
- * @file MainWindow.cpp
- * @brief Qt UI 主窗口实现
+ * @file MainWindow.cpp (简化版)
+ * @brief Qt UI 主窗口实现 - 入口窗口 (单一职责: 导航)
  * @author StockLens Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 #include "MainWindow.h"
-#include "adapters/StockListModel.h"
-#include "widgets/CandlestickWidget.h"
-#include "widgets/StrategyPanel.h"
 
-#include <QMessageBox>
-#include <QFileDialog>
-#include <QSettings>
-#include <QHeaderView>
-#include <QSplitter>
 #include <QVBoxLayout>
-
-// 使用 ui namespace
-using namespace ui;
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QMenuBar>
+#include <QMenu>
+#include <QAction>
+#include <QStatusBar>      // QStatusBar 完整定义
+#include <QMessageBox>
+#include <QCoreApplication>
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
 {
-    // 恢复上次窗口状态
-    QSettings settings("StockLens", "StockUI");
-    restoreGeometry(settings.value("geometry").toByteArray());
-    restoreState(settings.value("windowState").toByteArray());
+    setWindowTitle("Stock for C++ - 入口");
+    resize(600, 400);
 
-    // 构建界面
+    setupUI();
     setupMenuBar();
-    setupToolBar();
-    setupStatusBar();
-    setupDockWidgets();
-    setupConnections();
 
-    // 默认布局
-    if (!settings.value("windowState").isValid()) {
-        resize(1200, 800);
-        // 默认停靠布局：左侧股票列表，右侧图表，底部策略面板
-    }
-
-    statusBar()->showMessage("就绪");
+    statusBar()->showMessage("欢迎使用 Stock for C++");
 }
 
-MainWindow::~MainWindow() {
-    // 保存窗口状态
-    QSettings settings("StockLens", "StockUI");
-    settings.setValue("geometry", saveGeometry());
-    settings.setValue("windowState", saveState());
-}
-
-void MainWindow::setupMenuBar() {
-    // 文件菜单
-    QMenu* fileMenu = menuBar()->addMenu("文件");
-    
-    QAction* openAction = fileMenu->addAction("打开数据文件...");
-    openAction->setShortcut(QKeySequence::Open);
-    connect(openAction, &QAction::triggered, this, &MainWindow::onMenuFileOpen);
-    
-    fileMenu->addSeparator();
-    
-    QAction* exitAction = fileMenu->addAction("退出");
-    exitAction->setShortcut(QKeySequence::Quit);
-    connect(exitAction, &QAction::triggered, this, &QWidget::close);
-
-    // 设置菜单
-    QMenu* settingsMenu = menuBar()->addMenu("设置");
-    
-    QAction* settingsAction = settingsMenu->addAction("配置...");
-    connect(settingsAction, &QAction::triggered, this, &MainWindow::onMenuSettings);
-
-    // 帮助菜单
-    QMenu* helpMenu = menuBar()->addMenu("帮助");
-    
-    QAction* aboutAction = helpMenu->addAction("关于 Stock for C++");
-    connect(aboutAction, &QAction::triggered, this, &MainWindow::onMenuAbout);
-}
-
-void MainWindow::setupToolBar() {
-    QToolBar* mainToolBar = addToolBar("主工具栏");
-    
-    QAction* refreshAction = mainToolBar->addAction("刷新");
-    refreshAction->setIcon(QIcon(":/icons/refresh.png"));
-    
-    QAction* exportAction = mainToolBar->addAction("导出");
-    exportAction->setIcon(QIcon(":/icons/export.png"));
-    
-    mainToolBar->addSeparator();
-    
-    QAction* themeAction = mainToolBar->addAction("切换主题");
-    themeAction->setIcon(QIcon(":/icons/theme.png"));
-}
-
-void MainWindow::setupStatusBar() {
-    statusBar()->showMessage("就绪");
-}
-
-void MainWindow::setupDockWidgets() {
-    // ========== 左侧：股票列表 ==========
-    QDockWidget* stockListDock = new QDockWidget("股票列表", this);
-    stockListDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    
-    m_stockListView = new QTreeView(stockListDock);
-    m_stockModel = new StockListModel(this);
-    m_stockListView->setModel(m_stockModel);
-    m_stockListView->setRootIsDecorated(false);
-    m_stockListView->setAlternatingRowColors(true);
-    m_stockListView->header()->setStretchLastSection(true);
-    
-    stockListDock->setWidget(m_stockListView);
-    addDockWidget(Qt::LeftDockWidgetArea, stockListDock);
-
-    // ========== 中央区域：K线图表 ==========
+void MainWindow::setupUI() {
     QWidget* centralWidget = new QWidget(this);
-    QVBoxLayout* centralLayout = new QVBoxLayout(centralWidget);
-    centralLayout->setContentsMargins(0, 0, 0, 0);
-    
-    // 实际的 K线图表控件
-    m_candlestickWidget = new CandlestickWidget(this);
-    centralLayout->addWidget(m_candlestickWidget);
+    QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
+    mainLayout->setSpacing(20);
+
+    // ========== 应用标题 ==========
+
+    QLabel* titleLabel = new QLabel("Stock for C++", this);
+    titleLabel->setStyleSheet("font-size: 24px; font-weight: bold; color: #0078d4;");
+    titleLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(titleLabel);
+
+    QLabel* subtitleLabel = new QLabel("股票数据分析系统", this);
+    subtitleLabel->setStyleSheet("font-size: 16px; color: #555555;");
+    subtitleLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(subtitleLabel);
+
+    mainLayout->addSpacing(20);
+
+    // ========== 先设置 centralWidget,然后再创建导航按钮 ==========
     
     setCentralWidget(centralWidget);
 
-    // ========== 右侧/底部：策略面板 ==========
-    m_strategyDock = new QDockWidget("策略配置", this);
-    m_strategyDock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::RightDockWidgetArea);
-    
-    // 实际的策略面板控件
-    m_strategyPanel = new StrategyPanel(m_strategyDock);
-    m_strategyDock->setWidget(m_strategyPanel);
-    
-    addDockWidget(Qt::BottomDockWidgetArea, m_strategyDock);
-    
-    // 设置默认策略列表（示例）
-    std::vector<std::string> strategies = {
-        "EMA17Breakout",
-        "MACD",
-        "RSI",
-        "BOLL",
-        "KDJ"
-    };
-    m_strategyPanel->setAvailableStrategies(strategies);
+    // ========== 导航按钮区域 ==========
+
+    setupNavigationButtons();
+
+    mainLayout->addStretch();
 }
 
-void MainWindow::setupConnections() {
-    // 股票列表点击 → 选股信号
-    connect(m_stockListView, &QTreeView::clicked, 
-            this, &MainWindow::onStockClicked);
-    
-    // 策略面板信号
-    if (m_strategyPanel) {
-        connect(m_strategyPanel, &StrategyPanel::strategyChanged,
-                this, [this](const QString& strategy) {
-                    statusBar()->showMessage(QString("切换策略: %1").arg(strategy));
-                });
-        
-        connect(m_strategyPanel, &StrategyPanel::paramChanged,
-                this, [this](const QString& param, double value) {
-                    statusBar()->showMessage(
-                        QString("参数变更: %1 = %2").arg(param).arg(value, 0, 'f', 2));
-                });
-        
-        connect(m_strategyPanel, &StrategyPanel::calculateRequested,
-                this, [this]() {
-                    statusBar()->showMessage("计算策略信号...");
-                    // TODO: 调用核心库计算
-                    emit strategyResultUpdated();
-                });
-    }
+void MainWindow::setupMenuBar() {
+    // ========== 文件菜单 ==========
+
+    QMenu* fileMenu = menuBar()->addMenu("文件");
+
+    QAction* exitAction = new QAction("退出", this);
+    exitAction->setShortcut(QKeySequence::Quit);
+    connect(exitAction, &QAction::triggered, this, [this]() {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this, "确认退出", "确定要退出应用程序吗?",
+            QMessageBox::Yes | QMessageBox::No);
+
+        if (reply == QMessageBox::Yes) {
+            QCoreApplication::quit();
+        }
+    });
+    fileMenu->addAction(exitAction);
+
+    // ========== 设置菜单 ==========
+
+    QMenu* settingsMenu = menuBar()->addMenu("设置");
+
+    QAction* configAction = new QAction("打开配置窗口", this);
+    connect(configAction, &QAction::triggered, this, [this]() {
+        emit openConfigWindowRequested();
+    });
+    settingsMenu->addAction(configAction);
+
+    // ========== 帮助菜单 ==========
+
+    QMenu* helpMenu = menuBar()->addMenu("帮助");
+
+    QAction* aboutAction = new QAction("关于", this);
+    connect(aboutAction, &QAction::triggered, this, [this]() {
+        QMessageBox::about(this, "关于 Stock for C++",
+            "Stock for C++ v2.0.0\n\n"
+            "股票数据分析系统\n\n"
+            "功能特性:\n"
+            "- 股票数据查询和分析\n"
+            "- K线图表显示\n"
+            "- 后台任务管理\n"
+            "- MySQL 数据同步\n"
+            "- 配置管理\n\n"
+            "技术栈: Qt 6, C++17, SQLite/MySQL");
+    });
+    helpMenu->addAction(aboutAction);
 }
 
-void MainWindow::onStockClicked(const QModelIndex& index) {
-    QString tsCode = m_stockModel->getTsCode(index);
-    m_currentTsCode = tsCode;
-    
-    statusBar()->showMessage(QString("选中股票: %1").arg(tsCode));
-    emit stockSelected(tsCode);
-    
-    // TODO: Phase 2 - 触发图表更新
-    // m_candlestickWidget->loadStockData(tsCode);
-}
+void MainWindow::setupNavigationButtons() {
+    QWidget* navWidget = new QWidget(this);
+    QVBoxLayout* navLayout = new QVBoxLayout(navWidget);
+    navLayout->setSpacing(15);
 
-void MainWindow::onMenuFileOpen() {
-    QString fileName = QFileDialog::getOpenFileName(
-        this, "打开数据文件", "", "SQLite 数据库 (*.db);;所有文件 (*)"
-    );
-    
-    if (!fileName.isEmpty()) {
-        statusBar()->showMessage(QString("加载: %1").arg(fileName));
-        // TODO: 加载自定义数据文件
-    }
-}
+    // ========== 快捷导航按钮 ==========
 
-void MainWindow::onMenuSettings() {
-    QMessageBox::information(this, "配置", 
-        "配置对话框将在 Phase 3 实现");
-}
+    QLabel* navLabel = new QLabel("快捷导航", this);
+    navLabel->setStyleSheet("font-size: 14px; font-weight: bold; color: #333333;");
+    navLayout->addWidget(navLabel);
 
-void MainWindow::onMenuAbout() {
-    QMessageBox::about(this, "关于 Stock for C++",
-        "<h3>Stock for C++ Qt UI</h3>"
-        "<p>版本: 1.0.0</p>"
-        "<p>基于 Qt 6 的股票分析终端</p>"
-        "<p>© 2026 StockLens Team</p>"
-    );
+    // 任务管理按钮
+    m_taskButton = new QPushButton("任务管理", this);
+    m_taskButton->setStyleSheet(
+        "QPushButton { background-color: #0078d4; color: white; border: none; "
+        "padding: 15px; font-size: 14px; border-radius: 5px; }"
+        "QPushButton:hover { background-color: #106ebe; }");
+    connect(m_taskButton, &QPushButton::clicked, this, [this]() {
+        emit openTaskWindowRequested();
+        statusBar()->showMessage("已打开任务管理窗口");
+    });
+    navLayout->addWidget(m_taskButton);
+
+    // 配置管理按钮
+    m_configButton = new QPushButton("配置管理", this);
+    m_configButton->setStyleSheet(
+        "QPushButton { background-color: #107c10; color: white; border: none; "
+        "padding: 15px; font-size: 14px; border-radius: 5px; }"
+        "QPushButton:hover { background-color: #0b6a0b; }");
+    connect(m_configButton, &QPushButton::clicked, this, [this]() {
+        emit openConfigWindowRequested();
+        statusBar()->showMessage("已打开配置管理窗口");
+    });
+    navLayout->addWidget(m_configButton);
+
+    // 数据查询按钮
+    m_queryButton = new QPushButton("数据查询", this);
+    m_queryButton->setStyleSheet(
+        "QPushButton { background-color: #881798; color: white; border: none; "
+        "padding: 15px; font-size: 14px; border-radius: 5px; }"
+        "QPushButton:hover { background-color: #6b0d75; }");
+    connect(m_queryButton, &QPushButton::clicked, this, [this]() {
+        emit openQueryWindowRequested();
+        statusBar()->showMessage("已打开数据查询窗口");
+    });
+    navLayout->addWidget(m_queryButton);
+
+    // 数据库同步按钮
+    m_syncButton = new QPushButton("数据库同步", this);
+    m_syncButton->setStyleSheet(
+        "QPushButton { background-color: #d83b01; color: white; border: none; "
+        "padding: 15px; font-size: 14px; border-radius: 5px; }"
+        "QPushButton:hover { background-color: #a62c00; }");
+    connect(m_syncButton, &QPushButton::clicked, this, [this]() {
+        emit openSyncWindowRequested();
+        statusBar()->showMessage("已打开数据库同步窗口");
+    });
+    navLayout->addWidget(m_syncButton);
+
+    // K线图表按钮
+    m_chartButton = new QPushButton("K线图表", this);
+    m_chartButton->setStyleSheet(
+        "QPushButton { background-color: #ff8c00; color: white; border: none; "
+        "padding: 15px; font-size: 14px; border-radius: 5px; }"
+        "QPushButton:hover { background-color: #d97000; }");
+    connect(m_chartButton, &QPushButton::clicked, this, [this]() {
+        emit openChartWindowRequested();
+        statusBar()->showMessage("已打开 K线图表窗口");
+    });
+    navLayout->addWidget(m_chartButton);
+
+    // 添加到主布局
+    QVBoxLayout* mainLayout = static_cast<QVBoxLayout*>(centralWidget()->layout());
+    mainLayout->addWidget(navWidget);
 }

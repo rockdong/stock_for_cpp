@@ -1,14 +1,12 @@
 /**
  * @file main.cpp
- * @brief Qt UI 应用入口
+ * @brief Qt UI 应用入口 - 使用 ApplicationManager (重构后)
  * @author StockLens Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 #include <QApplication>
-#include <QFile>
-#include <QIcon>
-#include "MainWindow.h"
+#include "ApplicationManager.h"
 
 #ifdef __has_include
 #  if __has_include("../../version.h")
@@ -25,26 +23,22 @@ int main(int argc, char* argv[]) {
 
     // 设置应用信息
     app.setApplicationName("Stock for C++ UI");
-    app.setApplicationVersion("1.0.0");
+    app.setApplicationVersion("2.0.0");
     app.setOrganizationName("StockLens");
 
 #ifdef VERSION_STRING
     app.setApplicationVersion(QString::fromStdString(VERSION_STRING));
 #endif
 
-    // 加载样式表（如果存在）
-    QFile styleFile(":/styles/main.qss");
-    if (styleFile.open(QFile::ReadOnly)) {
-        QString styleSheet = QLatin1String(styleFile.readAll());
-        app.setStyleSheet(styleSheet);
-        styleFile.close();
-    }
+    // ========== 创建应用程序管理器 (重构后核心改变) ==========
 
-    // 创建主窗口
-    MainWindow mainWindow;
-    mainWindow.setWindowTitle("Stock for C++ - Qt UI");
-    mainWindow.resize(1200, 800);
-    mainWindow.show();
+    ApplicationManager appManager;
+
+    // 初始化: 数据库连接、窗口创建、主题加载
+    appManager.initialize();
+
+    // 显示入口窗口
+    appManager.showMainWindow();
 
     return app.exec();
 }

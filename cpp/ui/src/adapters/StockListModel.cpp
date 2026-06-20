@@ -158,3 +158,29 @@ void StockListModel::sort(int column, Qt::SortOrder order) {
     
     endResetModel();
 }
+
+/**
+ * @brief Phase 3：从核心库 Stock 结构设置数据
+ * 将 core::Stock 转换为 Qt 视图的 StockData
+ */
+void StockListModel::setStocks(const std::vector<core::Stock>& stocks) {
+    beginResetModel();
+    
+    m_stocks.clear();
+    m_stocks.reserve(stocks.size());
+    
+    // 转换 core::Stock → StockData (Qt 视图)
+    for (const auto& stock : stocks) {
+        StockData data;
+        data.tsCode = QString::fromStdString(stock.ts_code);
+        data.name = QString::fromStdString(stock.name);
+        data.industry = QString::fromStdString(stock.industry);
+        data.market = QString::fromStdString(stock.market);
+        data.lastPrice = 0.0;  // 暂无最新价数据
+        data.signal = "";      // 暂无信号数据
+        
+        m_stocks.push_back(data);
+    }
+    
+    endResetModel();
+}

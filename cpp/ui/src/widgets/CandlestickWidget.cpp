@@ -227,4 +227,23 @@ void CandlestickWidget::setVisibleRange(int count) {
     }
 }
 
+/**
+ * @brief 导出图表为 PNG 图片
+ * @param fileName 文件路径
+ * @return 是否成功
+ */
+bool CandlestickWidget::exportToPNG(const QString& fileName) {
+    if (!m_chartView) {
+        return false;
+    }
+    
+    QPixmap pixmap(m_chartView->size());
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    m_chartView->render(&painter);
+    painter.end();
+    
+    return pixmap.save(fileName);
+}
+
 } // namespace ui
