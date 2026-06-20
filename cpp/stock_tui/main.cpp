@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
         static std::vector<std::string> menuEntries = {
             "主界面",
             "分析",
+            "分析结果",
             "配置",
             "日志",
             "状态",
@@ -318,7 +319,7 @@ int main(int argc, char* argv[]) {
                 main_screen->SetCurrentMenu(selected_menu);
                 
                 // 如果在"退出"菜单，直接退出
-                if (selected_menu == 5) {
+                if (selected_menu == 6) {
                     screen.Exit();
                     return true;
                 }
@@ -350,9 +351,9 @@ int main(int argc, char* argv[]) {
                     main_screen->Render() | border | flex,
                 }),
                 separator(),
-                text("快捷键: [Ctrl+E] 配置编辑  [Ctrl+S] 保存  [Ctrl+P] 运行/停止分析  [Ctrl+A] 分析视图  [Ctrl+R] 刷新  [Ctrl+I] 导入CSV  [Ctrl+Q] 退出") | color(Color::GrayLight),
+                text("快捷键: [Ctrl+E] 配置编辑  [Ctrl+S] 保存  [Ctrl+P] 运行/停止分析  [Ctrl+A] 分析视图  [Ctrl+R] 刷新数据  [Ctrl+I] 导入CSV  [Ctrl+Q] 退出") | color(Color::GrayLight),
         text("或者: [E] [P] [A] [R] [I] [Q]（非编辑模式下）") | color(Color::GrayDark),
-        text("提示: [P] 键智能切换分析运行状态，编辑模式下字母键用于输入") | color(Color::Yellow),
+        text("提示: [P] 键智能切换分析运行状态，[R] 键刷新股票列表和分析结果，编辑模式下字母键用于输入") | color(Color::Yellow),
             });
         });
 

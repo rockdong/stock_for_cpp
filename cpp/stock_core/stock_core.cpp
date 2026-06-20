@@ -107,6 +107,14 @@ void setProgressCallback(ProgressCallback callback) {
     context->setProgressCallback(callback);
 }
 
+data::AnalysisResultDAO& getAnalysisResultDAO() {
+    auto* context = getContext();
+    if (!context) {
+        throw std::runtime_error("核心库未初始化,请先调用 stock_core::initialize()");
+    }
+    return context->getAnalysisResultDAO();
+}
+
 int importStocksFromCSV(const std::string& csvFilePath) {
     auto* context = getContext();
     if (!context) {

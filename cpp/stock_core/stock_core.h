@@ -8,7 +8,10 @@
 // 前置声明
 namespace config { class Config; }
 namespace logger { class LoggerManager; }
-namespace data { class Connection; }
+namespace data {
+    class Connection;
+    class AnalysisResultDAO;  // 新增：分析结果DAO前置声明
+}
 namespace network { class IDataSource; }
 namespace core { 
     class Stock;
@@ -183,6 +186,15 @@ namespace api {
      * @param callback 回调函数
      */
     void setProgressCallback(ProgressCallback callback);
+
+    /**
+     * @brief 获取分析结果DAO
+     * 
+     * 获取分析结果数据访问对象，用于查询分析结果
+     * 
+     * @return 分析结果DAO引用
+     */
+    data::AnalysisResultDAO& getAnalysisResultDAO();
 
 } // namespace api
 

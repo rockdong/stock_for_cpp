@@ -7,6 +7,7 @@
 #include <atomic>
 #include <mutex>
 #include "../core/Stock.h"  // 包含 Stock 定义（核心数据结构）
+#include "../core/AnalysisResult.h"  // 新增：包含 AnalysisResult 定义
 #include "../log/UILogSink.h"  // 新增：包含 UI log sink（访问 LogBufferManager）
 
 namespace stock_tui {
@@ -44,6 +45,13 @@ private:
     int failedAnalysis_ = 0;
     std::string lastAnalysisTime_ = "未分析";
     std::string systemStatus_ = "系统运行在降级模式";
+
+    // 分析结果状态（新增）
+    std::vector<core::AnalysisResult> analysisResults_;  // 分析结果数据缓存
+    std::vector<std::string> analysisResultEntries_;     // 分析结果显示条目
+    int selectedAnalysisResultIndex_ = 0;                // 当前选中的分析结果索引
+    ftxui::Component analysisResultMenu_;                // 分析结果菜单组件
+    int totalAnalysisResults_ = 0;                       // 分析结果总数
 
     // 分析运行状态
     std::atomic<bool> isAnalyzing_{false};  // 是否正在分析（原子变量，线程安全）
@@ -97,6 +105,7 @@ private:
     ftxui::Element RenderStockList();
     ftxui::Element RenderQuickActions();
     ftxui::Element RenderAnalysis();     // 新增：分析视图
+    ftxui::Element RenderAnalysisResults(); // 新增：分析结果视图
     ftxui::Element RenderConfiguration(); // 新增：配置视图
     ftxui::Element RenderLogs();          // 新增：日志视图
     ftxui::Element RenderStatus();        // 新增：状态视图

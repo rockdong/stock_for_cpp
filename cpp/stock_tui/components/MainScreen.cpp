@@ -2,6 +2,7 @@
 #include "../stock_core/stock_core.h"
 #include "../stock_core/StockCoreContext.h"  // 包含完整的 StockCoreContext 定义
 #include "../core/Stock.h"  // 包含完整的 Stock 定义
+#include "../core/AnalysisResult.h"  // 新增：包含 AnalysisResult 定义
 #include "version.h"  // 包含版本信息
 #include <ftxui/component/component.hpp>
 #include <ftxui/dom/elements.hpp>
@@ -67,6 +68,9 @@ void MainScreen::BuildUI() {
 
     // 初始化股票列表菜单组件（降级模式下使用空列表）
     stockListMenu_ = Menu(&stockListEntries_, &selectedStockIndex_);
+
+    // 初始化分析结果菜单组件（新增）
+    analysisResultMenu_ = Menu(&analysisResultEntries_, &selectedAnalysisResultIndex_);
 }
 
 Element MainScreen::RenderOverview() {
@@ -498,6 +502,95 @@ Element MainScreen::RenderStatus() {
     return vbox(elements);
 }
 
+Element MainScreen::RenderAnalysisResults() {
+    std::vector<Element> elements;
+
+    elements.push_back(text("分析结果") | bold | color(Color::Cyan));
+    elements.push_back(separator());
+
+    // 检查分析结果数量
+    if (totalAnalysisResults_ == 0) {
+        elements.push_back(text("暂无分析结果") | color(Color::Yellow));
+        elements.push_back(separator());
+        elements.push_back(text("提示: 请先运行批量分析（Ctrl+A）") | color(Color::GrayLight));
+        return vbox(elements) | frame | vscroll_indicator | flex;
+    }
+
+    // 统计信息
+    elements.push_back(text("统计信息") | bold);
+    elements.push_back(text("总结果数: " + std::to_string(totalAnalysisResults_)) | color(Color::Yellow));
+    elements.push_back(separator());
+
+    // 分析结果列表（使用 Menu 组件）
+    if (analysisResultMenu_) {
+        elements.push_back(text("结果列表 (可滚动):") | bold);
+        elements.push_back(separator());
+        elements.push_back(analysisResultMenu_->Render() | frame | vscroll_indicator | flex);
+    }
+
+    // 显示选中的详细信息
+    if (selectedAnalysisResultIndex_ >= 0 && selectedAnalysisResultIndex_ < analysisResults_.size()) {
+        auto& result = analysisResults_[selectedAnalysisResultIndex_];
+        elements.push_back(separator());
+        elements.push_back(text("详细信息") | bold | color(Color::Cyan));
+        elements.push_back(separator());
+
+        // 股票信息（查找股票名称）
+        std::string stockName = "";
+        for (const auto& stock : stocksData_) {
+            if (stock.ts_code == result.ts_code) {
+                stockName = stock.name;
+                break;
+            }
+        }
+        elements.push_back(text("股票: 【" + result.ts_code + "】" + (stockName.empty() ? "" : stockName)) | color(Color::Yellow));
+
+        // 策略信息
+        elements.push_back(text("策略: " + result.strategy_name) | color(Color::Cyan));
+
+        // 分析日期
+        elements.push_back(text("日期: " + result.trade_date) | color(Color::White));
+
+        // 标签（根据类型设置颜色）
+        Color labelColor = Color::White;
+        if (result.opt == "buy") {
+            labelColor = Color::Green;
+        } else if (result.opt == "sell") {
+            labelColor = Color::Red;
+        } else if (result.opt == "hold") {
+            labelColor = Color::Yellow;
+        }
+        elements.push_back(text("信号: " + result.label) | color(labelColor));
+
+        // 操作类型
+        elements.push_back(text("操作: " + result.opt) | color(labelColor));
+
+        // 信号强度（根据置信度设置颜色）
+        Color strengthColor = Color::GrayLight;
+        if (result.strength == core::SignalStrength::STRONG) {
+            strengthColor = Color::Green;
+        } else if (result.strength == core::SignalStrength::MEDIUM) {
+            strengthColor = Color::Yellow;
+        } else if (result.strength == core::SignalStrength::WEAK) {
+            strengthColor = Color::Red;
+        }
+        elements.push_back(text("强度: " + core::strengthToString(result.strength) + " (" + std::to_string((int)result.confidence) + "%)") | color(strengthColor));
+
+        // 频率
+        elements.push_back(text("频率: " + result.freq) | color(Color::GrayLight));
+
+        // 风险提示（如果有）
+        if (!result.risk_warning.empty()) {
+            elements.push_back(text("风险提示: " + result.risk_warning) | color(Color::Red));
+        }
+    }
+
+    elements.push_back(separator());
+    elements.push_back(text("快捷键: [↑↓] 滚动  [Enter] 查看详情  [R] 刷新") | color(Color::Cyan));
+
+    return vbox(elements) | frame | vscroll_indicator | flex;
+}
+
 void MainScreen::SetCurrentMenu(int menuIndex) {
     currentMenu_ = menuIndex;
 }
@@ -512,16 +605,19 @@ Element MainScreen::Render() {
         case 1:  // 分析
             content = RenderAnalysis() | flex;
             break;
-        case 2:  // 配置
+        case 2:  // 分析结果（新增）
+            content = RenderAnalysisResults() | flex;
+            break;
+        case 3:  // 配置
             content = RenderConfiguration() | flex;
             break;
-        case 3:  // 日志
+        case 4:  // 日志
             content = RenderLogs() | flex;
             break;
-        case 4:  // 状态
+        case 5:  // 状态
             content = RenderStatus() | flex;
             break;
-        case 5:  // 退出
+        case 6:  // 退出
             content = vbox({
                 text("退出系统") | bold | color(Color::Red),
                 separator(),
@@ -569,7 +665,48 @@ void MainScreen::RefreshData() {
             selectedStockIndex_ = 0;
         }
 
-        std::cerr << "[DEBUG] 股票列表刷新完成，总数: " << totalStocks_ << std::endl;
+        // 新增：加载分析结果（从数据库）
+        try {
+            auto& analysisResultDao = stock_core::api::getAnalysisResultDAO();
+            auto results = analysisResultDao.findAll();
+            totalAnalysisResults_ = results.size();
+            analysisResults_ = results;
+            analysisResultEntries_.clear();
+
+            // 格式化分析结果显示条目：【股票代码】股票名 | 策略 | 信号 | 操作
+            for (const auto& result : results) {
+                // 查找股票名称
+                std::string stockName = "";
+                for (const auto& stock : stocksData_) {
+                    if (stock.ts_code == result.ts_code) {
+                        stockName = stock.name;
+                        break;
+                    }
+                }
+
+                std::string entry = "【" + result.ts_code + "】" +
+                                    (stockName.empty() ? "" : stockName + " ") +
+                                    "| " + result.strategy_name +
+                                    " | " + result.label +
+                                    " | " + result.opt;
+                analysisResultEntries_.push_back(entry);
+            }
+
+            // 重置选中索引（防止越界）
+            if (selectedAnalysisResultIndex_ >= analysisResultEntries_.size()) {
+                selectedAnalysisResultIndex_ = 0;
+            }
+
+            std::cerr << "[DEBUG] 分析结果加载完成，总数: " << totalAnalysisResults_ << std::endl;
+
+        } catch (const std::exception& e) {
+            // 分析结果加载失败，使用默认值
+            totalAnalysisResults_ = 0;
+            analysisResults_.clear();
+            analysisResultEntries_.clear();
+            selectedAnalysisResultIndex_ = 0;
+            std::cerr << "[DEBUG] 分析结果加载失败: " << e.what() << std::endl;
+        }
 
     } catch (const std::exception& e) {
         // 降级模式：保持默认值
@@ -580,7 +717,12 @@ void MainScreen::RefreshData() {
         stockListEntries_.clear();
         stocksData_.clear();
         selectedStockIndex_ = 0;
-        std::cerr << "[DEBUG] 股票列表刷新失败（降级模式）" << std::endl;
+
+        // 分析结果也清空
+        totalAnalysisResults_ = 0;
+        analysisResults_.clear();
+        analysisResultEntries_.clear();
+        selectedAnalysisResultIndex_ = 0;
     }
 }
 
