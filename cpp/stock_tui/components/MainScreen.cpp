@@ -588,7 +588,9 @@ Element MainScreen::RenderAnalysisResults() {
     elements.push_back(separator());
     elements.push_back(text("快捷键: [↑↓] 滚动  [Enter] 查看详情  [R] 刷新") | color(Color::Cyan));
 
-    return vbox(elements) | frame | vscroll_indicator | flex;
+    // 修复：移除外层的滚动装饰器，避免与 Menu 组件的滚动容器冲突
+    // Menu 组件已自带 frame | vscroll_indicator | flex，详细信息部分保持固定显示
+    return vbox(elements);
 }
 
 void MainScreen::SetCurrentMenu(int menuIndex) {
